@@ -77,6 +77,13 @@
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/ZL154/Achievement-Badges-Plugin---Jellyfin/releases/download/v1.1.1/Jellyfin.Plugin.AchievementBadgesv1.1.1.zip",
         "checksum": "8bbc844dbe7d4d58889c4ecb5596a8e1"
+      },
+      {
+        "version": "1.1.2",
+        "changelog": "Achievements dashboard redesign. Added hero profile section, quick stat cards, tabbed dashboard sections and improved overall user-facing layout.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/Achievement-Badges-Plugin---Jellyfin/releases/download/v1.1.2/Jellyfin.Plugin.AchievementBadgesv1.1.2.zip",
+        "checksum": "d56edcb3de5180630c04184b996ca571"
       }
     ]
   }
