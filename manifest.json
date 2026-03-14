@@ -63,6 +63,13 @@
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/ZL154/Achievement-Badges-Plugin---Jellyfin/releases/download/v1.0.8/Jellyfin.Plugin.AchievementBadgesv1.0.8.zip",
         "checksum": "550af6b9664686283d2d1626ae993381"
+      },
+      {
+        "version": "1.1.0",
+        "changelog": "Major achievement system expansion. Added large badge catalogue, improved rarity tiers, summary statistics, expanded achievement tracking and improved backend logic.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/Achievement-Badges-Plugin---Jellyfin/releases/download/v1.1.0/Jellyfin.Plugin.AchievementBadgesv1.1.0.zip",
+        "checksum": "512474ff1e9a85ff428abfdeccef28a5"
       }
     ]
   }
