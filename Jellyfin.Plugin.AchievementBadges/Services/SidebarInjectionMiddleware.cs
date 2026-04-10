@@ -15,7 +15,7 @@ public class SidebarInjectionMiddleware
     private const string InjectionScript = @"<script>
 (function(){
     var ID='ab-sidebar-entry';
-    var URL='/web/index.html#!/configurationpage?name=achievementbadges';
+    var URL='/web/index.html#!/achievements';
     function inject(){
         if(document.getElementById(ID))return;
         var nav=document.querySelector('.mainDrawer-scrollContainer .navMenuOptions')||document.querySelector('.mainDrawer-scrollContainer');
@@ -28,7 +28,8 @@ public class SidebarInjectionMiddleware
     function start(){inject();new MutationObserver(inject).observe(document.body,{childList:true,subtree:true});}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
-</script>";
+</script>
+<script src=""/Plugins/AchievementBadges/client-script/standalone"" defer></script>";
 
     public SidebarInjectionMiddleware(RequestDelegate next, ILogger<SidebarInjectionMiddleware> logger)
     {
@@ -70,7 +71,7 @@ public class SidebarInjectionMiddleware
                     context.Response.Body = originalBody;
                     await context.Response.Body.WriteAsync(bytes);
 
-                    _logger.LogDebug("[AchievementBadges] Injected sidebar script into index.html response.");
+                    _logger.LogDebug("[AchievementBadges] Injected sidebar and standalone scripts.");
                     return;
                 }
             }
@@ -81,8 +82,7 @@ public class SidebarInjectionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AchievementBadges] Error in sidebar injection middleware.");
-
+            _logger.LogError(ex, "[AchievementBadges] Error in script injection middleware.");
             context.Response.Body = originalBody;
         }
     }

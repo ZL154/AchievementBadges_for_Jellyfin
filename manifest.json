@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.4.3",
+        "changelog": "Separated admin and user pages. Sidebar now links to a standalone user-facing achievements page at #!/achievements that all users can access. Admin page with simulate/reset stays at Plugin Settings. Rewrote standalone.js with proper auth. Red and black banner.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.4.3/Jellyfin.Plugin.AchievementBadgesv1.4.3.zip",
+        "checksum": "B304E272C4C9C1BFD46F011FC918B7F6"
+      },
+      {
         "version": "1.4.2",
         "changelog": "Added automatic sidebar injection middleware so Achievements appears in the navigation menu for all users on every page load. No manual configuration needed - works like StarTrack's script injection.",
         "targetAbi": "10.11.0.0",
