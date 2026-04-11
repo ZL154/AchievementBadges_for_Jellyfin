@@ -32,6 +32,12 @@ public class UserAchievementProfile
 
     public List<QuestState> DailyQuests { get; set; } = new();
     public List<QuestState> WeeklyQuests { get; set; } = new();
+
+    public List<string> PinnedBadgeIds { get; set; } = new();
+
+    public string? EquippedTitleBadgeId { get; set; }
+
+    public List<int> CompletionMilestonesReached { get; set; } = new();
 }
 
 public class QuestState

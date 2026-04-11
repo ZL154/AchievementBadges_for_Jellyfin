@@ -42,6 +42,299 @@ public class AchievementBadgeService
         Load();
     }
 
+    public object CompareUsers(string userIdA, string userIdB)
+    {
+        userIdA = NormalizeUserId(userIdA);
+        userIdB = NormalizeUserId(userIdB);
+        lock (_lock)
+        {
+            var pa = _userProfiles.TryGetValue(userIdA, out var profileA) ? profileA : null;
+            var pb = _userProfiles.TryGetValue(userIdB, out var profileB) ? profileB : null;
+            if (pa is null || pb is null) return new { Error = "One or both users not found." };
+
+            EvaluateBadges(pa, userIdA, silent: true);
+            EvaluateBadges(pb, userIdB, silent: true);
+
+            var enabledA = pa.Badges.Where(b => IsBadgeEnabled(b.Id)).ToList();
+            var enabledB = pb.Badges.Where(b => IsBadgeEnabled(b.Id)).ToList();
+
+            var unlockedA = enabledA.Count(b => b.Unlocked);
+            var unlockedB = enabledB.Count(b => b.Unlocked);
+            var scoreA = (int)Math.Round(AchievementScoreHelper.GetTotalUnlockedScore(enabledA) * (1 + 0.5 * pa.PrestigeLevel));
+            var scoreB = (int)Math.Round(AchievementScoreHelper.GetTotalUnlockedScore(enabledB) * (1 + 0.5 * pb.PrestigeLevel));
+
+            var unlockedSetA = enabledA.Where(b => b.Unlocked).Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var unlockedSetB = enabledB.Where(b => b.Unlocked).Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return new
+            {
+                UserA = new
+                {
+                    UserId = userIdA,
+                    UserName = ResolveUserName(userIdA),
+                    Score = scoreA,
+                    Unlocked = unlockedA,
+                    Total = enabledA.Count,
+                    PrestigeLevel = pa.PrestigeLevel,
+                    pa.Counters.TotalItemsWatched,
+                    pa.Counters.MoviesWatched,
+                    pa.Counters.SeriesCompleted,
+                    pa.Counters.BestWatchStreak,
+                    pa.Counters.TotalMinutesWatched,
+                    pa.Counters.LateNightSessions,
+                    pa.Counters.WeekendSessions,
+                    pa.Counters.UniqueGenresWatched,
+                    pa.Counters.UniqueLibrariesVisited
+                },
+                UserB = new
+                {
+                    UserId = userIdB,
+                    UserName = ResolveUserName(userIdB),
+                    Score = scoreB,
+                    Unlocked = unlockedB,
+                    Total = enabledB.Count,
+                    PrestigeLevel = pb.PrestigeLevel,
+                    pb.Counters.TotalItemsWatched,
+                    pb.Counters.MoviesWatched,
+                    pb.Counters.SeriesCompleted,
+                    pb.Counters.BestWatchStreak,
+                    pb.Counters.TotalMinutesWatched,
+                    pb.Counters.LateNightSessions,
+                    pb.Counters.WeekendSessions,
+                    pb.Counters.UniqueGenresWatched,
+                    pb.Counters.UniqueLibrariesVisited
+                },
+                OnlyA = unlockedSetA.Except(unlockedSetB).Count(),
+                OnlyB = unlockedSetB.Except(unlockedSetA).Count(),
+                Both = unlockedSetA.Intersect(unlockedSetB).Count()
+            };
+        }
+    }
+
+    public List<object> GetActivityFeed(int limit = 50)
+    {
+        lock (_lock)
+        {
+            var entries = new List<(DateTimeOffset At, string UserId, string UserName, AchievementBadge Badge)>();
+            foreach (var profile in _userProfiles.Values)
+            {
+                foreach (var b in profile.Badges)
+                {
+                    if (b.Unlocked && b.UnlockedAt.HasValue && IsBadgeEnabled(b.Id))
+                    {
+                        entries.Add((b.UnlockedAt.Value, profile.UserId, ResolveUserName(profile.UserId), b));
+                    }
+                }
+            }
+            return entries.OrderByDescending(e => e.At)
+                .Take(limit)
+                .Select(e => (object)new
+                {
+                    At = e.At,
+                    UserId = e.UserId,
+                    UserName = e.UserName,
+                    BadgeId = e.Badge.Id,
+                    Title = e.Badge.Title,
+                    Rarity = e.Badge.Rarity,
+                    Icon = e.Badge.Icon,
+                    Category = e.Badge.Category
+                })
+                .ToList();
+        }
+    }
+
+    public object GetPersonalRecords(string userId)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            if (!_userProfiles.TryGetValue(userId, out var profile)) return new { };
+            var c = profile.Counters;
+            return new
+            {
+                TotalItemsWatched = c.TotalItemsWatched,
+                MoviesWatched = c.MoviesWatched,
+                SeriesCompleted = c.SeriesCompleted,
+                BestWatchStreak = c.BestWatchStreak,
+                MaxEpisodesInSingleDay = c.MaxEpisodesInSingleDay,
+                MaxMoviesInSingleDay = c.MaxMoviesInSingleDay,
+                LongestItemMinutes = c.LongestItemMinutes,
+                TotalMinutesWatched = c.TotalMinutesWatched,
+                TotalHoursWatched = c.TotalMinutesWatched / 60,
+                LateNightSessions = c.LateNightSessions,
+                EarlyMorningSessions = c.EarlyMorningSessions,
+                WeekendSessions = c.WeekendSessions,
+                UniqueLibrariesVisited = c.UniqueLibrariesVisited,
+                UniqueGenresWatched = c.UniqueGenresWatched,
+                UniqueDecadesWatched = c.UniqueDecadesWatched,
+                UniqueCountriesWatched = c.UniqueCountriesWatched,
+                UniqueLanguagesWatched = c.UniqueLanguagesWatched,
+                DaysWatched = c.DaysWatched,
+                DaysLoggedIn = c.DaysLoggedIn,
+                BestLoginStreak = c.BestLoginStreak,
+                ShortItemsWatched = c.ShortItemsWatched,
+                LongSeriesCompleted = c.LongSeriesCompleted,
+                VeryLongSeriesCompleted = c.VeryLongSeriesCompleted,
+                RewatchCount = c.RewatchCount,
+                BestComboCount = profile.BestComboCount,
+                PrestigeLevel = profile.PrestigeLevel,
+                LifetimeScore = profile.LifetimeScore
+            };
+        }
+    }
+
+    public List<object> GetCategoryProgress(string userId)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            if (!_userProfiles.TryGetValue(userId, out var profile)) return new List<object>();
+            EvaluateBadges(profile, userId, silent: true);
+            return profile.Badges
+                .Where(b => IsBadgeEnabled(b.Id))
+                .GroupBy(b => b.Category ?? "General")
+                .Select(g => (object)new
+                {
+                    Category = g.Key,
+                    Total = g.Count(),
+                    Unlocked = g.Count(b => b.Unlocked),
+                    Percent = g.Count() == 0 ? 0 : (int)Math.Round(100.0 * g.Count(b => b.Unlocked) / g.Count())
+                })
+                .OrderByDescending(o => (int)o.GetType().GetProperty("Percent")!.GetValue(o)!)
+                .ToList();
+        }
+    }
+
+    public object GetPrestigeLeaderboard(int limit = 10)
+    {
+        lock (_lock)
+        {
+            return _userProfiles.Values
+                .Where(p => p.PrestigeLevel > 0 || p.LifetimeScore > 0)
+                .OrderByDescending(p => p.PrestigeLevel)
+                .ThenByDescending(p => p.LifetimeScore)
+                .Take(limit)
+                .Select(p => (object)new
+                {
+                    UserId = p.UserId,
+                    UserName = ResolveUserName(p.UserId),
+                    PrestigeLevel = p.PrestigeLevel,
+                    LifetimeScore = p.LifetimeScore,
+                    CurrentScore = (int)Math.Round(AchievementScoreHelper.GetTotalUnlockedScore(p.Badges.Where(b => IsBadgeEnabled(b.Id))) * (1 + 0.5 * p.PrestigeLevel))
+                })
+                .ToList();
+        }
+    }
+
+    public List<object> GetRecentUnlocks(string userId, int limit = 20)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            if (!_userProfiles.TryGetValue(userId, out var profile)) return new List<object>();
+            return profile.Badges
+                .Where(b => b.Unlocked && b.UnlockedAt.HasValue && IsBadgeEnabled(b.Id))
+                .OrderByDescending(b => b.UnlockedAt)
+                .Take(limit)
+                .Select(b => (object)new
+                {
+                    BadgeId = b.Id,
+                    b.Title,
+                    b.Rarity,
+                    b.Icon,
+                    b.Category,
+                    UnlockedAt = b.UnlockedAt
+                })
+                .ToList();
+        }
+    }
+
+    public Dictionary<int, int> GetWatchHourClock(string userId)
+    {
+        userId = NormalizeUserId(userId);
+        var result = new Dictionary<int, int>();
+        for (var h = 0; h < 24; h++) result[h] = 0;
+        lock (_lock)
+        {
+            if (!_userProfiles.TryGetValue(userId, out var profile)) return result;
+            var c = profile.Counters;
+            // We don't store per-hour data directly; approximate using LateNight (23-5),
+            // EarlyMorning (5-9), evening, etc. distributed across known windows.
+            var totalKnown = c.LateNightSessions + c.EarlyMorningSessions + c.WeekendSessions;
+            // Late night spread across 23, 0, 1, 2, 3, 4
+            var lnHours = new[] { 23, 0, 1, 2, 3, 4 };
+            foreach (var h in lnHours) result[h] += c.LateNightSessions / lnHours.Length;
+            // Early morning spread across 5, 6, 7, 8
+            var emHours = new[] { 5, 6, 7, 8 };
+            foreach (var h in emHours) result[h] += c.EarlyMorningSessions / emHours.Length;
+            // Other items distributed proportionally to remaining hours (9-22) using prime time weight
+            var remaining = Math.Max(0, c.TotalItemsWatched - c.LateNightSessions - c.EarlyMorningSessions);
+            var primeWeights = new int[] { 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 5, 4, 3, 2 }; // 9..22
+            var weightSum = 0; foreach (var w in primeWeights) weightSum += w;
+            for (var i = 0; i < primeWeights.Length; i++)
+            {
+                var hour = 9 + i;
+                result[hour] += (int)Math.Round((double)remaining * primeWeights[i] / weightSum);
+            }
+            return result;
+        }
+    }
+
+    public object PinBadge(string userId, string badgeId, bool pinned)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            var profile = GetOrCreateProfile(userId);
+            if (pinned)
+            {
+                if (!profile.PinnedBadgeIds.Any(id => id.Equals(badgeId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    profile.PinnedBadgeIds.Add(badgeId);
+                }
+            }
+            else
+            {
+                profile.PinnedBadgeIds.RemoveAll(id => id.Equals(badgeId, StringComparison.OrdinalIgnoreCase));
+            }
+            Save();
+            return new { Success = true, Pinned = profile.PinnedBadgeIds };
+        }
+    }
+
+    public object EquipTitle(string userId, string? badgeId)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            var profile = GetOrCreateProfile(userId);
+            if (string.IsNullOrEmpty(badgeId))
+            {
+                profile.EquippedTitleBadgeId = null;
+            }
+            else
+            {
+                var badge = profile.Badges.FirstOrDefault(b => b.Id.Equals(badgeId, StringComparison.OrdinalIgnoreCase));
+                if (badge is null || !badge.Unlocked) return new { Success = false, Message = "Badge not unlocked." };
+                profile.EquippedTitleBadgeId = badge.Id;
+            }
+            Save();
+            return new { Success = true, EquippedTitleBadgeId = profile.EquippedTitleBadgeId };
+        }
+    }
+
+    public object GetEquippedTitle(string userId)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            if (!_userProfiles.TryGetValue(userId, out var profile)) return new { };
+            if (string.IsNullOrEmpty(profile.EquippedTitleBadgeId)) return new { Title = (string?)null };
+            var badge = profile.Badges.FirstOrDefault(b => b.Id.Equals(profile.EquippedTitleBadgeId, StringComparison.OrdinalIgnoreCase));
+            return new { Title = badge?.Title, Rarity = badge?.Rarity };
+        }
+    }
+
     public Dictionary<string, int> GetWatchCalendar(string userId, int days = 90)
     {
         userId = NormalizeUserId(userId);

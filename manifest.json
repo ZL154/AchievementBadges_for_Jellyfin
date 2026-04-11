@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.5.6",
+        "changelog": "Big feature drop: side-by-side profile compare with VS bars + winner highlights + summary pills, server-wide activity feed of recent unlocks across every user, click any locked badge to open a modal showing actual library items that would help you finish it (uses chase backend), per-category progress rings on Stats tab, 24-hour watch clock radial chart, personal records grid (16 stats), prestige leaderboard tab on Stats, recent unlocks panel, watch heatmap fills the panel width properly. Backend additions: /compare/{a}/{b}, /activity-feed, /users/{id}/records, /users/{id}/category-progress, /leaderboard-prestige, /users/{id}/recent-unlocks-v2, /users/{id}/watch-clock, /users/{id}/pin/{badgeId}, /users/{id}/title.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.6/Jellyfin.Plugin.AchievementBadgesv1.5.6.zip",
+        "checksum": "8984201455F67D842FEA9B98F918BFB3"
+      },
+      {
         "version": "1.5.5",
         "changelog": "UI overhaul pass. Home screen widget removed completely (was flashing then being clobbered by other plugins rebuilding the home DOM). Profile card fully redesigned: conic-gradient spinning avatar ring, tier-colored glow, large gradient score number, progress bar with tier accent, hover-lift stats grid. Leaderboard now has a 3-person podium at the top with gold/silver/bronze bars + medals, and rows 4-10 as sleek list with progress bars. Server stats now a 6-card grid with emoji icons and hover-lift. Recap top genres / directors / actors rendered as bar charts instead of boring bullet lists, with a hero card showing total items + mini-grid for movies/episodes/days/unlocks. Badge points chip larger and more prominent (+88% font + glow). Heatmap SVG now uses preserveAspectRatio=none so it stretches to fill the container width at larger ranges. Prestige button polished: gold-to-pink gradient, no harsh border, bigger padding, nicer hover lift, cleaner disabled state. Confetti burst on achievement unlock toasts (28 particles in rarity color + rainbow). Toast itself slightly larger with better typography and rarity glow.",
         "targetAbi": "10.11.0.0",

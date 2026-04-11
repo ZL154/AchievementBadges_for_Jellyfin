@@ -499,6 +499,82 @@ public class AchievementBadgesController : ControllerBase
         return Ok(new { LibraryCompletionPercents = profile?.Counters.LibraryCompletionPercents ?? new Dictionary<string, int>() });
     }
 
+    // ---------- v1.5.6 features --------------------------------------
+
+    [HttpGet("compare/{userIdA}/{userIdB}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult CompareUsers([FromRoute] string userIdA, [FromRoute] string userIdB)
+    {
+        return Ok(_badgeService.CompareUsers(userIdA, userIdB));
+    }
+
+    [HttpGet("activity-feed")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetActivityFeed([FromQuery] int limit = 50)
+    {
+        return Ok(_badgeService.GetActivityFeed(limit));
+    }
+
+    [HttpGet("users/{userId}/records")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetPersonalRecords([FromRoute] string userId)
+    {
+        return Ok(_badgeService.GetPersonalRecords(userId));
+    }
+
+    [HttpGet("users/{userId}/category-progress")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetCategoryProgress([FromRoute] string userId)
+    {
+        return Ok(_badgeService.GetCategoryProgress(userId));
+    }
+
+    [HttpGet("leaderboard-prestige")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetPrestigeLeaderboard([FromQuery] int limit = 10)
+    {
+        return Ok(_badgeService.GetPrestigeLeaderboard(limit));
+    }
+
+    [HttpGet("users/{userId}/recent-unlocks-v2")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetRecentUnlocksV2([FromRoute] string userId, [FromQuery] int limit = 20)
+    {
+        return Ok(_badgeService.GetRecentUnlocks(userId, limit));
+    }
+
+    [HttpGet("users/{userId}/watch-clock")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetWatchClock([FromRoute] string userId)
+    {
+        return Ok(_badgeService.GetWatchHourClock(userId));
+    }
+
+    public class PinBadgeRequest { public bool Pinned { get; set; } }
+
+    [HttpPost("users/{userId}/pin/{badgeId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult PinBadge([FromRoute] string userId, [FromRoute] string badgeId, [FromBody] PinBadgeRequest? body)
+    {
+        return Ok(_badgeService.PinBadge(userId, badgeId, body?.Pinned ?? true));
+    }
+
+    public class EquipTitleRequest { public string? BadgeId { get; set; } }
+
+    [HttpPost("users/{userId}/title")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult EquipTitle([FromRoute] string userId, [FromBody] EquipTitleRequest? body)
+    {
+        return Ok(_badgeService.EquipTitle(userId, body?.BadgeId));
+    }
+
+    [HttpGet("users/{userId}/title")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetEquippedTitle([FromRoute] string userId)
+    {
+        return Ok(_badgeService.GetEquippedTitle(userId));
+    }
+
     // ---------- Watch calendar (for heatmap) ------------------------
 
     [HttpGet("users/{userId}/watch-calendar")]

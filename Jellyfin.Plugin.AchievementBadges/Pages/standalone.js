@@ -138,6 +138,49 @@
             '#' + ROOT_ID + ' .ab-server-num{font-size:1.6em;font-weight:800;color:#fff;}' +
             '#' + ROOT_ID + ' .ab-server-label{font-size:0.72em;text-transform:uppercase;letter-spacing:1.5px;opacity:0.6;margin-top:0.3em;font-weight:600;}' +
             '#' + ROOT_ID + ' .ab-server-wide{grid-column:span 2;}' +
+            // Compare tab
+            '#' + ROOT_ID + ' .ab-cmp-header{display:flex;align-items:center;gap:1em;margin-bottom:1.5em;justify-content:center;}' +
+            '#' + ROOT_ID + ' .ab-cmp-user{flex:1;text-align:center;}' +
+            '#' + ROOT_ID + ' .ab-cmp-name{font-size:1.3em;font-weight:800;}' +
+            '#' + ROOT_ID + ' .ab-cmp-vs{font-size:1.5em;font-weight:900;opacity:0.5;letter-spacing:0.1em;}' +
+            '#' + ROOT_ID + ' .ab-cmp-rows{display:flex;flex-direction:column;gap:0.5em;margin-bottom:1.25em;}' +
+            '#' + ROOT_ID + ' .ab-cmp-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:0.75em;}' +
+            '#' + ROOT_ID + ' .ab-cmp-side{display:flex;align-items:center;gap:0.5em;}' +
+            '#' + ROOT_ID + ' .ab-cmp-side-left{flex-direction:row-reverse;}' +
+            '#' + ROOT_ID + ' .ab-cmp-val{font-weight:700;font-size:0.95em;min-width:3em;}' +
+            '#' + ROOT_ID + ' .ab-cmp-side-left .ab-cmp-val{text-align:right;}' +
+            '#' + ROOT_ID + ' .ab-cmp-bar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,0.06);overflow:hidden;}' +
+            '#' + ROOT_ID + ' .ab-cmp-fill{height:100%;border-radius:4px;}' +
+            '#' + ROOT_ID + ' .ab-cmp-fill-left{background:linear-gradient(270deg,#667eea,#764ba2);margin-left:auto;}' +
+            '#' + ROOT_ID + ' .ab-cmp-fill-right{background:linear-gradient(90deg,#e91e63,#ff6b35);}' +
+            '#' + ROOT_ID + ' .ab-cmp-label{text-align:center;font-size:0.78em;text-transform:uppercase;letter-spacing:1px;opacity:0.55;font-weight:600;min-width:8em;}' +
+            '#' + ROOT_ID + ' .ab-cmp-winner .ab-cmp-val{color:#4ade80;}' +
+            '#' + ROOT_ID + ' .ab-cmp-summary{display:flex;flex-wrap:wrap;gap:0.5em;justify-content:center;}' +
+            '#' + ROOT_ID + ' .ab-cmp-pill{padding:0.5em 0.85em;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);font-size:0.85em;}' +
+            // Activity feed
+            '#' + ROOT_ID + ' .ab-feed-row{display:flex;align-items:center;gap:0.85em;padding:0.65em 0.85em;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);margin-bottom:0.4em;}' +
+            '#' + ROOT_ID + ' .ab-feed-icon{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:1.3em;flex-shrink:0;}' +
+            '#' + ROOT_ID + ' .ab-feed-body{flex:1;min-width:0;}' +
+            '#' + ROOT_ID + ' .ab-feed-text{font-size:0.95em;}' +
+            '#' + ROOT_ID + ' .ab-feed-meta{font-size:0.75em;opacity:0.65;margin-top:0.2em;}' +
+            // Category rings
+            '#' + ROOT_ID + ' .ab-cat-ring{display:flex;flex-direction:column;align-items:center;padding:0.5em;border-radius:10px;background:rgba(255,255,255,0.03);}' +
+            '#' + ROOT_ID + ' .ab-cat-ring-label{font-size:0.78em;font-weight:600;text-align:center;margin-top:0.25em;line-height:1.2;}' +
+            '#' + ROOT_ID + ' .ab-cat-ring-sub{font-size:0.7em;opacity:0.6;}' +
+            // Records grid
+            '#' + ROOT_ID + ' .ab-records-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.6em;}' +
+            '#' + ROOT_ID + ' .ab-record{padding:0.85em 0.6em;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);text-align:center;}' +
+            '#' + ROOT_ID + ' .ab-record-icon{font-size:1.5em;margin-bottom:0.2em;}' +
+            '#' + ROOT_ID + ' .ab-record-val{font-size:1.4em;font-weight:800;color:#fff;}' +
+            '#' + ROOT_ID + ' .ab-record-label{font-size:0.7em;text-transform:uppercase;letter-spacing:1px;opacity:0.6;margin-top:0.2em;font-weight:600;}' +
+            // Chase modal
+            '#' + ROOT_ID + ' .ab-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000000;display:flex;align-items:center;justify-content:center;padding:2em;animation:abFadeIn 0.2s;}' +
+            '@keyframes abFadeIn { from { opacity: 0; } to { opacity: 1; } }' +
+            '#' + ROOT_ID + ' .ab-modal{max-width:560px;width:100%;max-height:80vh;overflow-y:auto;background:linear-gradient(135deg,#1a1f2e,#0d1017);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:1.5em;}' +
+            '#' + ROOT_ID + ' .ab-modal-close{float:right;background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1em;}' +
+            '#' + ROOT_ID + ' .ab-modal-item{padding:0.6em 0.85em;border-radius:8px;background:rgba(255,255,255,0.05);margin-bottom:0.4em;border:1px solid rgba(255,255,255,0.05);}' +
+            '#' + ROOT_ID + ' .ab-modal-item-name{font-weight:600;}' +
+            '#' + ROOT_ID + ' .ab-modal-item-meta{font-size:0.78em;opacity:0.65;margin-top:0.15em;}' +
             '#' + ROOT_ID + ' .ab-prestige-btn{position:relative;padding:1.1em 3em;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700 0%,#ff6b35 50%,#e91e63 100%);color:#1a0a1f;font-weight:900;font-size:1.1em;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;box-shadow:0 10px 40px rgba(255,107,53,0.35),inset 0 1px 0 rgba(255,255,255,0.4),inset 0 -2px 0 rgba(0,0,0,0.25);transition:transform 0.2s,box-shadow 0.3s;overflow:hidden;font-family:inherit;}' +
             '#' + ROOT_ID + ' .ab-prestige-btn::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.55) 50%,transparent 70%);transform:translateX(-120%);transition:transform 0.8s cubic-bezier(.22,.61,.36,1);}' +
             '#' + ROOT_ID + ' .ab-prestige-btn:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 16px 50px rgba(255,107,53,0.55),inset 0 1px 0 rgba(255,255,255,0.5),inset 0 -2px 0 rgba(0,0,0,0.3);}' +
@@ -248,6 +291,8 @@
                     '<button type="button" class="ab-tab" id="abSaTabQuests">Quests</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabRecap">Recap</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabLb">Leaderboard</button>' +
+                    '<button type="button" class="ab-tab" id="abSaTabCompare">Compare</button>' +
+                    '<button type="button" class="ab-tab" id="abSaTabActivity">Activity</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabStats">Stats</button>' +
                 '</div>' +
                 '<div id="abSaPanelBadges" class="ab-panel">' +
@@ -313,12 +358,37 @@
                         '<div id="abSaLb">Loading...</div>' +
                     '</div>' +
                 '</div>' +
+                '<div id="abSaPanelCompare" class="ab-panel" style="display:none;">' +
+                    '<div class="ab-panel-card">' +
+                        '<h3 style="margin:0 0 0.75em;">Compare profiles</h3>' +
+                        '<div style="display:flex; gap:0.75em; flex-wrap:wrap; margin-bottom:1em;">' +
+                            '<select id="abSaCompareUserA" class="ab-select" style="flex:1; min-width:200px;"></select>' +
+                            '<div style="font-weight:800; align-self:center; opacity:0.6;">VS</div>' +
+                            '<select id="abSaCompareUserB" class="ab-select" style="flex:1; min-width:200px;"></select>' +
+                        '</div>' +
+                        '<div id="abSaCompareResult"><div class="ab-muted">Pick two users to compare.</div></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="abSaPanelActivity" class="ab-panel" style="display:none;">' +
+                    '<div class="ab-panel-card">' +
+                        '<h3 style="margin:0 0 0.75em;">Server activity feed</h3>' +
+                        '<div class="ab-muted" style="font-size:0.85em; margin-bottom:0.75em;">Latest unlocks across every user on the server.</div>' +
+                        '<div id="abSaActivity">Loading...</div>' +
+                    '</div>' +
+                '</div>' +
                 '<div id="abSaPanelStats" class="ab-panel" style="display:none;">' +
                     '<div class="ab-panel-card">' +
                         '<h3 style="margin:0 0 0.75em;">Your data</h3>' +
+                        '<div id="abSaCategoryRings" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:0.75em; margin-bottom:1.25em;"></div>' +
                         '<div id="abSaCharts" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1em;"></div>' +
+                        '<h3 style="margin:1.5em 0 0.75em;">Personal records</h3>' +
+                        '<div id="abSaRecords">Loading...</div>' +
                         '<h3 style="margin:1.5em 0 0.75em;">Score bank & prestige</h3>' +
                         '<div id="abSaBank">Loading...</div>' +
+                        '<h3 style="margin:1.5em 0 0.75em;">Prestige leaderboard</h3>' +
+                        '<div id="abSaPrestigeLb">Loading...</div>' +
+                        '<h3 style="margin:1.5em 0 0.75em;">Recent unlocks</h3>' +
+                        '<div id="abSaRecentUnlocks">Loading...</div>' +
                         '<h3 style="margin:1.5em 0 0.75em;">Server stats</h3>' +
                         '<div id="abSaServerStats">Loading...</div>' +
                     '</div>' +
@@ -333,8 +403,8 @@
     }
 
     function setTab(name) {
-        var panels = { badges: 'abSaPanelBadges', quests: 'abSaPanelQuests', recap: 'abSaPanelRecap', lb: 'abSaPanelLb', stats: 'abSaPanelStats' };
-        var tabs = { badges: 'abSaTabBadges', quests: 'abSaTabQuests', recap: 'abSaTabRecap', lb: 'abSaTabLb', stats: 'abSaTabStats' };
+        var panels = { badges: 'abSaPanelBadges', quests: 'abSaPanelQuests', recap: 'abSaPanelRecap', lb: 'abSaPanelLb', compare: 'abSaPanelCompare', activity: 'abSaPanelActivity', stats: 'abSaPanelStats' };
+        var tabs = { badges: 'abSaTabBadges', quests: 'abSaTabQuests', recap: 'abSaTabRecap', lb: 'abSaTabLb', compare: 'abSaTabCompare', activity: 'abSaTabActivity', stats: 'abSaTabStats' };
         for (var k in panels) {
             var p = el(panels[k]); if (p) p.style.display = k === name ? 'block' : 'none';
             var t = el(tabs[k]); if (t) t.classList.toggle('active', k === name);
@@ -342,6 +412,8 @@
         if (name === 'recap') { loadRecap('week'); }
         if (name === 'stats') { loadStats(); }
         if (name === 'quests') { loadQuests(); }
+        if (name === 'compare') { loadCompareUserList(); }
+        if (name === 'activity') { loadActivity(); }
     }
 
     function renderQuestCards(list, containerId) {
@@ -506,6 +578,121 @@
         });
     }
 
+    var serverUsers = null;
+
+    function fetchServerUsers() {
+        if (serverUsers) return Promise.resolve(serverUsers);
+        return fetch(buildUrl('Users'), { headers: getAuthHeaders(), credentials: 'include' })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (list) {
+                serverUsers = (list || []).map(function (u) { return { Id: (u.Id || '').toString(), Name: u.Name || u.Id }; });
+                return serverUsers;
+            })
+            .catch(function () { return []; });
+    }
+
+    function loadCompareUserList() {
+        fetchServerUsers().then(function (users) {
+            var a = el('abSaCompareUserA');
+            var b = el('abSaCompareUserB');
+            if (!a || !b) return;
+            if (a.options.length > 0) return; // already populated
+            users.forEach(function (u) {
+                var oA = document.createElement('option'); oA.value = u.Id; oA.textContent = u.Name; a.appendChild(oA);
+                var oB = document.createElement('option'); oB.value = u.Id; oB.textContent = u.Name; b.appendChild(oB);
+            });
+            if (users.length >= 2) { a.value = userId; b.value = users.find(function (u) { return u.Id !== userId; }).Id; }
+            a.addEventListener('change', loadCompareData);
+            b.addEventListener('change', loadCompareData);
+            loadCompareData();
+        });
+    }
+
+    function loadCompareData() {
+        var a = el('abSaCompareUserA'), b = el('abSaCompareUserB');
+        var resultBox = el('abSaCompareResult');
+        if (!a || !b || !resultBox) return;
+        if (!a.value || !b.value || a.value === b.value) {
+            resultBox.innerHTML = '<div class="ab-muted">Pick two different users.</div>';
+            return;
+        }
+        resultBox.innerHTML = 'Loading...';
+        fetchJson('Plugins/AchievementBadges/compare/' + a.value + '/' + b.value).then(function (cmp) {
+            if (!cmp || cmp.Error) { resultBox.innerHTML = '<div class="ab-muted">' + (cmp && cmp.Error || 'No data.') + '</div>'; return; }
+            var rows = [
+                ['Score', 'Score', cmp.UserA.Score, cmp.UserB.Score],
+                ['Unlocked', 'Badges', cmp.UserA.Unlocked + ' / ' + cmp.UserA.Total, cmp.UserB.Unlocked + ' / ' + cmp.UserB.Total],
+                ['Prestige', 'Prestige', cmp.UserA.PrestigeLevel, cmp.UserB.PrestigeLevel],
+                ['Items', 'Items watched', cmp.UserA.TotalItemsWatched, cmp.UserB.TotalItemsWatched],
+                ['Movies', 'Movies', cmp.UserA.MoviesWatched, cmp.UserB.MoviesWatched],
+                ['Series', 'Series finished', cmp.UserA.SeriesCompleted, cmp.UserB.SeriesCompleted],
+                ['Streak', 'Best streak', cmp.UserA.BestWatchStreak, cmp.UserB.BestWatchStreak],
+                ['Hours', 'Total hours', Math.round(cmp.UserA.TotalMinutesWatched / 60), Math.round(cmp.UserB.TotalMinutesWatched / 60)],
+                ['Late', 'Late nights', cmp.UserA.LateNightSessions, cmp.UserB.LateNightSessions],
+                ['Weekend', 'Weekend sessions', cmp.UserA.WeekendSessions, cmp.UserB.WeekendSessions],
+                ['Genres', 'Unique genres', cmp.UserA.UniqueGenresWatched, cmp.UserB.UniqueGenresWatched],
+                ['Libraries', 'Libraries visited', cmp.UserA.UniqueLibrariesVisited, cmp.UserB.UniqueLibrariesVisited]
+            ];
+            resultBox.innerHTML =
+                '<div class="ab-cmp-header">' +
+                    '<div class="ab-cmp-user"><div class="ab-cmp-name">' + escapeHtml(cmp.UserA.UserName) + '</div></div>' +
+                    '<div class="ab-cmp-vs">VS</div>' +
+                    '<div class="ab-cmp-user"><div class="ab-cmp-name">' + escapeHtml(cmp.UserB.UserName) + '</div></div>' +
+                '</div>' +
+                '<div class="ab-cmp-rows">' +
+                    rows.map(function (r) {
+                        var aVal = parseFloat(r[2]) || 0;
+                        var bVal = parseFloat(r[3]) || 0;
+                        var max = Math.max(aVal, bVal, 1);
+                        var aPct = Math.round(100 * aVal / max);
+                        var bPct = Math.round(100 * bVal / max);
+                        var winnerA = aVal > bVal;
+                        var winnerB = bVal > aVal;
+                        return '<div class="ab-cmp-row">' +
+                            '<div class="ab-cmp-side ab-cmp-side-left ' + (winnerA ? 'ab-cmp-winner' : '') + '">' +
+                                '<div class="ab-cmp-val">' + r[2] + '</div>' +
+                                '<div class="ab-cmp-bar"><div class="ab-cmp-fill ab-cmp-fill-left" style="width:' + aPct + '%;"></div></div>' +
+                            '</div>' +
+                            '<div class="ab-cmp-label">' + r[1] + '</div>' +
+                            '<div class="ab-cmp-side ab-cmp-side-right ' + (winnerB ? 'ab-cmp-winner' : '') + '">' +
+                                '<div class="ab-cmp-bar"><div class="ab-cmp-fill ab-cmp-fill-right" style="width:' + bPct + '%;"></div></div>' +
+                                '<div class="ab-cmp-val">' + r[3] + '</div>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('') +
+                '</div>' +
+                '<div class="ab-cmp-summary">' +
+                    '<div class="ab-cmp-pill"><strong>' + cmp.OnlyA + '</strong> badges only ' + escapeHtml(cmp.UserA.UserName) + ' has</div>' +
+                    '<div class="ab-cmp-pill"><strong>' + cmp.Both + '</strong> shared badges</div>' +
+                    '<div class="ab-cmp-pill"><strong>' + cmp.OnlyB + '</strong> badges only ' + escapeHtml(cmp.UserB.UserName) + ' has</div>' +
+                '</div>';
+        }).catch(function () {
+            resultBox.innerHTML = '<div class="ab-muted">Failed to load comparison.</div>';
+        });
+    }
+
+    function loadActivity() {
+        var box = el('abSaActivity');
+        if (!box) return;
+        box.innerHTML = 'Loading...';
+        fetchJson('Plugins/AchievementBadges/activity-feed?limit=50').then(function (entries) {
+            if (!entries || !entries.length) { box.innerHTML = '<div class="ab-muted">No activity yet.</div>'; return; }
+            box.innerHTML = entries.map(function (e) {
+                var when = e.At ? new Date(e.At).toLocaleString() : '';
+                var rarityCls = rarityClass(e.Rarity);
+                return '<div class="ab-feed-row">' +
+                    '<div class="ab-feed-icon ' + rarityCls + '">' + icon(e.Icon) + '</div>' +
+                    '<div class="ab-feed-body">' +
+                        '<div class="ab-feed-text"><strong>' + escapeHtml(e.UserName) + '</strong> unlocked <strong>' + escapeHtml(e.Title) + '</strong></div>' +
+                        '<div class="ab-feed-meta"><span class="' + rarityCls + '">' + e.Rarity + '</span> · ' + escapeHtml(e.Category || '') + ' · ' + when + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }).catch(function () {
+            box.innerHTML = '<div class="ab-muted">Failed to load activity.</div>';
+        });
+    }
+
     var currentHeatmapDays = 90;
 
     function loadStats() {
@@ -514,9 +701,20 @@
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/bank'),
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/summary'),
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/recap?period=year'),
-            fetchJson('Plugins/AchievementBadges/users/' + userId + '/watch-calendar?days=' + currentHeatmapDays)
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/watch-calendar?days=' + currentHeatmapDays),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/records'),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/category-progress'),
+            fetchJson('Plugins/AchievementBadges/leaderboard-prestige?limit=10'),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/recent-unlocks-v2?limit=15'),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/watch-clock')
         ]).then(function (r) {
             var bank = r[0], summary = r[1], recap = r[2], calendar = r[3];
+            var records = r[4], categoryProgress = r[5], prestigeLb = r[6], recentUnlocks = r[7], clock = r[8];
+
+            renderCategoryRings(categoryProgress);
+            renderRecords(records);
+            renderPrestigeLeaderboard(prestigeLb);
+            renderRecentUnlocks(recentUnlocks);
             var bankBox = el('abSaBank');
             if (bankBox) {
                 var prestigeStars = '';
@@ -551,11 +749,126 @@
                 });
             }
 
-            renderCharts(recap, summary, calendar);
+            renderCharts(recap, summary, calendar, clock);
         }).catch(function () { });
     }
 
-    function renderCharts(recap, summary, calendar) {
+    function renderCategoryRings(items) {
+        var box = el('abSaCategoryRings');
+        if (!box) return;
+        if (!items || !items.length) { box.innerHTML = ''; return; }
+        box.innerHTML = items.map(function (it) {
+            var pct = it.Percent || 0;
+            var circ = 2 * Math.PI * 28;
+            var dash = circ * pct / 100;
+            var color = pct >= 100 ? '#4caf50' : pct >= 50 ? '#667eea' : '#9aa5b1';
+            return '<div class="ab-cat-ring">' +
+                '<svg width="72" height="72" viewBox="0 0 72 72">' +
+                    '<circle cx="36" cy="36" r="28" stroke="rgba(255,255,255,0.08)" stroke-width="6" fill="none"/>' +
+                    '<circle cx="36" cy="36" r="28" stroke="' + color + '" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="' + dash + ' ' + circ + '" transform="rotate(-90 36 36)"/>' +
+                    '<text x="36" y="40" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">' + pct + '%</text>' +
+                '</svg>' +
+                '<div class="ab-cat-ring-label">' + escapeHtml(it.Category) + '</div>' +
+                '<div class="ab-cat-ring-sub">' + it.Unlocked + '/' + it.Total + '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function renderRecords(records) {
+        var box = el('abSaRecords');
+        if (!box) return;
+        if (!records) { box.innerHTML = '<div class="ab-muted">No records.</div>'; return; }
+        var fields = [
+            ['🎬', 'Movies', records.MoviesWatched],
+            ['📺', 'Total items', records.TotalItemsWatched],
+            ['🏆', 'Series complete', records.SeriesCompleted],
+            ['🔥', 'Best streak', records.BestWatchStreak + ' days'],
+            ['⏱️', 'Total time', records.TotalHoursWatched + ' hours'],
+            ['📅', 'Days watched', records.DaysWatched],
+            ['🎭', 'Genres', records.UniqueGenresWatched],
+            ['🌍', 'Countries', records.UniqueCountriesWatched],
+            ['🗣️', 'Languages', records.UniqueLanguagesWatched],
+            ['📚', 'Libraries', records.UniqueLibrariesVisited],
+            ['🌙', 'Late nights', records.LateNightSessions],
+            ['🌅', 'Early mornings', records.EarlyMorningSessions],
+            ['📆', 'Weekends', records.WeekendSessions],
+            ['⚡', 'Best combo', records.BestComboCount],
+            ['🔁', 'Rewatches', records.RewatchCount],
+            ['🎯', 'Login streak', records.BestLoginStreak]
+        ];
+        box.innerHTML = '<div class="ab-records-grid">' + fields.map(function (f) {
+            return '<div class="ab-record"><div class="ab-record-icon">' + f[0] + '</div><div class="ab-record-val">' + f[2] + '</div><div class="ab-record-label">' + f[1] + '</div></div>';
+        }).join('') + '</div>';
+    }
+
+    function renderPrestigeLeaderboard(list) {
+        var box = el('abSaPrestigeLb');
+        if (!box) return;
+        if (!list || !list.length) { box.innerHTML = '<div class="ab-muted">No one has prestiged yet. Be the first!</div>'; return; }
+        box.innerHTML = list.map(function (e, i) {
+            var stars = '';
+            for (var s = 0; s < e.PrestigeLevel; s++) stars += '\u2b50';
+            return '<div class="ab-lb-row-new">' +
+                '<div class="ab-lb-rank">#' + (i + 1) + '</div>' +
+                '<div class="ab-lb-info">' +
+                    '<div class="ab-lb-name">' + escapeHtml(e.UserName) + ' ' + stars + '</div>' +
+                    '<div class="ab-muted" style="font-size:0.78em;">Lifetime score ' + (e.LifetimeScore || 0) + '</div>' +
+                '</div>' +
+                '<div class="ab-lb-value">P' + e.PrestigeLevel + '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function renderRecentUnlocks(list) {
+        var box = el('abSaRecentUnlocks');
+        if (!box) return;
+        if (!list || !list.length) { box.innerHTML = '<div class="ab-muted">No unlocks yet.</div>'; return; }
+        box.innerHTML = list.map(function (b) {
+            var when = b.UnlockedAt ? new Date(b.UnlockedAt).toLocaleString() : '';
+            return '<div class="ab-feed-row">' +
+                '<div class="ab-feed-icon ' + rarityClass(b.Rarity) + '">' + icon(b.Icon) + '</div>' +
+                '<div class="ab-feed-body">' +
+                    '<div class="ab-feed-text"><strong>' + escapeHtml(b.Title) + '</strong></div>' +
+                    '<div class="ab-feed-meta"><span class="' + rarityClass(b.Rarity) + '">' + b.Rarity + '</span> · ' + when + '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function renderWatchClock(clock) {
+        if (!clock) return '<div class="ab-muted">No data.</div>';
+        var max = 0;
+        for (var k in clock) { if (clock[k] > max) max = clock[k]; }
+        if (max === 0) max = 1;
+        var cx = 90, cy = 90, rOuter = 80, rInner = 30;
+        var slices = '';
+        var labels = '';
+        for (var h = 0; h < 24; h++) {
+            var startAngle = (h * 15 - 90) * Math.PI / 180;
+            var endAngle = ((h + 1) * 15 - 90) * Math.PI / 180;
+            var intensity = (clock[h] || 0) / max;
+            var rEdge = rInner + (rOuter - rInner) * Math.max(0.1, intensity);
+            var color = 'hsl(' + (220 + intensity * 60) + ', 70%, ' + (35 + intensity * 35) + '%)';
+            var x1 = cx + rInner * Math.cos(startAngle);
+            var y1 = cy + rInner * Math.sin(startAngle);
+            var x2 = cx + rEdge * Math.cos(startAngle);
+            var y2 = cy + rEdge * Math.sin(startAngle);
+            var x3 = cx + rEdge * Math.cos(endAngle);
+            var y3 = cy + rEdge * Math.sin(endAngle);
+            var x4 = cx + rInner * Math.cos(endAngle);
+            var y4 = cy + rInner * Math.sin(endAngle);
+            slices += '<path d="M' + x1 + ',' + y1 + ' L' + x2 + ',' + y2 + ' A' + rEdge + ',' + rEdge + ' 0 0 1 ' + x3 + ',' + y3 + ' L' + x4 + ',' + y4 + ' A' + rInner + ',' + rInner + ' 0 0 0 ' + x1 + ',' + y1 + ' Z" fill="' + color + '"><title>' + h + ':00 — ' + (clock[h] || 0) + ' items</title></path>';
+            if (h % 6 === 0) {
+                var labelAngle = ((h + 0.5) * 15 - 90) * Math.PI / 180;
+                var lx = cx + (rOuter + 12) * Math.cos(labelAngle);
+                var ly = cy + (rOuter + 12) * Math.sin(labelAngle) + 4;
+                labels += '<text x="' + lx + '" y="' + ly + '" fill="#bbb" font-size="11" text-anchor="middle">' + h + 'h</text>';
+            }
+        }
+        return '<svg viewBox="0 0 200 200" width="100%" height="200">' + slices + labels + '</svg>';
+    }
+
+    function renderCharts(recap, summary, calendar, clock) {
         var box = el('abSaCharts'); if (!box) return;
 
         // Genre radar (SVG)
@@ -604,9 +917,12 @@
                 '</select>' +
             '</div>';
 
+        var clockSvg = renderWatchClock(clock);
+
         box.innerHTML =
             '<div class="ab-panel-card"><h4 style="margin:0 0 0.5em;">Genre radar</h4>' + radarSvg + '</div>' +
-            '<div class="ab-panel-card" style="grid-column:span 2; min-width:0;">' + heatHeader + heatSvg + '</div>' +
+            '<div class="ab-panel-card"><h4 style="margin:0 0 0.5em;">Watch clock (24h)</h4>' + clockSvg + '</div>' +
+            '<div class="ab-panel-card" style="grid-column:1 / -1; min-width:0;">' + heatHeader + heatSvg + '</div>' +
             '<div class="ab-panel-card"><h4 style="margin:0 0 0.5em;">Stats snapshot</h4>' + histSvg + '</div>';
 
         var rangeEl = document.getElementById('abSaHeatmapRange');
@@ -775,11 +1091,55 @@
                 '<div class="ab-footer"><div class="' + (b.Unlocked ? 'ab-unlocked' : 'ab-locked') + '">' + (b.Unlocked ? 'Unlocked' : 'Locked') + '</div>' +
                 '<button type="button" class="ab-btn"' + (!b.Unlocked ? ' disabled style="opacity:0.5;"' : '') + '>' + (eq ? 'Unequip' : 'Equip') + '</button></div>';
             if (b.Unlocked) {
-                c.querySelector('.ab-footer button').addEventListener('click', function () {
+                c.querySelector('.ab-footer button').addEventListener('click', function (ev) {
+                    ev.stopPropagation();
                     if (eq) doUnequip(b.Id); else doEquip(b.Id);
                 });
             }
+            // Click anywhere else on the card to open the chase modal (only for locked badges)
+            if (!b.Unlocked) {
+                c.style.cursor = 'pointer';
+                c.addEventListener('click', function () { openChaseModal(b); });
+            }
             grid.appendChild(c);
+        });
+    }
+
+    function openChaseModal(badge) {
+        var backdrop = document.createElement('div');
+        backdrop.className = 'ab-modal-backdrop';
+        backdrop.innerHTML =
+            '<div class="ab-modal">' +
+                '<button type="button" class="ab-modal-close">\u00d7</button>' +
+                '<h3 style="margin:0 0 0.25em;">' + escapeHtml(badge.Title) + '</h3>' +
+                '<div class="ab-muted" style="font-size:0.85em; margin-bottom:1em;">' + escapeHtml(badge.Description || '') + '</div>' +
+                '<div style="margin-bottom:1em; padding:0.6em 0.85em; border-radius:8px; background:rgba(102,126,234,0.1); border:1px solid rgba(102,126,234,0.3);">' +
+                    '<div class="ab-muted" style="font-size:0.78em;">PROGRESS</div>' +
+                    '<div style="font-weight:700; font-size:1.1em;">' + (badge.CurrentValue || 0) + ' / ' + (badge.TargetValue || 0) + '</div>' +
+                '</div>' +
+                '<div class="ab-muted" style="font-size:0.78em; margin-bottom:0.5em;">SUGGESTED ITEMS TO WATCH</div>' +
+                '<div id="abSaChaseList">Loading...</div>' +
+            '</div>';
+        backdrop.addEventListener('click', function (ev) {
+            if (ev.target === backdrop) { backdrop.remove(); }
+        });
+        backdrop.querySelector('.ab-modal-close').addEventListener('click', function () { backdrop.remove(); });
+        root.appendChild(backdrop);
+
+        fetchJson('Plugins/AchievementBadges/users/' + userId + '/chase/' + badge.Id + '?limit=10').then(function (res) {
+            var listBox = backdrop.querySelector('#abSaChaseList');
+            if (!listBox) return;
+            var items = res && res.Items;
+            if (!items || !items.length) {
+                listBox.innerHTML = '<div class="ab-muted">No items found. This badge may need a metric we can\'t recommend for.</div>';
+                return;
+            }
+            listBox.innerHTML = items.map(function (it) {
+                return '<div class="ab-modal-item"><div class="ab-modal-item-name">' + escapeHtml(it.Name || '') + '</div><div class="ab-modal-item-meta">' + (it.Type || '') + (it.Year ? ' · ' + it.Year : '') + (it.RunTimeMinutes ? ' · ' + it.RunTimeMinutes + ' min' : '') + '</div></div>';
+            }).join('');
+        }).catch(function () {
+            var listBox = backdrop.querySelector('#abSaChaseList');
+            if (listBox) listBox.innerHTML = '<div class="ab-muted">Failed to load.</div>';
         });
     }
 
@@ -885,6 +1245,8 @@
         el('abSaTabQuests').addEventListener('click', function () { setTab('quests'); });
         el('abSaTabRecap').addEventListener('click', function () { setTab('recap'); });
         el('abSaTabLb').addEventListener('click', function () { setTab('lb'); });
+        el('abSaTabCompare').addEventListener('click', function () { setTab('compare'); });
+        el('abSaTabActivity').addEventListener('click', function () { setTab('activity'); });
         el('abSaTabStats').addEventListener('click', function () { setTab('stats'); loadStats(); });
         setTab('badges');
 
