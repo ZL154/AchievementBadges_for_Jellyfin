@@ -213,6 +213,13 @@ See the [Releases page](https://github.com/ZL154/AchievementBadges_for_Jellyfin/
 
 ## 📸 Screenshots
 
+### Xbox-style unlock toast
+Pops up during playback when a badge unlocks. Circle expands into a banner, trophy rotates, "Rare achievement unlocked" label slides up, then everything collapses. Per-rarity color, glow, and diagonal shimmer sweep. Legendary + Mythic get confetti.
+
+<p align="center">
+  <img alt="Xbox-style unlock toast" src="assets/screenshots/unlock-toast.png" />
+</p>
+
 ### The standalone Achievements page
 The full profile view, shown in the Jellyfin sidebar. Rank progress bar, day streak, score, completion percentage, and the tab bar for the seven sub-views (My Badges, Quests, Recap, Leaderboard, Compare, Activity, Wrapped, Stats).
 
@@ -245,6 +252,20 @@ Rotating quests from a template pool. Everyone on the server gets the same daily
 Weekly, monthly and yearly breakdowns of what you've actually watched — total items, active days, top genres, top directors, and top actors.
 <p align="center">
   <img alt="Recap view" src="assets/screenshots/recap.png" />
+</p>
+
+### Year Wrapped
+Spotify-style end-of-year recap with a big gradient hero, "your numbers" (movies, episodes, active days, best streak, total hours), "your highlights" (biggest day, biggest month, most-watched weekday) and "your favorites" (top genres/directors/actors).
+
+<p align="center">
+  <img alt="Year Wrapped view" src="assets/screenshots/wrapped.png" />
+</p>
+
+### Leaderboard
+Podium view for the top 3, ranked list below. Switch categories with the tab row: Score, Movies, Episodes, Hours, Best Streak, Series. (Usernames blurred as User 1–10.)
+
+<p align="center">
+  <img alt="Leaderboard view" src="assets/screenshots/leaderboard.png" />
 </p>
 
 ### Compare profiles
