@@ -211,6 +211,94 @@ See the [Releases page](https://github.com/ZL154/AchievementBadges_for_Jellyfin/
 
 ---
 
+## 📸 Screenshots
+
+### The standalone Achievements page
+The full profile view, shown in the Jellyfin sidebar. Rank progress bar, day streak, score, completion percentage, and the tab bar for the seven sub-views (My Badges, Quests, Recap, Leaderboard, Compare, Activity, Wrapped, Stats).
+
+<p align="center">
+  <img alt="Achievements page" src="assets/screenshots/achievements-page.png" />
+</p>
+
+### Badge grid
+171 badges across 30+ categories, each with live progress bars and an Equip button. Unlocked badges show in color with a green status tag; locked badges dim. Rarity-colored borders let you scan the grid visually.
+
+<p align="center">
+  <img alt="Badge grid overview" src="assets/screenshots/badges-overview.png" />
+</p>
+
+### Rarity tiers in action
+Genre specialist badges and streak extremes across all six rarity colors — Common, Uncommon, Rare, Epic, Legendary, Mythic.
+
+<p align="center">
+  <img alt="Genre + rarity badges" src="assets/screenshots/genre-badges.png" />
+</p>
+
+### Daily and weekly quests
+Rotating quests from a template pool. Everyone on the server gets the same daily + weekly challenges so people can race each other. Completing them pays into the score bank.
+
+<p align="center">
+  <img alt="Daily and weekly quests" src="assets/screenshots/quests.png" />
+</p>
+
+### Recap
+Weekly, monthly and yearly breakdowns of what you've actually watched — total items, active days, top genres, top directors, and top actors. (The names below come from media metadata — Breaking Bad and Brooklyn Nine-Nine test libraries.)
+
+<p align="center">
+  <img alt="Recap view" src="assets/screenshots/recap.png" />
+</p>
+
+### Compare profiles
+Head-to-head profile comparison between any two users on your server. Gradient bars show the relative values on 12 core metrics, and the bottom pills break down how many badges each user has that the other doesn't. (Usernames blurred as User 1 / User 2.)
+
+<p align="center">
+  <img alt="Compare profiles view" src="assets/screenshots/compare-profiles.png" />
+</p>
+
+### Streak calendar
+GitHub-style year calendar of your watch activity. Current streak, best ever, and total active days at a glance.
+
+<p align="center">
+  <img alt="Streak calendar" src="assets/screenshots/streak-calendar.png" />
+</p>
+
+### Watch heatmap
+90-day heatmap grid, colored by daily watch volume. Click the range button to switch between 30/90/180/365 days.
+
+<p align="center">
+  <img alt="Watch heatmap" src="assets/screenshots/watch-heatmap.png" />
+</p>
+
+### Genre radar + watch clock
+SVG spider chart showing your top-5 genre distribution, and a 24-hour polar chart of when you actually watch.
+
+<p align="center">
+  <img alt="Genre radar + watch clock" src="assets/screenshots/genre-radar.png" />
+</p>
+
+### Admin panel
+Every admin section is collapsible so the page stays clean: webhook notifications, toast preview, UI feature toggles, visual badge editor, challenge templates, audit log, progress injection, custom badges, seasonal challenges, and per-badge enable/disable.
+
+<p align="center">
+  <img alt="Admin panel" src="assets/screenshots/admin-panel.png" />
+</p>
+
+### Advanced options
+Scan watch history, reset badges, scan all users, or load a specific user ID — all from one row under the Advanced options toggle.
+
+<p align="center">
+  <img alt="Advanced options" src="assets/screenshots/advanced-options.png" />
+</p>
+
+### Sidebar entry
+Auto-injected into the Jellyfin nav menu — no theme changes required.
+
+<p align="center">
+  <img alt="Sidebar entry" src="assets/screenshots/sidebar-entry.png" />
+</p>
+
+---
+
 ## 📜 License
 
 This project is released under the [MIT License](LICENSE) — one of the most permissive open-source licenses in common use.
