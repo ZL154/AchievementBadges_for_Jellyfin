@@ -114,13 +114,16 @@
             '--ab-color-bright:' + shades.bright + ';';
 
         var item = document.createElement('div');
-        item.className = 'ab-xb';
+        item.className = 'ab-xb ab-xb-' + rarity;
+        item.setAttribute('style', styleVars);
         if (isRare) item.classList.add('ab-xb-rare');
         item.innerHTML =
-            '<div class="ab-xb-circle" style="' + styleVars + '">' +
+            '<div class="ab-xb-circle">' +
+                '<span class="ab-xb-shimmer"></span>' +
                 '<span class="material-icons ab-xb-trophy">emoji_events</span>' +
             '</div>' +
-            '<div class="ab-xb-banner" style="' + styleVars + '">' +
+            '<div class="ab-xb-banner">' +
+                '<span class="ab-xb-shimmer ab-xb-shimmer-banner"></span>' +
                 '<div class="ab-xb-text">' +
                     '<div class="ab-xb-label">' + label + '</div>' +
                     '<div class="ab-xb-row">' +
@@ -358,13 +361,29 @@
 
             // ===== Xbox-style achievement toast =====
             '.ab-xb{position:relative;width:355px;height:90px;font-family:"Segoe UI",system-ui,sans-serif;pointer-events:none;}' +
-            '.ab-xb-circle{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:50%;background-color:var(--ab-color,#39960C);display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.1);z-index:2;box-shadow:0 4px 18px rgba(0,0,0,0.4);overflow:hidden;}' +
+            // Circle: solid base color + radial highlight so it looks spherical (3D), not flat
+            '.ab-xb-circle{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:50%;' +
+                'background-color:var(--ab-color,#39960C);' +
+                'background-image:radial-gradient(circle at 32% 28%,rgba(255,255,255,0.55) 0%,rgba(255,255,255,0.15) 25%,rgba(255,255,255,0) 55%),' +
+                                 'radial-gradient(circle at 70% 85%,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 60%);' +
+                'display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.1);z-index:2;' +
+                'box-shadow:0 4px 18px rgba(0,0,0,0.45),inset 0 0 12px rgba(255,255,255,0.12);' +
+                'overflow:hidden;}' +
             '.ab-xb-circle::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ab-color-lighter,#40a90e);opacity:0;z-index:0;}' +
             '.ab-xb-circle::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ab-color-darker,#32830a);opacity:0;z-index:0;}' +
-            '.ab-xb-trophy{position:relative;z-index:2;color:#fff;font-size:40px !important;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));}' +
-            '.ab-xb-banner{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:100px;background-color:var(--ab-color,#39960C);opacity:0;overflow:hidden;z-index:1;box-shadow:0 6px 24px rgba(0,0,0,0.45);}' +
-            // Subtle inner highlight/shadow on the banner so it\'s not flat
-            '.ab-xb-banner::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%,rgba(0,0,0,0.22) 100%);pointer-events:none;}' +
+            '.ab-xb-trophy{position:relative;z-index:3;color:#fff;font-size:40px !important;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));}' +
+            // Banner: solid base + vertical sheen gradient on top for depth
+            '.ab-xb-banner{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:100px;' +
+                'background-color:var(--ab-color,#39960C);' +
+                'background-image:linear-gradient(180deg,rgba(255,255,255,0.30) 0%,rgba(255,255,255,0.08) 35%,rgba(0,0,0,0) 60%,rgba(0,0,0,0.28) 100%);' +
+                'opacity:0;overflow:hidden;z-index:1;' +
+                'box-shadow:0 6px 24px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(255,255,255,0.10),inset 0 -2px 8px rgba(0,0,0,0.18);}' +
+            // Shimmer sweep (diagonal white gleam) - lives on both circle + banner, tiers animate it
+            '.ab-xb-shimmer{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;overflow:hidden;z-index:2;}' +
+            '.ab-xb-shimmer::after{content:"";position:absolute;top:-50%;left:-60%;width:40%;height:200%;' +
+                'background:linear-gradient(115deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,0.55) 50%,rgba(255,255,255,0) 65%,rgba(255,255,255,0) 100%);' +
+                'transform:translateX(0) skewX(-18deg);}' +
+            '.ab-xb-shimmer-banner{border-radius:100px;}' +
             '.ab-xb-text{position:absolute;left:95px;top:0;right:20px;height:100%;display:flex;flex-direction:column;justify-content:center;opacity:0;transform:translateY(85px);color:#fff;white-space:nowrap;}' +
             '.ab-xb-label{font-size:13px;font-weight:500;opacity:0.95;line-height:1.3;}' +
             '.ab-xb-row{font-size:15px;font-weight:700;display:flex;align-items:center;gap:4px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
@@ -378,8 +397,23 @@
             '.ab-xb-play .ab-xb-trophy{animation:abXbTrophyRotate 6s linear infinite;}' +
             '.ab-xb-play .ab-xb-banner{animation:abXbBanner 10.5s forwards,abXbBannerFill 10.5s forwards;}' +
             '.ab-xb-play .ab-xb-text{animation:abXbText 10.5s forwards;}' +
-            '.ab-xb-rare .ab-xb-banner{box-shadow:0 6px 28px rgba(0,0,0,0.45),0 0 40px var(--ab-color,#39960C);}' +
-            '.ab-xb-rare .ab-xb-circle{box-shadow:0 4px 18px rgba(0,0,0,0.4),0 0 30px var(--ab-color,#39960C);}' +
+            // Shimmer: sweeps across the banner + circle while banner is expanded
+            '.ab-xb-play .ab-xb-shimmer{animation:abXbShimmerOpacity 10.5s forwards;}' +
+            '.ab-xb-play .ab-xb-shimmer::after{animation:abXbShimmerSweep 10.5s forwards;}' +
+            // Baseline glow (rare+ tiers add much stronger glow)
+            '.ab-xb-banner{box-shadow:0 6px 24px rgba(0,0,0,0.5);}' +
+            '.ab-xb-rare .ab-xb-banner{box-shadow:0 6px 28px rgba(0,0,0,0.5),0 0 36px var(--ab-color,#39960C),0 0 70px var(--ab-color-lighter,#40a90e);}' +
+            '.ab-xb-rare .ab-xb-circle{box-shadow:0 4px 18px rgba(0,0,0,0.45),0 0 28px var(--ab-color,#39960C),inset 0 0 14px rgba(255,255,255,0.2);}' +
+            // Per-rarity intensifiers (more glow / faster shimmer for higher tiers)
+            '.ab-xb-epic      .ab-xb-banner{box-shadow:0 6px 28px rgba(0,0,0,0.5),0 0 42px var(--ab-color,#a78bfa),0 0 80px var(--ab-color-lighter,#c9b4ff);}' +
+            '.ab-xb-legendary .ab-xb-banner{box-shadow:0 6px 30px rgba(0,0,0,0.55),0 0 48px var(--ab-color,#f5b820),0 0 90px var(--ab-color-lighter,#ffd358),0 0 140px rgba(255,211,88,0.45);}' +
+            '.ab-xb-legendary .ab-xb-circle{box-shadow:0 4px 18px rgba(0,0,0,0.45),0 0 34px var(--ab-color,#f5b820),0 0 70px var(--ab-color-lighter,#ffd358),inset 0 0 16px rgba(255,255,255,0.28);}' +
+            '.ab-xb-mythic    .ab-xb-banner{box-shadow:0 6px 32px rgba(0,0,0,0.6),0 0 52px var(--ab-color,#dc3d56),0 0 100px var(--ab-color-lighter,#ff6b82),0 0 150px rgba(255,107,130,0.5);}' +
+            '.ab-xb-mythic    .ab-xb-circle{box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 38px var(--ab-color,#dc3d56),0 0 75px var(--ab-color-lighter,#ff6b82),inset 0 0 18px rgba(255,255,255,0.3);}' +
+            // Legendary + mythic shimmer sweeps twice + trophy glows
+            '.ab-xb-legendary.ab-xb-play .ab-xb-shimmer::after,.ab-xb-mythic.ab-xb-play .ab-xb-shimmer::after{animation:abXbShimmerSweep 10.5s forwards,abXbShimmerSweep2 10.5s forwards;}' +
+            '.ab-xb-legendary .ab-xb-trophy{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45)) drop-shadow(0 0 8px rgba(255,211,88,0.9));}' +
+            '.ab-xb-mythic    .ab-xb-trophy{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(255,107,130,0.9));}' +
             '@keyframes abXbCircle{' +
                 '0%{opacity:0;transform:scale(0.1) translateX(0);background-color:var(--ab-color,#39960C);}' +
                 '4%{opacity:1;transform:scale(1.1) translateX(0);}' +
@@ -431,6 +465,23 @@
                 '0%{transform:rotateY(0deg);}' +
                 '50%{transform:rotateY(360deg);}' +
                 '100%{transform:rotateY(0deg);}' +
+            '}' +
+            '@keyframes abXbShimmerOpacity{' +
+                '0%,27%{opacity:0;}' +
+                '30%{opacity:1;}' +
+                '82%{opacity:1;}' +
+                '84%,100%{opacity:0;}' +
+            '}' +
+            '@keyframes abXbShimmerSweep{' +
+                '0%,28%{transform:translateX(0) skewX(-18deg);}' +
+                '46%{transform:translateX(900%) skewX(-18deg);}' +
+                '100%{transform:translateX(900%) skewX(-18deg);}' +
+            '}' +
+            '@keyframes abXbShimmerSweep2{' +
+                '0%,58%{transform:translateX(0) skewX(-18deg);opacity:0;}' +
+                '59%{opacity:1;}' +
+                '76%{transform:translateX(900%) skewX(-18deg);opacity:1;}' +
+                '77%,100%{opacity:0;}' +
             '}';
         document.head.appendChild(style);
 
