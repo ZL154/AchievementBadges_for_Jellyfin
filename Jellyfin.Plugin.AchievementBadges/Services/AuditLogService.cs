@@ -84,7 +84,9 @@ public class AuditLogService
     {
         try
         {
-            File.WriteAllText(_path, JsonSerializer.Serialize(_entries, _json));
+            var tmp = _path + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(_entries, _json));
+            File.Move(tmp, _path, overwrite: true);
         }
         catch (Exception ex)
         {

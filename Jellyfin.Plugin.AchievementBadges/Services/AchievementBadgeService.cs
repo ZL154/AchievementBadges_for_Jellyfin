@@ -2211,7 +2211,12 @@ public class AchievementBadgeService
         };
 
         var json = JsonSerializer.Serialize(store, _jsonOptions);
-        File.WriteAllText(_dataFilePath, json);
+        // Atomic write: serialize to .tmp then rename. Prevents JSON corruption
+        // if the process is killed / machine loses power mid-write, which would
+        // otherwise wipe every user's unlocked badges.
+        var tmp = _dataFilePath + ".tmp";
+        File.WriteAllText(tmp, json);
+        File.Move(tmp, _dataFilePath, overwrite: true);
     }
 
     private static AchievementBadge CreateBadgeFromDefinition(AchievementDefinition def, string userId)
