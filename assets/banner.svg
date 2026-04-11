@@ -1,69 +1,140 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
   <defs>
-    <linearGradient id="redLine" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#8b0000"/>
-      <stop offset="50%" stop-color="#dc2626"/>
-      <stop offset="100%" stop-color="#8b0000"/>
+    <!-- Background gradient -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#1a0f2e" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#0d0a1a" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#050409" stop-opacity="1"/>
+    </radialGradient>
+
+    <!-- Rarity rainbow gradient for accent line -->
+    <linearGradient id="rarityBar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6b7280"/>
+      <stop offset="20%" stop-color="#34d399"/>
+      <stop offset="40%" stop-color="#60a5fa"/>
+      <stop offset="60%" stop-color="#a78bfa"/>
+      <stop offset="80%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#ef4444"/>
     </linearGradient>
+
+    <!-- Title gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#a3b5f7"/>
+    </linearGradient>
+
+    <!-- Trophy gradient -->
+    <linearGradient id="trophyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd700"/>
+      <stop offset="50%" stop-color="#ff9800"/>
+      <stop offset="100%" stop-color="#e91e63"/>
+    </linearGradient>
+
+    <!-- Trophy glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle grain -->
+    <filter id="noise">
+      <feTurbulence baseFrequency="0.9" numOctaves="2"/>
+      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.03 0"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="600" fill="#1a1a1a"/>
+  <rect width="1200" height="400" fill="url(#bgGlow)"/>
 
-  <!-- Top red line -->
-  <rect width="1200" height="4" fill="url(#redLine)"/>
-  <!-- Bottom red line -->
-  <rect y="596" width="1200" height="4" fill="url(#redLine)"/>
+  <!-- Radial highlight behind trophy -->
+  <circle cx="260" cy="200" r="180" fill="#667eea" opacity="0.08"/>
+  <circle cx="260" cy="200" r="120" fill="#764ba2" opacity="0.12"/>
 
-  <!-- Corner brackets -->
-  <!-- Top left -->
-  <line x1="50" y1="45" x2="50" y2="100" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-  <line x1="50" y1="45" x2="105" y2="45" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-  <!-- Top right -->
-  <line x1="1150" y1="45" x2="1150" y2="100" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-  <line x1="1150" y1="45" x2="1095" y2="45" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-  <!-- Bottom left -->
-  <line x1="50" y1="555" x2="50" y2="500" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-  <line x1="50" y1="555" x2="105" y2="555" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-  <!-- Bottom right -->
-  <line x1="1150" y1="555" x2="1150" y2="500" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-  <line x1="1150" y1="555" x2="1095" y2="555" stroke="#dc2626" stroke-width="3" opacity="0.7"/>
-
-  <!-- Trophy icon -->
-  <g transform="translate(340, 280)">
-    <!-- Cup -->
-    <path d="M-30,-45 L-30,-65 L30,-65 L30,-45 C30,-15 16,8 0,16 C-16,8 -30,-15 -30,-45Z" fill="#dc2626"/>
-    <!-- Handles -->
-    <path d="M-30,-42 C-46,-42 -52,-26 -46,-12 C-43,-7 -34,-10 -30,-18" fill="none" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
-    <path d="M30,-42 C46,-42 52,-26 46,-12 C43,-7 34,-10 30,-18" fill="none" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
-    <!-- Star -->
-    <polygon points="0,-48 4,-38 14,-38 6,-31 9,-21 0,-28 -9,-21 -6,-31 -14,-38 -4,-38" fill="#1a1a1a" opacity="0.4"/>
-    <!-- Stem -->
-    <rect x="-5" y="16" width="10" height="16" rx="2" fill="#991b1b"/>
-    <!-- Base -->
-    <rect x="-18" y="32" width="36" height="7" rx="3" fill="#991b1b"/>
+  <!-- Constellation dots -->
+  <g fill="#ffffff" opacity="0.25">
+    <circle cx="100" cy="60" r="1.5"/>
+    <circle cx="180" cy="100" r="1"/>
+    <circle cx="80" cy="340" r="1"/>
+    <circle cx="150" cy="300" r="1.5"/>
+    <circle cx="1100" cy="80" r="1"/>
+    <circle cx="1050" cy="120" r="1.5"/>
+    <circle cx="1150" cy="280" r="1"/>
+    <circle cx="1080" cy="340" r="1.5"/>
+    <circle cx="950" cy="60" r="1"/>
+    <circle cx="900" cy="340" r="1"/>
+    <circle cx="700" cy="50" r="1"/>
+    <circle cx="550" cy="60" r="1.5"/>
+    <circle cx="420" cy="60" r="1"/>
+    <circle cx="500" cy="340" r="1"/>
+    <circle cx="800" cy="350" r="1.5"/>
+  </g>
+  <g fill="#a3b5f7" opacity="0.4">
+    <circle cx="120" cy="180" r="2"/>
+    <circle cx="1080" cy="200" r="2"/>
+    <circle cx="420" cy="90" r="1.5"/>
+    <circle cx="780" cy="320" r="1.5"/>
   </g>
 
-  <!-- Main title - white with red shadow for glitch effect -->
-  <text x="620" y="270" text-anchor="middle" font-family="'Georgia','Times New Roman',serif" font-size="72" font-weight="900" fill="#dc2626" letter-spacing="8" opacity="0.6">ACHIEVEMENT</text>
-  <text x="618" y="268" text-anchor="middle" font-family="'Georgia','Times New Roman',serif" font-size="72" font-weight="900" fill="white" letter-spacing="8">ACHIEVEMENT</text>
+  <!-- Top corner bracket accents -->
+  <path d="M 40,40 L 40,100 M 40,40 L 100,40" stroke="#667eea" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M 1160,40 L 1160,100 M 1160,40 L 1100,40" stroke="#667eea" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M 40,360 L 40,300 M 40,360 L 100,360" stroke="#667eea" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M 1160,360 L 1160,300 M 1160,360 L 1100,360" stroke="#667eea" stroke-width="2" fill="none" opacity="0.6"/>
 
-  <text x="620" y="340" text-anchor="middle" font-family="'Georgia','Times New Roman',serif" font-size="72" font-weight="900" fill="#dc2626" letter-spacing="8" opacity="0.6">BADGES</text>
-  <text x="618" y="338" text-anchor="middle" font-family="'Georgia','Times New Roman',serif" font-size="72" font-weight="900" fill="white" letter-spacing="8">BADGES</text>
+  <!-- Trophy icon - left side with glow -->
+  <g transform="translate(260, 200)" filter="url(#glow)">
+    <!-- Handles -->
+    <path d="M -55,-60 C -90,-60 -100,-30 -85,-5 C -75,10 -55,5 -48,-15" fill="none" stroke="url(#trophyGrad)" stroke-width="7" stroke-linecap="round"/>
+    <path d="M 55,-60 C 90,-60 100,-30 85,-5 C 75,10 55,5 48,-15" fill="none" stroke="url(#trophyGrad)" stroke-width="7" stroke-linecap="round"/>
+    <!-- Cup -->
+    <path d="M -55,-80 L -55,-35 C -55,10 -35,35 0,45 C 35,35 55,10 55,-35 L 55,-80 Z" fill="url(#trophyGrad)"/>
+    <!-- Rim highlight -->
+    <rect x="-58" y="-85" width="116" height="8" rx="3" fill="#ffd700"/>
+    <!-- Star on cup -->
+    <polygon points="0,-50 6,-32 25,-32 10,-20 16,-2 0,-13 -16,-2 -10,-20 -25,-32 -6,-32" fill="#ffffff" opacity="0.85"/>
+    <!-- Stem -->
+    <rect x="-8" y="45" width="16" height="22" rx="3" fill="url(#trophyGrad)"/>
+    <!-- Base -->
+    <rect x="-32" y="67" width="64" height="10" rx="4" fill="url(#trophyGrad)"/>
+    <!-- Base shadow -->
+    <ellipse cx="0" cy="82" rx="40" ry="4" fill="#000000" opacity="0.5"/>
+  </g>
+
+  <!-- Label above title -->
+  <text x="430" y="125" font-family="'Segoe UI',system-ui,sans-serif" font-size="14" fill="#667eea" letter-spacing="6" font-weight="700">PROGRESSION SYSTEM</text>
+
+  <!-- Main title -->
+  <text x="430" y="210" font-family="'Segoe UI',system-ui,-apple-system,sans-serif" font-size="76" font-weight="900" fill="url(#titleGrad)" letter-spacing="-2">ACHIEVEMENT</text>
+  <text x="430" y="275" font-family="'Segoe UI',system-ui,-apple-system,sans-serif" font-size="76" font-weight="900" fill="url(#titleGrad)" letter-spacing="-2">BADGES</text>
 
   <!-- Subtitle -->
-  <text x="618" y="400" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="18" fill="#666" letter-spacing="12" font-weight="400">F O R   J E L L Y F I N</text>
+  <text x="430" y="305" font-family="'Segoe UI',system-ui,sans-serif" font-size="16" fill="#6b7280" letter-spacing="2" font-weight="500">for Jellyfin · 170+ achievements · 10-tier rank system</text>
 
-  <!-- Rarity bar -->
-  <g transform="translate(600, 480)" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700">
-    <circle cx="-200" cy="0" r="4" fill="#6b7280"/><text x="-200" y="18" fill="#6b7280">COMMON</text>
-    <circle cx="-120" cy="0" r="4" fill="#34d399"/><text x="-120" y="18" fill="#34d399">UNCOMMON</text>
-    <circle cx="-40" cy="0" r="4" fill="#60a5fa"/><text x="-40" y="18" fill="#60a5fa">RARE</text>
-    <circle cx="40" cy="0" r="4" fill="#a78bfa"/><text x="40" y="18" fill="#a78bfa">EPIC</text>
-    <circle cx="120" cy="0" r="4" fill="#fbbf24"/><text x="120" y="18" fill="#fbbf24">LEGENDARY</text>
-    <circle cx="200" cy="0" r="4" fill="#ef4444"/><text x="200" y="18" fill="#ef4444">MYTHIC</text>
+  <!-- Rarity accent bar -->
+  <rect x="430" y="325" width="500" height="3" rx="1.5" fill="url(#rarityBar)"/>
+
+  <!-- Rarity dots row -->
+  <g font-family="'Segoe UI',system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="1.5">
+    <circle cx="440" cy="355" r="3" fill="#6b7280"/>
+    <text x="448" y="359" fill="#6b7280">COMMON</text>
+
+    <circle cx="530" cy="355" r="3" fill="#34d399"/>
+    <text x="538" y="359" fill="#34d399">UNCOMMON</text>
+
+    <circle cx="630" cy="355" r="3" fill="#60a5fa"/>
+    <text x="638" y="359" fill="#60a5fa">RARE</text>
+
+    <circle cx="695" cy="355" r="3" fill="#a78bfa"/>
+    <text x="703" y="359" fill="#a78bfa">EPIC</text>
+
+    <circle cx="760" cy="355" r="3" fill="#fbbf24"/>
+    <text x="768" y="359" fill="#fbbf24">LEGENDARY</text>
+
+    <circle cx="860" cy="355" r="3" fill="#ef4444"/>
+    <text x="868" y="359" fill="#ef4444">MYTHIC</text>
   </g>
-
-  <!-- Bottom text -->
-  <text x="600" y="555" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" fill="#444" letter-spacing="3" font-weight="600">JELLYFIN 10.11+ PLUGIN</text>
 </svg>

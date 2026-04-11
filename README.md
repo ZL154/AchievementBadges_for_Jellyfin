@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/Jellyfin-10.11%2B-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
   <img src="https://img.shields.io/badge/Type-Plugin-E50914?style=for-the-badge&labelColor=000000&color=E50914" />
   <img src="https://img.shields.io/badge/System-Achievements-darkred?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Version-1.5.9-darkred?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Version-1.5.11-gold?style=for-the-badge" />
 </p>
 
 # 🏆 Achievement Badges for Jellyfin
@@ -26,7 +26,7 @@ A full progression, gamification and achievement system for Jellyfin that reward
 
 ## ✨ Overview
 
-Over **100 built-in achievements** across dozens of categories, a 10-tier rank ladder from Rookie to Immortal, a score economy with combos, prestige, and daily/weekly quests, plus admin power features like custom badges, seasonal challenges, webhook notifications and a full audit log.
+Over **170 built-in achievements** across 30+ categories, a 10-tier rank ladder from Rookie to Immortal, a score economy with combos, prestige, and daily/weekly quests, plus admin power features like custom badges, seasonal challenges, webhook notifications and a full audit log.
 
 Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin, ElegantFin, or StarTrack.
 
@@ -205,11 +205,6 @@ POST      /Plugins/AchievementBadges/admin/users/{userId}/inject-counters
 
 ---
 
-## 🖼 Showcase
-
-_Screenshots coming with v1.5.x once UI is stable_
-
----
 See the [Releases page](https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases) for full notes.
 
 ---
