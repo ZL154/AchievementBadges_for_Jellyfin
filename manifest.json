@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.5.2",
+        "changelog": "Diagnostic + resilience hotfix for sidebar/header injection missing on some servers. Added verbose console logging from inline injection script so we can see exactly which step fails. Added aggressive retry loop (every 1s for 15s plus 500ms/2s delayed injections) so other plugins rebuilding the nav menu can no longer permanently clobber our entry. Expanded nav container selectors to match more Jellyfin themes. Added server-side logging to the middleware so we can confirm if it's even firing for /web/index.html requests.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.2/Jellyfin.Plugin.AchievementBadgesv1.5.2.zip",
+        "checksum": "970041E2D63B9B64E1E59851894B59D6"
+      },
+      {
         "version": "1.5.1",
         "changelog": "Security fix + massive feature set. SECURITY: every admin endpoint now requires RequiresElevation policy so regular users can no longer change plugin config. Prestige system (reset rank after Legend to earn a prestige star, lifetime score preserved). Score bank earned per playback with combo multipliers (10%+ per consecutive watch). Spend score bank to buy any locked badge. Gift score between users. Daily quest rotation with 8 templates, shared deterministically across users, completing rewards the bank. Recommendation engine chases the badge - shows exactly which items to watch to complete a specific badge. Export / import profile JSON. Per-badge reset. Admin progress injection for testing. Audit log of all unlocks. Visual badge editor form (no more JSON). Challenge templates (1-click create monthly, Halloween, New Year, Summer). Stats tab with genre radar, heatmap placeholder, score histogram. Rank themes unlock CSS overrides at Enthusiast, Binger, Connoisseur, Maestro, Legend, Immortal. Slack webhook format auto-detected from URL.",
         "targetAbi": "10.11.0.0",

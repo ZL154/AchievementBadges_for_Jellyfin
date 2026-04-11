@@ -14,6 +14,7 @@ public class SidebarInjectionMiddleware
 
     private const string InjectionScript = @"<script>
 (function(){
+    try { console.log('[AchievementBadges] inline injection script loaded'); } catch(e){}
     var SIDEBAR_ID='ab-sidebar-entry';
     var SHOWCASE_ID='ab-sidebar-showcase';
     var HEADER_ID='ab-header-badges';
@@ -41,33 +42,49 @@ public class SidebarInjectionMiddleware
     }
 
     function injectSidebar(){
-        if(document.getElementById(SIDEBAR_ID))return;
-        var nav=document.querySelector('.mainDrawer-scrollContainer .navMenuOptions')||document.querySelector('.mainDrawer-scrollContainer');
-        if(!nav)return;
-        var wrap=document.createElement('div');wrap.id=SIDEBAR_ID;
-        var a=document.createElement('a');a.className='navMenuOption';a.style.cursor='pointer';
-        a.innerHTML='<span class=""material-icons navMenuOptionIcon"">emoji_events</span><span class=""navMenuOptionText"">Achievements</span>';
-        a.addEventListener('click',function(e){e.preventDefault();window.location.hash='/achievements';});
-        wrap.appendChild(a);
-        var showcase=document.createElement('div');showcase.id=SHOWCASE_ID;
-        showcase.style.cssText='display:flex;gap:4px;padding:2px 12px 8px 42px;flex-wrap:wrap;';
-        wrap.appendChild(showcase);
-        nav.appendChild(wrap);
-        refreshShowcases();
+        try {
+            if(document.getElementById(SIDEBAR_ID)){ return; }
+            // Try multiple selectors — different Jellyfin themes/plugins rebuild the nav menu differently.
+            var nav = document.querySelector('.mainDrawer-scrollContainer .navMenuOptions')
+                   || document.querySelector('.mainDrawer-scrollContainer')
+                   || document.querySelector('.navDrawer-scrollContainer')
+                   || document.querySelector('.drawer-navigationPlugins')
+                   || document.querySelector('.navMenuOptions')
+                   || document.querySelector('[is=""emby-scroller""] .navMenuOptions');
+            if(!nav){
+                return;
+            }
+            console.log('[AchievementBadges] injectSidebar: found nav container, adding entry');
+            var wrap=document.createElement('div');wrap.id=SIDEBAR_ID;
+            var a=document.createElement('a');a.className='navMenuOption';a.style.cursor='pointer';
+            a.innerHTML='<span class=""material-icons navMenuOptionIcon"">emoji_events</span><span class=""navMenuOptionText"">Achievements</span>';
+            a.addEventListener('click',function(e){e.preventDefault();window.location.hash='/achievements';});
+            wrap.appendChild(a);
+            var showcase=document.createElement('div');showcase.id=SHOWCASE_ID;
+            showcase.style.cssText='display:flex;gap:4px;padding:2px 12px 8px 42px;flex-wrap:wrap;';
+            wrap.appendChild(showcase);
+            nav.appendChild(wrap);
+            refreshShowcases();
+        } catch(e) { console.error('[AchievementBadges] injectSidebar error:', e); }
     }
 
     function injectHeader(){
-        if(document.getElementById(HEADER_ID))return;
-        var headerRight=document.querySelector('.headerRight')||document.querySelector('.skinHeader .headerButton:last-child');
-        if(!headerRight)return;
-        var container=document.createElement('div');container.id=HEADER_ID;
-        container.style.cssText='display:flex;align-items:center;gap:3px;margin-right:6px;';
-        container.title='Equipped Badges';
-        container.style.cursor='pointer';
-        container.addEventListener('click',function(){window.location.hash='/achievements';});
-        var parent=headerRight.parentElement;
-        if(parent)parent.insertBefore(container,headerRight);
-        refreshShowcases();
+        try {
+            if(document.getElementById(HEADER_ID)){ return; }
+            var headerRight=document.querySelector('.headerRight')||document.querySelector('.skinHeader .headerButton:last-child');
+            if(!headerRight){
+                return;
+            }
+            console.log('[AchievementBadges] injectHeader: found header, adding badges container');
+            var container=document.createElement('div');container.id=HEADER_ID;
+            container.style.cssText='display:flex;align-items:center;gap:3px;margin-right:6px;';
+            container.title='Equipped Badges';
+            container.style.cursor='pointer';
+            container.addEventListener('click',function(){window.location.hash='/achievements';});
+            var parent=headerRight.parentElement;
+            if(parent)parent.insertBefore(container,headerRight);
+            refreshShowcases();
+        } catch(e) { console.error('[AchievementBadges] injectHeader error:', e); }
     }
 
     function refreshShowcases(){
@@ -99,12 +116,38 @@ public class SidebarInjectionMiddleware
         });
     }
 
+    function tryInject(){
+        injectSidebar();
+        injectHeader();
+    }
+
     function start(){
-        injectSidebar();injectHeader();
-        new MutationObserver(function(){injectSidebar();injectHeader();}).observe(document.body,{childList:true,subtree:true});
+        try { console.log('[AchievementBadges] start() running, readyState=', document.readyState); } catch(e){}
+        tryInject();
+        // Retry on a loop for the first 15 seconds in case nav hasn't mounted yet
+        // or another plugin rebuilt it after we injected
+        var attempts = 0;
+        var retryInterval = setInterval(function(){
+            attempts++;
+            tryInject();
+            if(attempts >= 15){ clearInterval(retryInterval); }
+        }, 1000);
+        // MutationObserver catches any later nav rebuilds (e.g. SPA route changes)
+        if(document.body){
+            new MutationObserver(function(){tryInject();}).observe(document.body,{childList:true,subtree:true});
+        }
+        // Refresh equipped badge content periodically
         setInterval(refreshShowcases,30000);
     }
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+    if(document.readyState==='loading'){
+        document.addEventListener('DOMContentLoaded',start);
+    } else {
+        start();
+    }
+    // Also kick off start() after a small delay as a belt-and-braces approach,
+    // since some themes load asynchronously and the initial DOM is minimal
+    setTimeout(function(){ try{ tryInject(); }catch(e){} }, 500);
+    setTimeout(function(){ try{ tryInject(); }catch(e){} }, 2000);
 })();
 </script>
 <script src=""/Plugins/AchievementBadges/client-script/standalone"" defer></script>
@@ -123,6 +166,8 @@ public class SidebarInjectionMiddleware
             await _next(context);
             return;
         }
+
+        _logger.LogInformation("[AchievementBadges] middleware handling index.html request: {Path}", context.Request.Path.Value);
 
         var originalBody = context.Response.Body;
 
@@ -150,9 +195,17 @@ public class SidebarInjectionMiddleware
                     context.Response.Body = originalBody;
                     await context.Response.Body.WriteAsync(bytes);
 
-                    _logger.LogInformation("[AchievementBadges] Injected scripts.");
+                    _logger.LogInformation("[AchievementBadges] Injected scripts into {Path} ({Bytes} bytes).", context.Request.Path.Value, bytes.Length);
                     return;
                 }
+                else
+                {
+                    _logger.LogWarning("[AchievementBadges] middleware: response HTML did not contain </body> tag, skipping injection. Content-Type={ContentType}", context.Response.ContentType);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("[AchievementBadges] middleware: response content type not HTML, skipping injection. Content-Type={ContentType}", context.Response.ContentType);
             }
 
             buffer.Seek(0, SeekOrigin.Begin);
