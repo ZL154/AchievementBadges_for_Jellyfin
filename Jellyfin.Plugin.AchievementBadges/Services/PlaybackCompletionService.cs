@@ -37,7 +37,8 @@ public class PlaybackCompletionService
         bool isSeriesCompleted,
         double completionPercent,
         DateTimeOffset playedAt,
-        out string message)
+        out string message,
+        string? libraryName = null)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -94,7 +95,7 @@ public class PlaybackCompletionService
             isMovie,
             isEpisode,
             isSeriesCompleted,
-            null,
+            libraryName,
             playedAt);
 
         message = "Playback completion recorded.";

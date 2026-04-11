@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.4.8",
+        "changelog": "Fix live playback tracker silently dropping every event on Jellyfin 10.11 (reflection couldn't find UserId/SessionInfo because the real properties are Session and Users). Tracker now uses strong-typed PlaybackProgressEventArgs. Fix Explorer badge library detection - both backfill and live tracker now use ILibraryManager.GetCollectionFolders() instead of walking parents looking for CollectionFolder by class name. Live playback also now contributes to Explorer / UniqueLibrariesVisited.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.4.8/Jellyfin.Plugin.AchievementBadgesv1.4.8.zip",
+        "checksum": "70CCA9FE1B2B255D99569D558BC765AC"
+      },
+      {
         "version": "1.4.7",
         "changelog": "Fix watch history backfill counting items but leaving badges locked at 0. AchievementBadgeService now normalizes user IDs to canonical dashed-GUID format at every entry point, and Load() migrates existing profiles so dashed/non-dashed duplicates are merged. Fix live playback tracker never registering - PlaybackCompletionTracker is now an IHostedService so its PlaybackProgress/PlaybackStopped subscriptions actually run. Added diagnostic logging for silent extraction failures.",
         "targetAbi": "10.11.0.0",

@@ -221,20 +221,16 @@ public class WatchHistoryBackfillService
     {
         try
         {
-            var parent = item;
-            while (parent != null)
+            var folders = _libraryManager.GetCollectionFolders(item);
+            var name = folders?.FirstOrDefault()?.Name;
+            if (!string.IsNullOrWhiteSpace(name))
             {
-                var typeName = parent.GetType().Name;
-                if (typeName == "CollectionFolder" || parent.GetParent() == null)
-                {
-                    return parent.Name ?? string.Empty;
-                }
-
-                parent = parent.GetParent();
+                return name;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "[AchievementBadges] Failed to resolve collection folder for item {ItemId}.", item.Id);
         }
 
         return string.Empty;
