@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="1070" alt="achievement-banner" src="https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png" />
+  <img alt="achievement-banner" src="https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png" />
 </p>
 
 ```text
@@ -15,14 +15,14 @@
   <img src="https://img.shields.io/badge/Jellyfin-10.11%2B-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
   <img src="https://img.shields.io/badge/Type-Plugin-E50914?style=for-the-badge&labelColor=000000&color=E50914" />
   <img src="https://img.shields.io/badge/System-Achievements-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
-  <img src="https://img.shields.io/badge/Version-1.5.11-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
+  <img src="https://img.shields.io/badge/Version-1.5.18-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
 </p>
 
 # 🏆 Achievement Badges for Jellyfin
 
 A full progression, gamification and achievement system for Jellyfin that rewards users based on real viewing activity. Think Xbox Gamerscore meets Letterboxd, built natively into your media server.
 
-> **Status:** Feature-complete as of v1.5.11. Bug fixes and Jellyfin version compatibility will continue; new features will be considered via [pull request](https://github.com/ZL154/AchievementBadges_for_Jellyfin/pulls).
+> **Status:** Feature-complete as of v1.5.11 — the 1.5.12–1.5.18 releases have focused on polish (Xbox-style toasts, gradient tones, banner refinement). Bug fixes and Jellyfin version compatibility will continue; new features will be considered via [pull request](https://github.com/ZL154/AchievementBadges_for_Jellyfin/pulls).
 
 ---
 
@@ -37,7 +37,7 @@ Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin
 ## 🧩 Core features
 
 ### 🏅 Badge system
-- **100+ built-in achievements** across Films, Series, Binge, Night Watching, Morning, Weekend, Exploration, Streaks, Episode/Film Marathons, Eras, World, Languages, Genres, Runtime, Total Time, Holidays (Christmas, New Year, Halloween, Eid), Library Completion, Loyalty, People, Rewatch, and Hidden categories
+- **170+ built-in achievements** across Films, Series, Binge, Night Watching, Morning, Weekend, Exploration, Streaks, Episode/Film Marathons, Eras, World, Languages, Genres, Runtime, Total Time, Holidays (Christmas, New Year, Halloween, Eid), Library Completion, Loyalty, People, Rewatch, and Hidden categories
 - **6 rarity tiers** — Common, Uncommon, Rare, Epic, Legendary, Mythic
 - **Hidden/secret badges** displayed as `???` until unlocked
 - **Library completion milestones** that auto-scale to any library structure
@@ -51,7 +51,7 @@ Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin
 - **10 tiers** from Rookie → Novice → Viewer → Regular → Enthusiast → Binger → Connoisseur → Maestro → Legend → Immortal
 - Rank computed from your achievement score with progress bar to next tier
 - **Theme unlocks** — the achievements page changes gradient/border color as you climb
-- Home widget shows your current rank, score, and next tier target
+- Sidebar badge showcase + header dots display your current equipped badges at a glance
 
 ### 💰 Score economy
 - Every playback accrues 5 base points into a **score bank**
@@ -81,9 +81,9 @@ Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin
 
 ### 🏠 UI integration
 - **Sidebar entry** auto-injected into the Jellyfin nav menu
-- **Home screen widget** showing rank and 3 closest-to-unlock badges
 - **Equipped badge showcase** in header + profile
-- **Unlock toast notifications** that pop up during playback (polled every 30s)
+- **Xbox-style unlock toasts** that pop up during playback (polled every 30s), with per-rarity glow, shimmer sweep and confetti on rare+ unlocks
+- **Admin toast preview** — test buttons in the admin panel fire a sample toast for each rarity tier
 - **Standalone achievements page** at `#!/achievements`
 - **Shareable profile card** — server-rendered HTML at `/Plugins/AchievementBadges/users/{id}/profile-card`
 
@@ -152,7 +152,6 @@ https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/mani
 | Runtime badges | Items with `RunTimeTicks` populated |
 | Library completion | At least one library folder with items |
 | Webhook notifications | A webhook URL (Discord, Slack, or generic) |
-| Home widget | `.homeSectionsContainer` in the DOM (standard Jellyfin) |
 
 ---
 
