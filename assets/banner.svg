@@ -1,17 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 160" width="500" height="160" role="img" aria-label="Xbox-style achievement unlocked animation">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" width="420" height="120" role="img" aria-label="Xbox-style achievement unlocked animation">
   <!--
-    Literal Xbox achievement animation (Adam Cosman codepen recreation).
-    Circle expands into a banner, trophy rotates, text slides up, then collapses back.
-    One 10.5s loop. Colors cycle through the six rarity tiers so visitors see every shade.
+    Literal Xbox achievement popup animation recreated in SVG.
+    Adapted directly from Adam Cosman's codepen: circle grows, slides left, banner
+    expands behind it, text slides up, then everything collapses back. 10.5s loop.
+    Rarity color cycles through all six tiers on a 63s master loop.
   -->
   <defs>
     <linearGradient id="bannerSheen" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.22"/>
-      <stop offset="45%"  stop-color="#ffffff" stop-opacity="0"/>
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="35%"  stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="60%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.28"/>
     </linearGradient>
 
-    <!-- Trophy (all white, drawn from the center) -->
+    <radialGradient id="circleSheen" cx="32%" cy="28%" r="65%">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="25%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.25"/>
+    </radialGradient>
+
+    <!-- Trophy (all white, centered) -->
     <g id="trophy">
       <path d="M -14,-16 L -14,-20 L 14,-20 L 14,-16 C 14,-5 9,4 0,8 C -9,4 -14,-5 -14,-16 Z" fill="#ffffff"/>
       <path d="M -14,-14 C -20,-14 -22,-9 -20,-4" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
@@ -21,10 +30,10 @@
     </g>
   </defs>
 
-  <g transform="translate(250, 80)" font-family="'Segoe UI','Helvetica Neue',system-ui,sans-serif">
+  <g transform="translate(210, 60)" font-family="'Segoe UI','Helvetica Neue',system-ui,sans-serif">
 
-    <!-- ================= BANNER ================= -->
-    <rect x="-37.5" y="-37.5" width="75" height="75" rx="37.5" ry="37.5" fill="#39960C" opacity="0">
+    <!-- ================= BANNER (base color) ================= -->
+    <rect x="-37.5" y="-37.5" width="75" height="75" rx="37.5" ry="37.5" fill="#34d399" opacity="0">
       <animate attributeName="fill" dur="63s" repeatCount="indefinite"
         values="#34d399;#34d399;#60a5fa;#60a5fa;#a78bfa;#a78bfa;#f5b820;#f5b820;#dc3d56;#dc3d56;#9fb3c8;#9fb3c8;#34d399"
         keyTimes="0;0.166;0.1665;0.333;0.3335;0.5;0.5005;0.666;0.6665;0.833;0.8335;0.999;1"/>
@@ -39,7 +48,7 @@
         keyTimes="0;0.11;0.24;0.85;0.89;1"/>
     </rect>
 
-    <!-- Banner inner highlight/shadow so it isn't flat -->
+    <!-- Banner inner highlight/shadow sheen -->
     <rect x="-37.5" y="-37.5" width="75" height="75" rx="37.5" ry="37.5" fill="url(#bannerSheen)" opacity="0" pointer-events="none">
       <animate attributeName="opacity" dur="10.5s" repeatCount="indefinite"
         values="0;0;1;1;1;0;0"
@@ -63,45 +72,44 @@
 
       <text x="-82" y="-6" font-size="13" font-weight="500" fill="#ffffff">Rare achievement unlocked</text>
       <text x="-82" y="17" font-size="15" font-weight="800" fill="#ffffff">G 170</text>
-      <text x="-52" y="17" font-size="15" font-weight="600" fill="#ffffff" opacity="0.85">–</text>
+      <text x="-52" y="17" font-size="15" font-weight="600" fill="#ffffff" opacity="0.85">&#8211;</text>
       <text x="-40" y="17" font-size="15" font-weight="700" fill="#ffffff">Achievement Badges</text>
     </g>
 
-    <!-- ================= CIRCLE + TROPHY ================= -->
-    <!-- The whole group translates left when the banner expands -->
+    <!-- ================= CIRCLE (translates left as banner expands) ================= -->
     <g>
       <animateTransform attributeName="transform" type="translate" dur="10.5s" repeatCount="indefinite"
         values="0 0;0 0;0 0;-140 0;-140 0;0 0;0 0"
         keyTimes="0;0.05;0.11;0.24;0.85;0.89;1"/>
 
-      <!-- Lighter pulse ring (::before equivalent) -->
-      <circle r="37.5" fill="#40a90e" opacity="0">
+      <!-- Lighter pulse ring (::before) -->
+      <circle r="37.5" fill="#5ee5b0" opacity="0">
         <animate attributeName="fill" dur="63s" repeatCount="indefinite"
           values="#5ee5b0;#5ee5b0;#8ec3ff;#8ec3ff;#c9b4ff;#c9b4ff;#ffd358;#ffd358;#ff6b82;#ff6b82;#c0d1e0;#c0d1e0;#5ee5b0"
           keyTimes="0;0.166;0.1665;0.333;0.3335;0.5;0.5005;0.666;0.6665;0.833;0.8335;0.999;1"/>
         <animate attributeName="r" dur="10.5s" repeatCount="indefinite"
-          values="0;0;60;60;60;60"
-          keyTimes="0;0.02;0.06;0.08;0.10;1"/>
+          values="0;0;62;62;62"
+          keyTimes="0;0.02;0.07;0.10;1"/>
         <animate attributeName="opacity" dur="10.5s" repeatCount="indefinite"
-          values="0;0;0.7;0;0;0"
-          keyTimes="0;0.02;0.05;0.08;0.10;1"/>
+          values="0;0;0.75;0;0"
+          keyTimes="0;0.02;0.055;0.10;1"/>
       </circle>
 
-      <!-- Darker pulse ring (::after equivalent) -->
-      <circle r="37.5" fill="#32830a" opacity="0">
+      <!-- Darker pulse ring (::after) -->
+      <circle r="37.5" fill="#1d9268" opacity="0">
         <animate attributeName="fill" dur="63s" repeatCount="indefinite"
           values="#1d9268;#1d9268;#2f6cc4;#2f6cc4;#6b4ed0;#6b4ed0;#b88200;#b88200;#8b1a2d;#8b1a2d;#6b7d90;#6b7d90;#1d9268"
           keyTimes="0;0.166;0.1665;0.333;0.3335;0.5;0.5005;0.666;0.6665;0.833;0.8335;0.999;1"/>
         <animate attributeName="r" dur="10.5s" repeatCount="indefinite"
-          values="0;0;60;60;60;60"
-          keyTimes="0;0.03;0.07;0.09;0.11;1"/>
+          values="0;0;62;62;62"
+          keyTimes="0;0.03;0.08;0.11;1"/>
         <animate attributeName="opacity" dur="10.5s" repeatCount="indefinite"
-          values="0;0;0.55;0;0;0"
-          keyTimes="0;0.03;0.06;0.09;0.11;1"/>
+          values="0;0;0.6;0;0"
+          keyTimes="0;0.03;0.065;0.11;1"/>
       </circle>
 
-      <!-- Main circle -->
-      <circle r="0" fill="#39960C" opacity="0">
+      <!-- Main circle (solid base color) -->
+      <circle r="0" fill="#34d399" opacity="0">
         <animate attributeName="fill" dur="63s" repeatCount="indefinite"
           values="#34d399;#34d399;#60a5fa;#60a5fa;#a78bfa;#a78bfa;#f5b820;#f5b820;#dc3d56;#dc3d56;#9fb3c8;#9fb3c8;#34d399"
           keyTimes="0;0.166;0.1665;0.333;0.3335;0.5;0.5005;0.666;0.6665;0.833;0.8335;0.999;1"/>
@@ -111,6 +119,16 @@
         <animate attributeName="opacity" dur="10.5s" repeatCount="indefinite"
           values="0;0;1;1;1;0"
           keyTimes="0;0.01;0.04;0.97;0.99;1"/>
+      </circle>
+
+      <!-- Radial sheen on circle for 3D sphere look -->
+      <circle r="0" fill="url(#circleSheen)" opacity="0" pointer-events="none">
+        <animate attributeName="r" dur="10.5s" repeatCount="indefinite"
+          values="0;0;37.5;37.5;37.5;0"
+          keyTimes="0;0.04;0.05;0.95;0.97;1"/>
+        <animate attributeName="opacity" dur="10.5s" repeatCount="indefinite"
+          values="0;0;1;1;0"
+          keyTimes="0;0.04;0.06;0.96;1"/>
       </circle>
 
       <!-- Trophy (rotates continuously while visible) -->
