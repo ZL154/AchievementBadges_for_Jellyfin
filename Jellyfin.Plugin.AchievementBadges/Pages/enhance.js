@@ -78,9 +78,24 @@
     var rarityScorePts = { common: 10, uncommon: 20, rare: 35, epic: 60, legendary: 100, mythic: 150 };
 
     var rarityColor = {
-        common: '#9aa5b1', uncommon: '#4caf50', rare: '#2196f3',
-        epic: '#9c27b0', legendary: '#ff9800', mythic: '#f44336'
+        common: '#9fb3c8', uncommon: '#34d399', rare: '#60a5fa',
+        epic: '#a78bfa', legendary: '#fbbf24', mythic: '#f43f5e'
     };
+
+    // 3-stop gradients (lighter, base, darker) — matches banner.svg rarity gradients
+    var rarityGradients = {
+        common:    ['#b8c9d9', '#9fb3c8', '#6b7d90'],
+        uncommon:  ['#5beda9', '#34d399', '#1d9268'],
+        rare:      ['#8bc1ff', '#60a5fa', '#2f6cc4'],
+        epic:      ['#c9b4ff', '#a78bfa', '#6b4ed0'],
+        legendary: ['#ffe066', '#f5b820', '#b88200'],
+        mythic:    ['#ff7a8c', '#dc3d56', '#8b1a2d']
+    };
+
+    function gradientCss(rarity) {
+        var g = rarityGradients[rarity] || rarityGradients.common;
+        return 'linear-gradient(180deg,' + g[0] + ' 0%,' + g[1] + ' 50%,' + g[2] + ' 100%)';
+    }
 
     function showToast(badge) {
         if (visibleToastCount >= MAX_VISIBLE_TOASTS) {
@@ -90,7 +105,8 @@
         visibleToastCount++;
         var c = ensureToastContainer();
         var rarity = (badge.Rarity || 'common').toLowerCase();
-        var color = rarityColor[rarity] || '#9aa5b1';
+        var color = rarityColor[rarity] || '#9fb3c8';
+        var grad = gradientCss(rarity);
         var isRare = rarity !== 'common' && rarity !== 'uncommon';
         var scorePts = rarityScorePts[rarity] || 10;
         var label = isRare ? ((badge.Rarity || 'Rare') + ' achievement unlocked') : 'Achievement unlocked';
@@ -99,10 +115,10 @@
         item.className = 'ab-xb';
         if (isRare) item.classList.add('ab-xb-rare');
         item.innerHTML =
-            '<div class="ab-xb-circle" style="--ab-color:' + color + ';">' +
+            '<div class="ab-xb-circle" style="--ab-color:' + color + ';background-image:' + grad + ';">' +
                 '<span class="material-icons ab-xb-trophy">emoji_events</span>' +
             '</div>' +
-            '<div class="ab-xb-banner" style="--ab-color:' + color + ';">' +
+            '<div class="ab-xb-banner" style="--ab-color:' + color + ';background-image:' + grad + ';">' +
                 '<div class="ab-xb-text">' +
                     '<div class="ab-xb-label">' + label + '</div>' +
                     '<div class="ab-xb-row">' +
@@ -340,10 +356,10 @@
 
             // ===== Xbox-style achievement toast =====
             '.ab-xb{position:relative;width:355px;height:90px;font-family:"Segoe UI",system-ui,sans-serif;pointer-events:none;}' +
-            '.ab-xb-circle{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:50%;background:var(--ab-color,#39960C);display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.1);z-index:2;box-shadow:0 4px 18px rgba(0,0,0,0.4);}' +
+            '.ab-xb-circle{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:50%;background-color:var(--ab-color,#39960C);background-size:cover;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.1);z-index:2;box-shadow:0 4px 18px rgba(0,0,0,0.4);}' +
             '.ab-xb-circle::before,.ab-xb-circle::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ab-color,#39960C);opacity:0;filter:brightness(1.25);}' +
             '.ab-xb-trophy{color:#fff;font-size:40px !important;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));}' +
-            '.ab-xb-banner{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:100px;background:var(--ab-color,#39960C);opacity:0;overflow:hidden;z-index:1;box-shadow:0 6px 24px rgba(0,0,0,0.45);}' +
+            '.ab-xb-banner{position:absolute;left:50%;top:7px;margin-left:-37px;width:75px;height:75px;border-radius:100px;background-color:var(--ab-color,#39960C);background-size:cover;opacity:0;overflow:hidden;z-index:1;box-shadow:0 6px 24px rgba(0,0,0,0.45);}' +
             '.ab-xb-text{position:absolute;left:95px;top:0;right:20px;height:100%;display:flex;flex-direction:column;justify-content:center;opacity:0;transform:translateY(85px);color:#fff;white-space:nowrap;}' +
             '.ab-xb-label{font-size:13px;font-weight:500;opacity:0.95;line-height:1.3;}' +
             '.ab-xb-row{font-size:15px;font-weight:700;display:flex;align-items:center;gap:4px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
@@ -363,7 +379,7 @@
                 '0%{opacity:0;transform:scale(0.1) translateX(0);}' +
                 '4%{opacity:1;transform:scale(1.1) translateX(0);}' +
                 '5%{transform:scale(1) translateX(0);}' +
-                '11%{transform:scale(1) translateX(0);background-color:var(--ab-color,#39960C);}' +
+                '11%{transform:scale(1) translateX(0);}' +
                 '24%{transform:scale(1) translateX(-140px);}' +
                 '85%{transform:scale(1) translateX(-140px);opacity:1;}' +
                 '89%{transform:scale(1) translateX(0);opacity:1;}' +
