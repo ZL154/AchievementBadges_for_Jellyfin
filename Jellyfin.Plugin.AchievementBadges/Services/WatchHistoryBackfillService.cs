@@ -103,6 +103,8 @@ public class WatchHistoryBackfillService
 
                 var playedDate = GetPlayedDate(user, movie);
 
+                var (moviesDirectors, moviesActors) = GetPeople(movie);
+
                 _achievementBadgeService.RecordPlayback(new PlaybackContext
                 {
                     UserId = userId,
@@ -114,7 +116,9 @@ public class WatchHistoryBackfillService
                     ProductionLocations = movie.ProductionLocations,
                     OriginalLanguage = GetOriginalLanguage(movie),
                     Genres = movie.Genres,
-                    RunTimeTicks = movie.RunTimeTicks
+                    RunTimeTicks = movie.RunTimeTicks,
+                    Directors = moviesDirectors,
+                    Actors = moviesActors
                 });
             }
 
@@ -144,6 +148,8 @@ public class WatchHistoryBackfillService
 
                 var playedDate = GetPlayedDate(user, episode);
 
+                var (epDirectors, epActors) = GetPeople(episode);
+
                 _achievementBadgeService.RecordPlayback(new PlaybackContext
                 {
                     UserId = userId,
@@ -155,7 +161,9 @@ public class WatchHistoryBackfillService
                     ProductionLocations = episode.ProductionLocations,
                     OriginalLanguage = GetOriginalLanguage(episode),
                     Genres = episode.Genres,
-                    RunTimeTicks = episode.RunTimeTicks
+                    RunTimeTicks = episode.RunTimeTicks,
+                    Directors = epDirectors,
+                    Actors = epActors
                 });
 
                 if (seriesId != Guid.Empty)
@@ -247,6 +255,39 @@ public class WatchHistoryBackfillService
         }
 
         return string.Empty;
+    }
+
+    private static (List<string> directors, List<string> actors) GetPeople(BaseItem item)
+    {
+        var directors = new List<string>();
+        var actors = new List<string>();
+        try
+        {
+            var peopleProp = item.GetType().GetProperty("People");
+            var people = peopleProp?.GetValue(item) as System.Collections.IEnumerable;
+            if (people is null) return (directors, actors);
+
+            foreach (var p in people)
+            {
+                if (p is null) continue;
+                var type = p.GetType();
+                var name = type.GetProperty("Name")?.GetValue(p) as string;
+                var role = type.GetProperty("Type")?.GetValue(p)?.ToString();
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                if (string.Equals(role, "Director", StringComparison.OrdinalIgnoreCase))
+                {
+                    directors.Add(name);
+                }
+                else if (string.Equals(role, "Actor", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (actors.Count < 5) actors.Add(name);
+                }
+            }
+        }
+        catch
+        {
+        }
+        return (directors, actors);
     }
 
     private static string? GetOriginalLanguage(BaseItem item)

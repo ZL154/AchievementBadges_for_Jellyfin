@@ -155,10 +155,21 @@
                 '<div class="ab-hero">' +
                     '<div style="flex:1;min-width:280px;">' +
                         '<div class="ab-hero-left">' +
-                            '<div class="ab-hero-icon">\ud83c\udfc5</div>' +
-                            '<div><div id="abSaTitle" class="ab-hero-title">Achievement Profile</div><div id="abSaSub" class="ab-hero-sub">Loading...</div></div>' +
+                            '<div id="abSaRankIcon" class="ab-hero-icon">\ud83c\udfc5</div>' +
+                            '<div>' +
+                                '<div id="abSaTitle" class="ab-hero-title">Achievement Profile</div>' +
+                                '<div id="abSaRankLabel" class="ab-hero-sub" style="font-size:1em; font-weight:600;">Rookie</div>' +
+                                '<div id="abSaSub" class="ab-hero-sub" style="font-size:0.85em; opacity:0.8;">Loading...</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div style="margin-top:0.75em;">' +
+                            '<div id="abSaRankBarText" class="ab-eyebrow" style="display:flex; justify-content:space-between;"><span>Rank progress</span><span id="abSaRankBarPct">0%</span></div>' +
+                            '<div style="height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden; margin-top:4px;">' +
+                                '<div id="abSaRankBarFill" style="height:100%; width:0%; background:#667eea; transition:width 0.4s;"></div>' +
+                            '</div>' +
                         '</div>' +
                         '<div style="margin-top:1em;"><div class="ab-eyebrow">Showcase</div><div id="abSaShowcase" class="ab-showcase"><div class="ab-muted">Equip badges to build your showcase.</div></div></div>' +
+                        '<div style="margin-top:1em;"><a id="abSaProfileCardLink" href="#" target="_blank" class="ab-muted" style="font-size:0.85em; text-decoration:underline;">Open shareable profile card</a></div>' +
                     '</div>' +
                 '</div>' +
                 '<div id="abSaError" style="display:none;" class="ab-error"></div>' +
@@ -170,16 +181,49 @@
                 '</div>' +
                 '<div class="ab-tabs">' +
                     '<button type="button" class="ab-tab active" id="abSaTabBadges">My Badges</button>' +
+                    '<button type="button" class="ab-tab" id="abSaTabRecap">Recap</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabLb">Leaderboard</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabStats">Stats</button>' +
                 '</div>' +
                 '<div id="abSaPanelBadges" class="ab-panel">' +
+                    '<div style="display:flex; gap:0.75em; flex-wrap:wrap; margin-bottom:1em; align-items:center;">' +
+                        '<input type="search" id="abSaSearch" placeholder="Search badges by title, category, rarity..." style="flex:1; min-width:240px; padding:0.6em 0.9em; border-radius:999px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:inherit; font-size:0.95em;">' +
+                        '<select id="abSaFilter" style="padding:0.6em 0.9em; border-radius:999px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:inherit;">' +
+                            '<option value="all">All badges</option>' +
+                            '<option value="unlocked">Unlocked only</option>' +
+                            '<option value="locked">Locked only</option>' +
+                            '<option value="close">Close to unlock (&gt;50%)</option>' +
+                        '</select>' +
+                    '</div>' +
                     '<h3 style="margin:0 0 0.75em;">Equipped badges</h3>' +
                     '<div id="abSaEquippedEmpty" class="ab-muted" style="padding:0.8em;border:1px dashed rgba(255,255,255,0.16);border-radius:12px;">No equipped badges yet.</div>' +
                     '<div id="abSaEquipped" class="ab-grid"></div>' +
                     '<div id="abSaGrid" class="ab-grid" style="margin-top:1.5em;"></div>' +
+                    '<div id="abSaEmptyFilter" class="ab-muted" style="display:none; margin-top:1em;">No badges match your filter.</div>' +
                 '</div>' +
-                '<div id="abSaPanelLb" class="ab-panel" style="display:none;"><div class="ab-panel-card"><h3 style="margin:0 0 0.75em;">Leaderboard</h3><div id="abSaLb">Loading...</div></div></div>' +
+                '<div id="abSaPanelRecap" class="ab-panel" style="display:none;">' +
+                    '<div class="ab-panel-card">' +
+                        '<div style="display:flex; gap:0.5em; margin-bottom:1em;">' +
+                            '<button type="button" class="ab-btn" data-period="week">This week</button>' +
+                            '<button type="button" class="ab-btn" data-period="month">This month</button>' +
+                            '<button type="button" class="ab-btn" data-period="year">This year</button>' +
+                        '</div>' +
+                        '<div id="abSaRecap">Loading recap...</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="abSaPanelLb" class="ab-panel" style="display:none;">' +
+                    '<div class="ab-panel-card">' +
+                        '<div class="ab-tabs" style="margin-bottom:1em;">' +
+                            '<button type="button" class="ab-tab active" data-lb="score">Score</button>' +
+                            '<button type="button" class="ab-tab" data-lb="movies">Movies</button>' +
+                            '<button type="button" class="ab-tab" data-lb="episodes">Episodes</button>' +
+                            '<button type="button" class="ab-tab" data-lb="hours">Hours</button>' +
+                            '<button type="button" class="ab-tab" data-lb="streak">Best Streak</button>' +
+                            '<button type="button" class="ab-tab" data-lb="series">Series</button>' +
+                        '</div>' +
+                        '<div id="abSaLb">Loading...</div>' +
+                    '</div>' +
+                '</div>' +
                 '<div id="abSaPanelStats" class="ab-panel" style="display:none;"><div class="ab-panel-card"><h3 style="margin:0 0 0.75em;">Server Stats</h3><div id="abSaServerStats">Loading...</div></div></div>' +
             '</div>';
         return r;
@@ -191,12 +235,77 @@
     }
 
     function setTab(name) {
-        var panels = { badges: 'abSaPanelBadges', lb: 'abSaPanelLb', stats: 'abSaPanelStats' };
-        var tabs = { badges: 'abSaTabBadges', lb: 'abSaTabLb', stats: 'abSaTabStats' };
+        var panels = { badges: 'abSaPanelBadges', recap: 'abSaPanelRecap', lb: 'abSaPanelLb', stats: 'abSaPanelStats' };
+        var tabs = { badges: 'abSaTabBadges', recap: 'abSaTabRecap', lb: 'abSaTabLb', stats: 'abSaTabStats' };
         for (var k in panels) {
             var p = el(panels[k]); if (p) p.style.display = k === name ? 'block' : 'none';
             var t = el(tabs[k]); if (t) t.classList.toggle('active', k === name);
         }
+        if (name === 'recap') { loadRecap('week'); }
+    }
+
+    var allBadges = [];
+    var equippedIdsGlobal = {};
+    var currentSearch = '';
+    var currentFilter = 'all';
+
+    function passesFilter(b) {
+        var q = currentSearch.toLowerCase();
+        if (q) {
+            var hay = [(b.Title || ''), (b.Category || ''), (b.Rarity || ''), (b.Description || '')].join(' ').toLowerCase();
+            if (hay.indexOf(q) === -1) return false;
+        }
+        if (currentFilter === 'unlocked') return !!b.Unlocked;
+        if (currentFilter === 'locked') return !b.Unlocked;
+        if (currentFilter === 'close') {
+            if (b.Unlocked) return false;
+            var tar = b.TargetValue || 0, cur = b.CurrentValue || 0;
+            return tar > 0 && (cur / tar) > 0.5;
+        }
+        return true;
+    }
+
+    function applyFilter() {
+        var filtered = allBadges.filter(passesFilter);
+        renderBadges(filtered, equippedIdsGlobal);
+        var empty = el('abSaEmptyFilter');
+        if (empty) empty.style.display = (filtered.length === 0 && allBadges.length > 0) ? 'block' : 'none';
+    }
+
+    function loadRecap(period) {
+        if (!userId) return;
+        var box = el('abSaRecap'); if (box) box.innerHTML = 'Loading recap...';
+        fetchJson('Plugins/AchievementBadges/users/' + userId + '/recap?period=' + period).then(function (r) {
+            if (!box) return;
+            var topList = function (items, title) {
+                if (!items || !items.length) return '';
+                return '<div style="margin-top:1em;"><div class="ab-eyebrow">' + title + '</div><ul style="margin:0.3em 0 0; padding-left:1.2em;">' +
+                    items.map(function (x) { return '<li>' + x.Name + ' \u2014 ' + x.Count + '</li>'; }).join('') + '</ul></div>';
+            };
+            box.innerHTML =
+                '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75em;">' +
+                    '<div class="ab-stat"><div class="ab-stat-t">Items</div><div class="ab-stat-v">' + (r.TotalItems || 0) + '</div></div>' +
+                    '<div class="ab-stat"><div class="ab-stat-t">Movies</div><div class="ab-stat-v">' + (r.MoviesWatched || 0) + '</div></div>' +
+                    '<div class="ab-stat"><div class="ab-stat-t">Episodes</div><div class="ab-stat-v">' + (r.EpisodesWatched || 0) + '</div></div>' +
+                    '<div class="ab-stat"><div class="ab-stat-t">Days active</div><div class="ab-stat-v">' + (r.DaysWatched || 0) + '</div></div>' +
+                    '<div class="ab-stat"><div class="ab-stat-t">Unlocks</div><div class="ab-stat-v">' + (r.BadgesUnlocked || 0) + '</div></div>' +
+                '</div>' +
+                topList(r.TopGenres, 'Top genres') +
+                topList(r.TopDirectors, 'Top directors') +
+                topList(r.TopActors, 'Top actors');
+        }).catch(function () {
+            if (box) box.innerHTML = '<div class="ab-muted">Failed to load recap.</div>';
+        });
+    }
+
+    function loadCategoryLb(cat) {
+        fetchJson('Plugins/AchievementBadges/leaderboard/' + cat + '?limit=10').then(function (lb) {
+            var box = el('abSaLb'); if (!box) return;
+            if (!lb || !lb.length) { box.innerHTML = '<div class="ab-muted">No data yet.</div>'; return; }
+            box.innerHTML = lb.map(function (e, i) {
+                return '<div class="ab-lb-row"><div><strong>#' + (i + 1) + '</strong> \u2022 ' + (e.UserName || e.UserId) + '</div><div>' + (e.Value || 0) + '</div></div>';
+            }).join('');
+        });
     }
 
     function renderShowcase(badges) {
@@ -251,26 +360,53 @@
     function loadAll() {
         if (!userId) { showError('Could not detect user.'); return Promise.resolve(); }
         var eqIds = {};
+        // fire login ping (safe even if it fails)
+        fetchJson('Plugins/AchievementBadges/users/' + userId + '/login-ping', 'POST').catch(function () {});
+
         return Promise.all([
             fetchJson('Plugins/AchievementBadges/users/' + userId),
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/summary'),
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/equipped'),
             fetchJson('Plugins/AchievementBadges/leaderboard?limit=10'),
-            fetchJson('Plugins/AchievementBadges/server/stats')
+            fetchJson('Plugins/AchievementBadges/server/stats'),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/rank')
         ]).then(function (results) {
-            var badges = results[0], summary = results[1], equipped = results[2], lb = results[3], stats = results[4];
+            var badges = results[0], summary = results[1], equipped = results[2], lb = results[3], stats = results[4], rank = results[5];
 
             var sub = el('abSaSub');
-            if (sub) sub.textContent = 'Completion: ' + ((summary && summary.Percentage != null) ? summary.Percentage : 0) + '%';
+            if (sub) sub.textContent = 'Completion: ' + ((summary && summary.Percentage != null) ? summary.Percentage : 0) + '% \u2022 Score: ' + (summary ? (summary.Score || 0) : 0);
             var u = el('abSaUnlocked'); if (u) u.textContent = summary ? summary.Unlocked : 0;
             var t = el('abSaTotal'); if (t) t.textContent = summary ? summary.Total : 0;
             var p = el('abSaPct'); if (p) p.textContent = (summary && typeof summary.Percentage === 'number' ? summary.Percentage.toFixed(1) : '0') + '%';
             var sc = el('abSaScore'); if (sc) sc.textContent = summary ? (summary.Score || 0) : 0;
 
+            if (rank && rank.Tier) {
+                var lbl = el('abSaRankLabel');
+                if (lbl) { lbl.textContent = rank.Tier.Name; lbl.style.color = rank.Tier.Color || ''; }
+                var fill = el('abSaRankBarFill');
+                if (fill) {
+                    fill.style.width = (rank.ProgressToNext || 0) + '%';
+                    fill.style.background = (rank.Tier.Color || '#667eea');
+                }
+                var pct = el('abSaRankBarPct');
+                if (pct) {
+                    if (rank.NextTier) {
+                        pct.textContent = rank.Score + ' / ' + rank.NextTier.MinScore + ' to ' + rank.NextTier.Name;
+                    } else {
+                        pct.textContent = 'Max rank';
+                    }
+                }
+            }
+
+            var cardLink = el('abSaProfileCardLink');
+            if (cardLink) cardLink.href = 'Plugins/AchievementBadges/users/' + userId + '/profile-card';
+
+            allBadges = badges || [];
             renderShowcase(equipped);
             renderEquipped(equipped);
             if (equipped) equipped.forEach(function (b) { eqIds[b.Id] = true; });
-            renderBadges(badges, eqIds);
+            equippedIdsGlobal = eqIds;
+            applyFilter();
 
             var lbBox = el('abSaLb');
             if (lbBox) {
@@ -316,9 +452,35 @@
         root.style.display = 'block';
 
         el('abSaTabBadges').addEventListener('click', function () { setTab('badges'); });
+        el('abSaTabRecap').addEventListener('click', function () { setTab('recap'); });
         el('abSaTabLb').addEventListener('click', function () { setTab('lb'); });
         el('abSaTabStats').addEventListener('click', function () { setTab('stats'); });
         setTab('badges');
+
+        var search = el('abSaSearch');
+        if (search) search.addEventListener('input', function () {
+            currentSearch = search.value || '';
+            applyFilter();
+        });
+        var filter = el('abSaFilter');
+        if (filter) filter.addEventListener('change', function () {
+            currentFilter = filter.value || 'all';
+            applyFilter();
+        });
+
+        var recapBtns = root.querySelectorAll('#abSaPanelRecap button[data-period]');
+        recapBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () { loadRecap(btn.getAttribute('data-period')); });
+        });
+
+        var lbBtns = root.querySelectorAll('#abSaPanelLb button[data-lb]');
+        lbBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                lbBtns.forEach(function (x) { x.classList.remove('active'); });
+                btn.classList.add('active');
+                loadCategoryLb(btn.getAttribute('data-lb'));
+            });
+        });
 
         getCurrentUserId().then(function (id) {
             userId = id;

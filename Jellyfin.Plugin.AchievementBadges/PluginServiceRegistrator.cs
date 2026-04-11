@@ -10,9 +10,12 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 {
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
+        serviceCollection.AddSingleton<WebhookNotifier>();
         serviceCollection.AddSingleton<AchievementBadgeService>();
         serviceCollection.AddSingleton<PlaybackCompletionService>();
         serviceCollection.AddSingleton<WatchHistoryBackfillService>();
+        serviceCollection.AddSingleton<LibraryCompletionService>();
+        serviceCollection.AddSingleton<RecapService>();
 
         serviceCollection.AddSingleton<PlaybackCompletionTracker>();
         serviceCollection.AddHostedService(provider => provider.GetRequiredService<PlaybackCompletionTracker>());

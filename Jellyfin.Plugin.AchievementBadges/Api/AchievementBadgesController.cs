@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Jellyfin.Plugin.AchievementBadges.Models;
 using Jellyfin.Plugin.AchievementBadges.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -17,15 +18,21 @@ public class AchievementBadgesController : ControllerBase
     private readonly AchievementBadgeService _badgeService;
     private readonly PlaybackCompletionService _playbackCompletionService;
     private readonly WatchHistoryBackfillService _backfillService;
+    private readonly LibraryCompletionService _libraryCompletionService;
+    private readonly RecapService _recapService;
 
     public AchievementBadgesController(
         AchievementBadgeService badgeService,
         PlaybackCompletionService playbackCompletionService,
-        WatchHistoryBackfillService backfillService)
+        WatchHistoryBackfillService backfillService,
+        LibraryCompletionService libraryCompletionService,
+        RecapService recapService)
     {
         _badgeService = badgeService;
         _playbackCompletionService = playbackCompletionService;
         _backfillService = backfillService;
+        _libraryCompletionService = libraryCompletionService;
+        _recapService = recapService;
     }
 
     [HttpGet("test")]
@@ -418,5 +425,240 @@ public class AchievementBadgesController : ControllerBase
 
         plugin.UpdateConfiguration(config);
         return Ok(new { Success = true, DisabledBadgeIds = config.DisabledBadgeIds });
+    }
+
+    // ---------- Rank -------------------------------------------------
+
+    [HttpGet("users/{userId}/rank")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetRank([FromRoute] string userId)
+    {
+        var summary = _badgeService.GetSummary(userId);
+        var score = (int)(summary.GetType().GetProperty("Score")?.GetValue(summary) ?? 0);
+        var tier = RankHelper.GetTier(score);
+        var next = RankHelper.GetNextTier(score);
+        var prevMin = tier.MinScore;
+        var nextMin = next?.MinScore ?? tier.MinScore;
+        var progress = next is null ? 100 : (int)Math.Round(100.0 * (score - prevMin) / Math.Max(1, nextMin - prevMin));
+
+        return Ok(new
+        {
+            Score = score,
+            Tier = new { tier.Name, tier.MinScore, tier.Color, tier.Icon },
+            NextTier = next is null ? null : (object)new { next.Name, next.MinScore, next.Color, next.Icon },
+            ProgressToNext = progress,
+            Tiers = RankHelper.Tiers.Select(t => new { t.Name, t.MinScore, t.Color, t.Icon })
+        });
+    }
+
+    [HttpGet("ranks")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetAllRanks()
+    {
+        return Ok(RankHelper.Tiers.Select(t => new { t.Name, t.MinScore, t.Color, t.Icon }));
+    }
+
+    // ---------- Library completion ----------------------------------
+
+    [HttpPost("users/{userId}/library-completion/recompute")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult RecomputeLibraryCompletion([FromRoute] string userId)
+    {
+        if (!Guid.TryParse(userId, out var guid))
+        {
+            return BadRequest(new { Message = "Invalid user id." });
+        }
+        var result = _libraryCompletionService.RecomputeForUser(guid);
+        return Ok(new { LibraryCompletionPercents = result });
+    }
+
+    [HttpGet("users/{userId}/library-completion")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetLibraryCompletion([FromRoute] string userId)
+    {
+        var profile = _badgeService.PeekProfile(userId);
+        return Ok(new { LibraryCompletionPercents = profile?.Counters.LibraryCompletionPercents ?? new Dictionary<string, int>() });
+    }
+
+    // ---------- Recap ------------------------------------------------
+
+    [HttpGet("users/{userId}/recap")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetRecap([FromRoute] string userId, [FromQuery] string period = "week")
+    {
+        return Ok(_recapService.GetRecap(userId, period));
+    }
+
+    // ---------- Login ping -------------------------------------------
+
+    [HttpPost("users/{userId}/login-ping")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult LoginPing([FromRoute] string userId)
+    {
+        _badgeService.RegisterLogin(userId);
+        return Ok(new { Success = true });
+    }
+
+    // ---------- Newly unlocked since timestamp ----------------------
+
+    [HttpGet("users/{userId}/unlocks-since")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetUnlocksSince([FromRoute] string userId, [FromQuery] string? since = null)
+    {
+        var cutoff = DateTimeOffset.MinValue;
+        if (!string.IsNullOrWhiteSpace(since) && DateTimeOffset.TryParse(since, out var parsed))
+        {
+            cutoff = parsed;
+        }
+
+        var badges = _badgeService.GetBadgesForUser(userId)
+            .Where(b => b.Unlocked && b.UnlockedAt.HasValue && b.UnlockedAt.Value > cutoff)
+            .OrderByDescending(b => b.UnlockedAt)
+            .ToList();
+
+        return Ok(new { Now = DateTimeOffset.UtcNow, Badges = badges });
+    }
+
+    // ---------- Profile card (HTML) ---------------------------------
+
+    [HttpGet("users/{userId}/profile-card")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    public ActionResult GetProfileCard([FromRoute] string userId)
+    {
+        var content = ResourceReader.ReadEmbeddedText("Jellyfin.Plugin.AchievementBadges.Pages.profile-card.html")
+            ?? "<html><body>Profile card template missing.</body></html>";
+        content = content.Replace("{{userId}}", userId);
+        return Content(content, "text/html");
+    }
+
+    // ---------- Leaderboard categories ------------------------------
+
+    [HttpGet("leaderboard/{category}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetCategoryLeaderboard([FromRoute] string category, [FromQuery] int limit = 10)
+    {
+        return Ok(_badgeService.GetLeaderboardByCategory(category, limit));
+    }
+
+    // ---------- Custom badges (admin) -------------------------------
+
+    [HttpGet("admin/custom-badges")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetCustomBadges()
+    {
+        return Ok(Plugin.Instance?.Configuration?.CustomBadges ?? new List<AchievementDefinition>());
+    }
+
+    [HttpPost("admin/custom-badges")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult SaveCustomBadges([FromBody] List<AchievementDefinition> badges)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin is null) return BadRequest();
+        var config = plugin.Configuration;
+        config.CustomBadges = (badges ?? new()).Where(b => !string.IsNullOrWhiteSpace(b.Id)).ToList();
+        foreach (var b in config.CustomBadges) { b.IsCustom = true; }
+        plugin.UpdateConfiguration(config);
+        return Ok(new { Count = config.CustomBadges.Count });
+    }
+
+    // ---------- Challenges (admin) ----------------------------------
+
+    [HttpGet("admin/challenges")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetChallenges()
+    {
+        return Ok(Plugin.Instance?.Configuration?.Challenges ?? new List<AchievementDefinition>());
+    }
+
+    [HttpPost("admin/challenges")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult SaveChallenges([FromBody] List<AchievementDefinition> challenges)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin is null) return BadRequest();
+        var config = plugin.Configuration;
+        config.Challenges = (challenges ?? new()).Where(b => !string.IsNullOrWhiteSpace(b.Id)).ToList();
+        foreach (var c in config.Challenges) { c.IsChallenge = true; }
+        plugin.UpdateConfiguration(config);
+        return Ok(new { Count = config.Challenges.Count });
+    }
+
+    // ---------- Webhook config (admin) ------------------------------
+
+    public class WebhookConfigRequest
+    {
+        public string? WebhookUrl { get; set; }
+        public bool WebhookEnabled { get; set; }
+        public string? WebhookMessageTemplate { get; set; }
+    }
+
+    [HttpGet("admin/webhook")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetWebhookConfig()
+    {
+        var c = Plugin.Instance?.Configuration;
+        return Ok(new
+        {
+            WebhookUrl = c?.WebhookUrl,
+            WebhookEnabled = c?.WebhookEnabled ?? false,
+            WebhookMessageTemplate = c?.WebhookMessageTemplate
+        });
+    }
+
+    [HttpPost("admin/webhook")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult SaveWebhookConfig([FromBody] WebhookConfigRequest request)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin is null) return BadRequest();
+        var config = plugin.Configuration;
+        config.WebhookUrl = request?.WebhookUrl;
+        config.WebhookEnabled = request?.WebhookEnabled ?? false;
+        if (!string.IsNullOrWhiteSpace(request?.WebhookMessageTemplate))
+        {
+            config.WebhookMessageTemplate = request.WebhookMessageTemplate!;
+        }
+        plugin.UpdateConfiguration(config);
+        return Ok(new { Success = true });
+    }
+
+    // ---------- UI config (admin) -----------------------------------
+
+    public class UiFeatureFlagsRequest
+    {
+        public bool EnableUnlockToasts { get; set; } = true;
+        public bool EnableHomeWidget { get; set; } = true;
+        public bool EnableItemDetailRibbon { get; set; } = true;
+    }
+
+    [HttpGet("admin/ui-features")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetUiFeatures()
+    {
+        var c = Plugin.Instance?.Configuration;
+        return Ok(new
+        {
+            EnableUnlockToasts = c?.EnableUnlockToasts ?? true,
+            EnableHomeWidget = c?.EnableHomeWidget ?? true,
+            EnableItemDetailRibbon = c?.EnableItemDetailRibbon ?? true
+        });
+    }
+
+    [HttpPost("admin/ui-features")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult SaveUiFeatures([FromBody] UiFeatureFlagsRequest request)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin is null) return BadRequest();
+        var config = plugin.Configuration;
+        config.EnableUnlockToasts = request?.EnableUnlockToasts ?? true;
+        config.EnableHomeWidget = request?.EnableHomeWidget ?? true;
+        config.EnableItemDetailRibbon = request?.EnableItemDetailRibbon ?? true;
+        plugin.UpdateConfiguration(config);
+        return Ok(new { Success = true });
     }
 }

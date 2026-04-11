@@ -44,6 +44,16 @@ public class UserAchievementCounters
 
     public int RewatchCount { get; set; }
 
+    public Dictionary<string, int> GenreItemCounts { get; set; } = new();
+    public Dictionary<string, int> DirectorItemCounts { get; set; } = new();
+    public Dictionary<string, int> ActorItemCounts { get; set; } = new();
+    public Dictionary<string, int> LibraryItemCounts { get; set; } = new();
+    public Dictionary<string, int> LibraryCompletionPercents { get; set; } = new();
+
+    public HashSet<string> LoginDates { get; set; } = new();
+    public DateOnly? LastLoginDate { get; set; }
+    public int BestLoginStreak { get; set; }
+
     public int MaxEpisodesInSingleDay
     {
         get
@@ -80,4 +90,34 @@ public class UserAchievementCounters
     public int UniqueCountriesWatched => CountriesWatched.Count;
     public int UniqueLanguagesWatched => LanguagesWatched.Count;
     public int UniqueGenresWatched => GenresWatched.Count;
+
+    public int DaysLoggedIn => LoginDates.Count;
+
+    public int CurrentLoginStreak
+    {
+        get
+        {
+            if (LoginDates.Count == 0) return 0;
+            var dates = LoginDates
+                .Select(d => DateOnly.TryParse(d, out var parsed) ? parsed : default)
+                .Where(d => d != default)
+                .OrderByDescending(d => d)
+                .ToList();
+            if (dates.Count == 0) return 0;
+
+            var streak = 1;
+            var current = dates[0];
+            for (var i = 1; i < dates.Count; i++)
+            {
+                if (dates[i] == current.AddDays(-1)) { streak++; current = dates[i]; }
+                else if (dates[i] == current) continue;
+                else break;
+            }
+            return streak;
+        }
+    }
+
+    public int TopDirectorCount => DirectorItemCounts.Count == 0 ? 0 : DirectorItemCounts.Values.Max();
+    public int TopActorCount => ActorItemCounts.Count == 0 ? 0 : ActorItemCounts.Values.Max();
+    public int BestLibraryCompletionPercent => LibraryCompletionPercents.Count == 0 ? 0 : LibraryCompletionPercents.Values.Max();
 }

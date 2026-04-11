@@ -27,5 +27,13 @@ public enum AchievementMetric
     WatchedOnEid,
     LongSeriesCompleted,
     VeryLongSeriesCompleted,
-    RewatchCount
+    RewatchCount,
+    GenreItemsWatched,
+    LibraryCompletionPercent,
+    DaysLoggedIn,
+    CurrentLoginStreak,
+    BestLoginStreak,
+    TopDirectorCount,
+    TopActorCount,
+    PersonItemsWatched
 }

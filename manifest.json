@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.5.0",
+        "changelog": "Massive expansion. Rank system with 10 tiers (Rookie to Immortal) based on achievement score, shown with progress bar on user profile and home widget. Unlock toast notifications poll every 30s during playback. Hidden/secret badges shown as ??? until unlocked (6 new secret badges). Library completion badges that auto-scale to any server (10/25/50/75/100% per library). Weekly/monthly/yearly recap page with top genres/directors/actors. Home screen widget showing rank + next 3 badges. Item detail page achievement ribbon. Daily login streak tracking with 4 loyalty badges. Director/actor affinity tracking with 6 people badges. Admin: custom user-defined badges via JSON, seasonal time-limited challenges, webhook notifications (Discord/Slack) on unlock, UI feature toggles. Search box and smart filters (unlocked/locked/close) on achievements page. Category leaderboards (score/movies/episodes/hours/streak/series). Shareable HTML profile card endpoint.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.0/Jellyfin.Plugin.AchievementBadgesv1.5.0.zip",
+        "checksum": "220D9B181BF8A04E7D3DAD3BBD4F8175"
+      },
+      {
         "version": "1.4.10",
         "changelog": "Add Eid Mubarak badge - unlocks on watches during Eid al-Fitr or Eid al-Adha. Dates hardcoded for 2024-2035 with a 5-day window around each anchor to cover the multi-day celebration and regional moon-sighting variance.",
         "targetAbi": "10.11.0.0",

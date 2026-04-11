@@ -18,22 +18,107 @@ public class AchievementBadgeService
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly ILogger<AchievementBadgeService> _logger;
     private readonly IUserManager _userManager;
+    private readonly WebhookNotifier? _webhookNotifier;
 
     private Dictionary<string, UserAchievementProfile> _userProfiles = new();
 
     public AchievementBadgeService(
         IApplicationPaths applicationPaths,
         IUserManager userManager,
+        WebhookNotifier webhookNotifier,
         ILogger<AchievementBadgeService> logger)
     {
         _logger = logger;
         _userManager = userManager;
+        _webhookNotifier = webhookNotifier;
 
         var pluginDataPath = Path.Combine(applicationPaths.PluginConfigurationsPath, "achievementbadges");
         Directory.CreateDirectory(pluginDataPath);
 
         _dataFilePath = Path.Combine(pluginDataPath, "badges.json");
         Load();
+    }
+
+    public UserAchievementProfile? PeekProfile(string userId)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            return _userProfiles.TryGetValue(userId, out var profile) ? profile : null;
+        }
+    }
+
+    public void UpdateLibraryCompletionPercents(string userId, Dictionary<string, int> percents)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            var profile = GetOrCreateProfile(userId);
+            profile.Counters.LibraryCompletionPercents = percents ?? new Dictionary<string, int>();
+            EvaluateBadges(profile, userId);
+            Save();
+        }
+    }
+
+    public void RegisterLogin(string userId)
+    {
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            var profile = GetOrCreateProfile(userId);
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var key = today.ToString("yyyy-MM-dd");
+
+            profile.Counters.LoginDates.Add(key);
+
+            var streak = profile.Counters.CurrentLoginStreak;
+            if (streak > profile.Counters.BestLoginStreak)
+            {
+                profile.Counters.BestLoginStreak = streak;
+            }
+
+            profile.Counters.LastLoginDate = today;
+            EvaluateBadges(profile, userId);
+            Save();
+        }
+    }
+
+    public List<AchievementDefinition> GetActiveDefinitions()
+    {
+        var all = new List<AchievementDefinition>(AchievementDefinitions.All);
+
+        var config = Plugin.Instance?.Configuration;
+        if (config is null)
+        {
+            return all;
+        }
+
+        foreach (var custom in config.CustomBadges ?? new())
+        {
+            if (string.IsNullOrWhiteSpace(custom.Id)) continue;
+            custom.IsCustom = true;
+            all.Add(custom);
+        }
+
+        var now = DateTimeOffset.Now;
+        foreach (var challenge in config.Challenges ?? new())
+        {
+            if (string.IsNullOrWhiteSpace(challenge.Id)) continue;
+            challenge.IsChallenge = true;
+            var started = !challenge.ChallengeStart.HasValue || challenge.ChallengeStart.Value <= now;
+            var notEnded = !challenge.ChallengeEnd.HasValue || challenge.ChallengeEnd.Value >= now;
+            if (started && notEnded)
+            {
+                all.Add(challenge);
+            }
+            else if (!notEnded)
+            {
+                // Keep ended challenges visible so users who earned them keep the badge.
+                all.Add(challenge);
+            }
+        }
+
+        return all;
     }
 
     public List<AchievementBadge> GetBadgesForUser(string userId)
@@ -368,11 +453,59 @@ public class AchievementBadgeService
             {
                 foreach (var genre in context.Genres)
                 {
-                    if (!string.IsNullOrWhiteSpace(genre))
-                    {
-                        counters.GenresWatched.Add(genre.Trim());
-                    }
+                    if (string.IsNullOrWhiteSpace(genre)) continue;
+                    var trimmed = genre.Trim();
+                    counters.GenresWatched.Add(trimmed);
+                    counters.GenreItemCounts.TryGetValue(trimmed, out var gc);
+                    counters.GenreItemCounts[trimmed] = gc + 1;
                 }
+            }
+
+            if (context.Directors is { Count: > 0 })
+            {
+                foreach (var director in context.Directors)
+                {
+                    if (string.IsNullOrWhiteSpace(director)) continue;
+                    var trimmed = director.Trim();
+                    counters.DirectorItemCounts.TryGetValue(trimmed, out var dc);
+                    counters.DirectorItemCounts[trimmed] = dc + 1;
+                }
+
+                if (counters.DirectorItemCounts.Count > 200)
+                {
+                    var keep = counters.DirectorItemCounts
+                        .OrderByDescending(kvp => kvp.Value)
+                        .Take(100)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    counters.DirectorItemCounts = keep;
+                }
+            }
+
+            if (context.Actors is { Count: > 0 })
+            {
+                foreach (var actor in context.Actors)
+                {
+                    if (string.IsNullOrWhiteSpace(actor)) continue;
+                    var trimmed = actor.Trim();
+                    counters.ActorItemCounts.TryGetValue(trimmed, out var ac);
+                    counters.ActorItemCounts[trimmed] = ac + 1;
+                }
+
+                if (counters.ActorItemCounts.Count > 500)
+                {
+                    var keep = counters.ActorItemCounts
+                        .OrderByDescending(kvp => kvp.Value)
+                        .Take(200)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    counters.ActorItemCounts = keep;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(context.LibraryName))
+            {
+                var libKey = context.LibraryName.Trim();
+                counters.LibraryItemCounts.TryGetValue(libKey, out var lc);
+                counters.LibraryItemCounts[libKey] = lc + 1;
             }
 
             if (context.RunTimeTicks is long ticks && ticks > 0)
@@ -468,6 +601,47 @@ public class AchievementBadgeService
                 CurrentWatchStreak = GetCurrentWatchStreak(profile.Counters),
                 BestWatchStreak = profile.Counters.BestWatchStreak
             };
+        }
+    }
+
+    public object GetLeaderboardByCategory(string category, int limit = 10)
+    {
+        lock (_lock)
+        {
+            var projected = _userProfiles.Values.Select(profile =>
+            {
+                EvaluateBadges(profile, profile.UserId);
+                var counters = profile.Counters;
+                var enabled = profile.Badges.Where(b => IsBadgeEnabled(b.Id)).ToList();
+                return new
+                {
+                    UserId = profile.UserId,
+                    UserName = ResolveUserName(profile.UserId),
+                    Score = AchievementScoreHelper.GetTotalUnlockedScore(enabled),
+                    Unlocked = enabled.Count(b => b.Unlocked),
+                    Counters = counters
+                };
+            }).ToList();
+
+            IEnumerable<object> ordered = category?.ToLowerInvariant() switch
+            {
+                "movies" => projected.OrderByDescending(x => x.Counters.MoviesWatched)
+                    .Take(limit).Select(x => (object)new { x.UserId, x.UserName, Value = x.Counters.MoviesWatched }),
+                "episodes" => projected.OrderByDescending(x => x.Counters.TotalItemsWatched - x.Counters.MoviesWatched)
+                    .Take(limit).Select(x => (object)new { x.UserId, x.UserName, Value = x.Counters.TotalItemsWatched - x.Counters.MoviesWatched }),
+                "streak" => projected.OrderByDescending(x => x.Counters.BestWatchStreak)
+                    .Take(limit).Select(x => (object)new { x.UserId, x.UserName, Value = x.Counters.BestWatchStreak }),
+                "hours" => projected.OrderByDescending(x => x.Counters.TotalMinutesWatched)
+                    .Take(limit).Select(x => (object)new { x.UserId, x.UserName, Value = x.Counters.TotalMinutesWatched / 60 }),
+                "series" => projected.OrderByDescending(x => x.Counters.SeriesCompleted)
+                    .Take(limit).Select(x => (object)new { x.UserId, x.UserName, Value = x.Counters.SeriesCompleted }),
+                "unlocked" => projected.OrderByDescending(x => x.Unlocked)
+                    .Take(limit).Select(x => (object)new { x.UserId, x.UserName, Value = x.Unlocked }),
+                _ => projected.OrderByDescending(x => x.Score)
+                    .Take(limit).Select(x => (object)new { x.UserId, x.UserName, Value = x.Score })
+            };
+
+            return ordered.ToList();
         }
     }
 
@@ -657,20 +831,20 @@ public class AchievementBadgeService
         return primary;
     }
 
-    private static UserAchievementProfile CreateProfile(string userId)
+    private UserAchievementProfile CreateProfile(string userId)
     {
         return new UserAchievementProfile
         {
             UserId = userId,
             Counters = new UserAchievementCounters(),
-            Badges = AchievementDefinitions.All.Select(def => CreateBadgeFromDefinition(def, userId)).ToList(),
+            Badges = GetActiveDefinitions().Select(def => CreateBadgeFromDefinition(def, userId)).ToList(),
             EquippedBadgeIds = new List<string>()
         };
     }
 
-    private static void SyncDefinitions(UserAchievementProfile profile, string userId)
+    private void SyncDefinitions(UserAchievementProfile profile, string userId)
     {
-        foreach (var def in AchievementDefinitions.All)
+        foreach (var def in GetActiveDefinitions())
         {
             var existing = profile.Badges.FirstOrDefault(b => b.Id.Equals(def.Id, StringComparison.OrdinalIgnoreCase));
 
@@ -706,10 +880,18 @@ public class AchievementBadgeService
 
     private void EvaluateBadges(UserAchievementProfile profile, string userId)
     {
-        foreach (var def in AchievementDefinitions.All)
+        var newlyUnlocked = new List<AchievementBadge>();
+
+        foreach (var def in GetActiveDefinitions())
         {
-            var badge = profile.Badges.First(b => b.Id.Equals(def.Id, StringComparison.OrdinalIgnoreCase));
-            var current = Math.Clamp(GetMetricValue(profile.Counters, def.Metric), 0, def.TargetValue);
+            var badge = profile.Badges.FirstOrDefault(b => b.Id.Equals(def.Id, StringComparison.OrdinalIgnoreCase));
+            if (badge is null)
+            {
+                badge = CreateBadgeFromDefinition(def, userId);
+                profile.Badges.Add(badge);
+            }
+
+            var current = Math.Clamp(GetMetricValue(profile.Counters, def.Metric, def.MetricParameter), 0, def.TargetValue);
 
             var wasUnlocked = badge.Unlocked;
             badge.CurrentValue = current;
@@ -719,6 +901,7 @@ public class AchievementBadgeService
                 badge.Unlocked = true;
                 badge.UnlockedAt = DateTimeOffset.UtcNow;
                 _logger.LogInformation("Unlocked badge {BadgeId} for user {UserId}", def.Id, userId);
+                newlyUnlocked.Add(badge);
             }
 
             if (wasUnlocked && badge.UnlockedAt is null)
@@ -728,9 +911,45 @@ public class AchievementBadgeService
         }
 
         SanitizeEquippedBadges(profile);
+
+        if (newlyUnlocked.Count > 0 && _webhookNotifier is not null)
+        {
+            var userName = ResolveUserName(userId);
+            foreach (var badge in newlyUnlocked)
+            {
+                if (!IsBadgeEnabled(badge.Id)) continue;
+                _webhookNotifier.NotifyUnlock(userName, badge);
+            }
+        }
     }
 
-    private static int GetMetricValue(UserAchievementCounters counters, AchievementMetric metric)
+    private static int GetMetricValue(UserAchievementCounters counters, AchievementMetric metric, string? parameter = null)
+    {
+        if (metric == AchievementMetric.GenreItemsWatched && !string.IsNullOrWhiteSpace(parameter))
+        {
+            return counters.GenreItemCounts.TryGetValue(parameter, out var g) ? g : 0;
+        }
+
+        if (metric == AchievementMetric.PersonItemsWatched && !string.IsNullOrWhiteSpace(parameter))
+        {
+            if (counters.DirectorItemCounts.TryGetValue(parameter, out var d)) return d;
+            if (counters.ActorItemCounts.TryGetValue(parameter, out var a)) return a;
+            return 0;
+        }
+
+        if (metric == AchievementMetric.LibraryCompletionPercent)
+        {
+            if (!string.IsNullOrWhiteSpace(parameter))
+            {
+                return counters.LibraryCompletionPercents.TryGetValue(parameter, out var p) ? p : 0;
+            }
+            return counters.BestLibraryCompletionPercent;
+        }
+
+        return GetSingleMetricValue(counters, metric);
+    }
+
+    private static int GetSingleMetricValue(UserAchievementCounters counters, AchievementMetric metric)
     {
         return metric switch
         {
@@ -760,6 +979,11 @@ public class AchievementBadgeService
             AchievementMetric.LongSeriesCompleted => counters.LongSeriesCompleted,
             AchievementMetric.VeryLongSeriesCompleted => counters.VeryLongSeriesCompleted,
             AchievementMetric.RewatchCount => counters.RewatchCount,
+            AchievementMetric.DaysLoggedIn => counters.DaysLoggedIn,
+            AchievementMetric.CurrentLoginStreak => counters.CurrentLoginStreak,
+            AchievementMetric.BestLoginStreak => counters.BestLoginStreak,
+            AchievementMetric.TopDirectorCount => counters.TopDirectorCount,
+            AchievementMetric.TopActorCount => counters.TopActorCount,
             _ => 0
         };
     }
@@ -829,10 +1053,28 @@ public class AchievementBadgeService
 
     private List<AchievementBadge> GetEnabledBadgeClones(UserAchievementProfile profile)
     {
-        return profile.Badges
-            .Where(b => IsBadgeEnabled(b.Id))
-            .Select(CloneBadge)
-            .ToList();
+        var defsById = GetActiveDefinitions()
+            .ToDictionary(d => d.Id, d => d, StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<AchievementBadge>();
+        foreach (var b in profile.Badges)
+        {
+            if (!IsBadgeEnabled(b.Id)) continue;
+
+            var isSecret = defsById.TryGetValue(b.Id, out var def) && def.IsSecret;
+
+            var clone = CloneBadge(b);
+
+            if (isSecret && !clone.Unlocked)
+            {
+                clone.Title = "???";
+                clone.Description = "Hidden achievement — keep watching to discover it.";
+                clone.Icon = "help";
+            }
+
+            result.Add(clone);
+        }
+        return result;
     }
 
     private static int GetCurrentWatchStreak(UserAchievementCounters counters)

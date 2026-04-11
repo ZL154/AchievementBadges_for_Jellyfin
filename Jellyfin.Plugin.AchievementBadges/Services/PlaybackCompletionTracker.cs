@@ -123,6 +123,7 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
             }
 
             var libraryName = ResolveLibraryName(item);
+            var (directors, actors) = GetPeople(item);
 
             var context = new PlaybackContext
             {
@@ -137,7 +138,9 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
                 ProductionLocations = item.ProductionLocations,
                 OriginalLanguage = GetOriginalLanguage(item),
                 Genres = item.Genres,
-                RunTimeTicks = item.RunTimeTicks
+                RunTimeTicks = item.RunTimeTicks,
+                Directors = directors,
+                Actors = actors
             };
 
             var success = _playbackCompletionService.RecordCompletion(context, completionPercent, out var message);
@@ -178,6 +181,39 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
         }
 
         return Guid.Empty;
+    }
+
+    private static (System.Collections.Generic.List<string> directors, System.Collections.Generic.List<string> actors) GetPeople(BaseItem item)
+    {
+        var directors = new System.Collections.Generic.List<string>();
+        var actors = new System.Collections.Generic.List<string>();
+        try
+        {
+            var peopleProp = item.GetType().GetProperty("People");
+            var people = peopleProp?.GetValue(item) as System.Collections.IEnumerable;
+            if (people is null) return (directors, actors);
+
+            foreach (var p in people)
+            {
+                if (p is null) continue;
+                var type = p.GetType();
+                var name = type.GetProperty("Name")?.GetValue(p) as string;
+                var role = type.GetProperty("Type")?.GetValue(p)?.ToString();
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                if (string.Equals(role, "Director", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    directors.Add(name);
+                }
+                else if (string.Equals(role, "Actor", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    if (actors.Count < 5) actors.Add(name);
+                }
+            }
+        }
+        catch
+        {
+        }
+        return (directors, actors);
     }
 
     private static string? GetOriginalLanguage(BaseItem item)

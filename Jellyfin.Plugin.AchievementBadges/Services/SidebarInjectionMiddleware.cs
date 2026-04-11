@@ -107,7 +107,8 @@ public class SidebarInjectionMiddleware
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script>
-<script src=""/Plugins/AchievementBadges/client-script/standalone"" defer></script>";
+<script src=""/Plugins/AchievementBadges/client-script/standalone"" defer></script>
+<script src=""/Plugins/AchievementBadges/client-script/enhance"" defer></script>";
 
     public SidebarInjectionMiddleware(RequestDelegate next, ILogger<SidebarInjectionMiddleware> logger)
     {

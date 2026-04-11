@@ -19,4 +19,16 @@ public class AchievementDefinition
     public int TargetValue { get; set; }
 
     public AchievementMetric Metric { get; set; }
+
+    public bool IsSecret { get; set; }
+
+    public string? MetricParameter { get; set; }
+
+    public bool IsCustom { get; set; }
+
+    public bool IsChallenge { get; set; }
+
+    public System.DateTimeOffset? ChallengeStart { get; set; }
+
+    public System.DateTimeOffset? ChallengeEnd { get; set; }
 }

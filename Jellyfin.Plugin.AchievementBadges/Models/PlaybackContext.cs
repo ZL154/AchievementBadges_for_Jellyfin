@@ -21,4 +21,7 @@ public class PlaybackContext
     public long? RunTimeTicks { get; set; }
 
     public bool IsRewatch { get; set; }
+
+    public IReadOnlyList<string>? Directors { get; set; }
+    public IReadOnlyList<string>? Actors { get; set; }
 }

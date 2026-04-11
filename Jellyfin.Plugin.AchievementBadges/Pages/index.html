@@ -387,6 +387,86 @@ padding:1em;
 
                 <details class="abAdminSection" style="margin-top:1em;">
                     <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                        Webhook notifications (admin)
+                    </summary>
+                    <div style="margin-top:0.5em;">
+                        <p class="secondaryText" style="margin-top:0;">
+                            Post a message to Discord / Slack / any webhook URL whenever a user unlocks a badge.
+                            Template placeholders: <code>{user}</code>, <code>{badge}</code>, <code>{rarity}</code>, <code>{description}</code>.
+                            Discord webhook URLs (ending in <code>/webhooks/...</code>) work out of the box.
+                        </p>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
+                            <input type="checkbox" id="abWebhookEnabled"> Enable webhook notifications
+                        </label>
+                        <label style="display:block; margin-bottom:0.75em;">Webhook URL:<br>
+                            <input type="url" id="abWebhookUrl" placeholder="https://discord.com/api/webhooks/..." style="width:100%; padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px;">
+                        </label>
+                        <label style="display:block; margin-bottom:0.75em;">Message template:<br>
+                            <input type="text" id="abWebhookTemplate" style="width:100%; padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px;">
+                        </label>
+                        <button is="emby-button" type="button" class="raised button-submit" id="abWebhookSaveBtn">Save webhook config</button>
+                        <div id="abWebhookStatus" class="secondaryText"></div>
+                    </div>
+                </details>
+
+                <details class="abAdminSection" style="margin-top:1em;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                        UI features (admin)
+                    </summary>
+                    <div style="margin-top:0.5em;">
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.5em;">
+                            <input type="checkbox" id="abUiToasts" checked> Show unlock toast notifications
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.5em;">
+                            <input type="checkbox" id="abUiHomeWidget" checked> Inject home screen widget
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.5em;">
+                            <input type="checkbox" id="abUiItemRibbon" checked> Show achievement ribbon on item detail pages
+                        </label>
+                        <button is="emby-button" type="button" class="raised" id="abUiFeaturesSaveBtn">Save UI features</button>
+                        <div id="abUiFeaturesStatus" class="secondaryText"></div>
+                    </div>
+                </details>
+
+                <details class="abAdminSection" style="margin-top:1em;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                        Custom badges (admin)
+                    </summary>
+                    <div style="margin-top:0.5em;">
+                        <p class="secondaryText" style="margin-top:0;">
+                            Define your own badges tied to any existing metric. Paste a JSON array below.
+                            Each badge needs at least <code>Id</code>, <code>Title</code>, <code>Description</code>, <code>Metric</code>, and <code>TargetValue</code>.
+                        </p>
+                        <textarea id="abCustomBadgesJson" rows="10" style="width:100%; font-family:monospace; font-size:0.85em; padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px;"></textarea>
+                        <div style="margin-top:0.5em;">
+                            <button is="emby-button" type="button" class="raised" id="abCustomBadgesLoadBtn">Reload</button>
+                            <button is="emby-button" type="button" class="raised button-submit" id="abCustomBadgesSaveBtn">Save custom badges</button>
+                        </div>
+                        <div id="abCustomBadgesStatus" class="secondaryText"></div>
+                    </div>
+                </details>
+
+                <details class="abAdminSection" style="margin-top:1em;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                        Seasonal challenges (admin)
+                    </summary>
+                    <div style="margin-top:0.5em;">
+                        <p class="secondaryText" style="margin-top:0;">
+                            Time-limited goals. Each challenge is a badge definition with optional
+                            <code>ChallengeStart</code> and <code>ChallengeEnd</code> ISO dates. Once the window closes,
+                            earned challenges stay in the user's profile permanently.
+                        </p>
+                        <textarea id="abChallengesJson" rows="10" style="width:100%; font-family:monospace; font-size:0.85em; padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px;"></textarea>
+                        <div style="margin-top:0.5em;">
+                            <button is="emby-button" type="button" class="raised" id="abChallengesLoadBtn">Reload</button>
+                            <button is="emby-button" type="button" class="raised button-submit" id="abChallengesSaveBtn">Save challenges</button>
+                        </div>
+                        <div id="abChallengesStatus" class="secondaryText"></div>
+                    </div>
+                </details>
+
+                <details class="abAdminSection" style="margin-top:1em;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
                         Enable / disable badges (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -1147,6 +1227,99 @@ padding:1em;
 
     initialisePage();
     loadCatalog();
+
+    // --- Webhook config ---
+    var webhookEnabledEl = document.getElementById('abWebhookEnabled');
+    var webhookUrlEl = document.getElementById('abWebhookUrl');
+    var webhookTemplateEl = document.getElementById('abWebhookTemplate');
+    var webhookSaveBtn = document.getElementById('abWebhookSaveBtn');
+    var webhookStatusEl = document.getElementById('abWebhookStatus');
+
+    function loadWebhook() {
+        fetchJson('Plugins/AchievementBadges/admin/webhook').then(function (c) {
+            webhookEnabledEl.checked = !!c.WebhookEnabled;
+            webhookUrlEl.value = c.WebhookUrl || '';
+            webhookTemplateEl.value = c.WebhookMessageTemplate || '';
+        });
+    }
+    webhookSaveBtn.addEventListener('click', function () {
+        fetchJson('Plugins/AchievementBadges/admin/webhook', 'POST', {
+            WebhookEnabled: webhookEnabledEl.checked,
+            WebhookUrl: webhookUrlEl.value,
+            WebhookMessageTemplate: webhookTemplateEl.value
+        }).then(function () { webhookStatusEl.textContent = 'Saved.'; })
+         .catch(function (e) { webhookStatusEl.textContent = 'Save failed: ' + (e.message || e); });
+    });
+    loadWebhook();
+
+    // --- UI features ---
+    var uiToastsEl = document.getElementById('abUiToasts');
+    var uiHomeEl = document.getElementById('abUiHomeWidget');
+    var uiRibbonEl = document.getElementById('abUiItemRibbon');
+    var uiSaveBtn = document.getElementById('abUiFeaturesSaveBtn');
+    var uiStatusEl = document.getElementById('abUiFeaturesStatus');
+
+    fetchJson('Plugins/AchievementBadges/admin/ui-features').then(function (c) {
+        uiToastsEl.checked = c.EnableUnlockToasts !== false;
+        uiHomeEl.checked = c.EnableHomeWidget !== false;
+        uiRibbonEl.checked = c.EnableItemDetailRibbon !== false;
+    });
+    uiSaveBtn.addEventListener('click', function () {
+        fetchJson('Plugins/AchievementBadges/admin/ui-features', 'POST', {
+            EnableUnlockToasts: uiToastsEl.checked,
+            EnableHomeWidget: uiHomeEl.checked,
+            EnableItemDetailRibbon: uiRibbonEl.checked
+        }).then(function () { uiStatusEl.textContent = 'Saved.'; })
+         .catch(function (e) { uiStatusEl.textContent = 'Save failed: ' + (e.message || e); });
+    });
+
+    // --- Custom badges ---
+    var customBadgesJsonEl = document.getElementById('abCustomBadgesJson');
+    var customBadgesLoadBtn = document.getElementById('abCustomBadgesLoadBtn');
+    var customBadgesSaveBtn = document.getElementById('abCustomBadgesSaveBtn');
+    var customBadgesStatusEl = document.getElementById('abCustomBadgesStatus');
+
+    function loadCustomBadges() {
+        fetchJson('Plugins/AchievementBadges/admin/custom-badges').then(function (r) {
+            customBadgesJsonEl.value = JSON.stringify(r || [], null, 2);
+        });
+    }
+    customBadgesLoadBtn.addEventListener('click', loadCustomBadges);
+    customBadgesSaveBtn.addEventListener('click', function () {
+        try {
+            var parsed = JSON.parse(customBadgesJsonEl.value || '[]');
+            fetchJson('Plugins/AchievementBadges/admin/custom-badges', 'POST', parsed)
+                .then(function (r) { customBadgesStatusEl.textContent = 'Saved ' + r.Count + ' custom badges.'; reloadAll(); })
+                .catch(function (e) { customBadgesStatusEl.textContent = 'Save failed: ' + (e.message || e); });
+        } catch (e) {
+            customBadgesStatusEl.textContent = 'Invalid JSON: ' + e.message;
+        }
+    });
+    loadCustomBadges();
+
+    // --- Challenges ---
+    var challengesJsonEl = document.getElementById('abChallengesJson');
+    var challengesLoadBtn = document.getElementById('abChallengesLoadBtn');
+    var challengesSaveBtn = document.getElementById('abChallengesSaveBtn');
+    var challengesStatusEl = document.getElementById('abChallengesStatus');
+
+    function loadChallenges() {
+        fetchJson('Plugins/AchievementBadges/admin/challenges').then(function (r) {
+            challengesJsonEl.value = JSON.stringify(r || [], null, 2);
+        });
+    }
+    challengesLoadBtn.addEventListener('click', loadChallenges);
+    challengesSaveBtn.addEventListener('click', function () {
+        try {
+            var parsed = JSON.parse(challengesJsonEl.value || '[]');
+            fetchJson('Plugins/AchievementBadges/admin/challenges', 'POST', parsed)
+                .then(function (r) { challengesStatusEl.textContent = 'Saved ' + r.Count + ' challenges.'; reloadAll(); })
+                .catch(function (e) { challengesStatusEl.textContent = 'Save failed: ' + (e.message || e); });
+        } catch (e) {
+            challengesStatusEl.textContent = 'Invalid JSON: ' + e.message;
+        }
+    });
+    loadChallenges();
 })();
 </script>
 
