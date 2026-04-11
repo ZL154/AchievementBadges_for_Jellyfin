@@ -11,10 +11,11 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
         serviceCollection.AddSingleton<AchievementBadgeService>();
-        serviceCollection.AddSingleton<PlaybackActivityTracker>();
         serviceCollection.AddSingleton<PlaybackCompletionService>();
-        serviceCollection.AddSingleton<PlaybackCompletionTracker>();
         serviceCollection.AddSingleton<WatchHistoryBackfillService>();
+
+        serviceCollection.AddSingleton<PlaybackCompletionTracker>();
+        serviceCollection.AddHostedService(provider => provider.GetRequiredService<PlaybackCompletionTracker>());
 
         serviceCollection.AddHostedService<SafeStartupRunner>();
 

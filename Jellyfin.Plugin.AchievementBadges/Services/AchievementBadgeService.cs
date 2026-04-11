@@ -38,6 +38,7 @@ public class AchievementBadgeService
 
     public List<AchievementBadge> GetBadgesForUser(string userId)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -49,6 +50,7 @@ public class AchievementBadgeService
 
     public AchievementBadge? GetBadge(string userId, string badgeId)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -61,6 +63,7 @@ public class AchievementBadgeService
 
     public List<AchievementBadge> GetEquippedBadges(string userId)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -78,6 +81,7 @@ public class AchievementBadgeService
 
     public bool EquipBadge(string userId, string badgeId, out string message)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -121,6 +125,7 @@ public class AchievementBadgeService
 
     public bool UnequipBadge(string userId, string badgeId, out string message)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -144,6 +149,7 @@ public class AchievementBadgeService
 
     public AchievementBadge? UpdateProgress(string userId, string badgeId, int amount)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -182,6 +188,7 @@ public class AchievementBadgeService
 
     public AchievementBadge? UnlockBadge(string userId, string badgeId)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -207,6 +214,7 @@ public class AchievementBadgeService
 
     public List<AchievementBadge> ResetBadgesForUser(string userId)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = CreateProfile(userId);
@@ -225,6 +233,7 @@ public class AchievementBadgeService
         string? libraryName = null,
         DateTimeOffset? playedAt = null)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -322,6 +331,7 @@ public class AchievementBadgeService
 
     public object GetSummary(string userId)
     {
+        userId = NormalizeUserId(userId);
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
@@ -411,6 +421,21 @@ public class AchievementBadgeService
         }
     }
 
+    private static string NormalizeUserId(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return string.Empty;
+        }
+
+        if (Guid.TryParse(userId, out var guid))
+        {
+            return guid.ToString("D");
+        }
+
+        return userId.Trim();
+    }
+
     private string ResolveUserName(string userId)
     {
         try
@@ -447,6 +472,72 @@ public class AchievementBadgeService
         }
 
         return profile;
+    }
+
+    private static UserAchievementProfile MergeProfiles(UserAchievementProfile a, UserAchievementProfile b)
+    {
+        // Prefer the profile with more watch activity; union the rest.
+        var primary = b.Counters.TotalItemsWatched > a.Counters.TotalItemsWatched ? b : a;
+        var secondary = ReferenceEquals(primary, a) ? b : a;
+
+        foreach (var lib in secondary.Counters.LibrariesVisited)
+        {
+            primary.Counters.LibrariesVisited.Add(lib);
+        }
+
+        foreach (var date in secondary.Counters.WatchDates)
+        {
+            primary.Counters.WatchDates.Add(date);
+        }
+
+        foreach (var pair in secondary.Counters.MoviesByDate)
+        {
+            if (!primary.Counters.MoviesByDate.ContainsKey(pair.Key) ||
+                primary.Counters.MoviesByDate[pair.Key] < pair.Value)
+            {
+                primary.Counters.MoviesByDate[pair.Key] = pair.Value;
+            }
+        }
+
+        foreach (var pair in secondary.Counters.EpisodesByDate)
+        {
+            if (!primary.Counters.EpisodesByDate.ContainsKey(pair.Key) ||
+                primary.Counters.EpisodesByDate[pair.Key] < pair.Value)
+            {
+                primary.Counters.EpisodesByDate[pair.Key] = pair.Value;
+            }
+        }
+
+        foreach (var badge in secondary.Badges)
+        {
+            var existing = primary.Badges.FirstOrDefault(x => x.Id.Equals(badge.Id, StringComparison.OrdinalIgnoreCase));
+            if (existing is null)
+            {
+                primary.Badges.Add(badge);
+                continue;
+            }
+
+            if (badge.CurrentValue > existing.CurrentValue)
+            {
+                existing.CurrentValue = badge.CurrentValue;
+            }
+
+            if (badge.Unlocked && !existing.Unlocked)
+            {
+                existing.Unlocked = true;
+                existing.UnlockedAt = badge.UnlockedAt ?? existing.UnlockedAt;
+            }
+        }
+
+        foreach (var equipped in secondary.EquippedBadgeIds)
+        {
+            if (!primary.EquippedBadgeIds.Contains(equipped, StringComparer.OrdinalIgnoreCase))
+            {
+                primary.EquippedBadgeIds.Add(equipped);
+            }
+        }
+
+        return primary;
     }
 
     private static UserAchievementProfile CreateProfile(string userId)
@@ -597,12 +688,42 @@ public class AchievementBadgeService
             var json = File.ReadAllText(_dataFilePath);
             var store = JsonSerializer.Deserialize<UserBadgeStore>(json, _jsonOptions);
 
-            _userProfiles = store?.UserProfiles ?? new Dictionary<string, UserAchievementProfile>();
+            var rawProfiles = store?.UserProfiles ?? new Dictionary<string, UserAchievementProfile>();
+            _userProfiles = new Dictionary<string, UserAchievementProfile>();
+            var migrated = false;
+
+            foreach (var pair in rawProfiles)
+            {
+                var canonicalKey = NormalizeUserId(pair.Key);
+                var profile = pair.Value;
+                profile.UserId = canonicalKey;
+
+                if (_userProfiles.TryGetValue(canonicalKey, out var existing))
+                {
+                    _userProfiles[canonicalKey] = MergeProfiles(existing, profile);
+                    migrated = true;
+                }
+                else
+                {
+                    _userProfiles[canonicalKey] = profile;
+                }
+
+                if (!string.Equals(pair.Key, canonicalKey, StringComparison.Ordinal))
+                {
+                    migrated = true;
+                }
+            }
 
             foreach (var profile in _userProfiles.Values)
             {
                 SyncDefinitions(profile, profile.UserId);
                 EvaluateBadges(profile, profile.UserId);
+            }
+
+            if (migrated)
+            {
+                _logger.LogInformation("Canonicalized achievement profile user keys.");
+                Save();
             }
 
             _logger.LogInformation("Loaded achievement data for {UserCount} users.", _userProfiles.Count);

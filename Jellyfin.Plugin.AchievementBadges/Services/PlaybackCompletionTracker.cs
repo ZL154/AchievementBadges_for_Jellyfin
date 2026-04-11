@@ -1,17 +1,21 @@
 using System;
 using System.Globalization;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.AchievementBadges.Services;
 
-public class PlaybackCompletionTracker : IDisposable
+public class PlaybackCompletionTracker : IHostedService, IDisposable
 {
     private readonly ISessionManager _sessionManager;
     private readonly PlaybackCompletionService _playbackCompletionService;
     private readonly ILogger<PlaybackCompletionTracker> _logger;
+    private bool _subscribed;
     private bool _disposed;
 
     public PlaybackCompletionTracker(
@@ -22,9 +26,37 @@ public class PlaybackCompletionTracker : IDisposable
         _sessionManager = sessionManager;
         _playbackCompletionService = playbackCompletionService;
         _logger = logger;
+    }
 
-        _sessionManager.PlaybackProgress += OnPlaybackProgress;
-        _sessionManager.PlaybackStopped += OnPlaybackStopped;
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (!_subscribed)
+        {
+            _sessionManager.PlaybackProgress += OnPlaybackProgress;
+            _sessionManager.PlaybackStopped += OnPlaybackStopped;
+            _subscribed = true;
+            _logger.LogInformation("[AchievementBadges] PlaybackCompletionTracker started, subscribed to session events.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        Unsubscribe();
+        return Task.CompletedTask;
+    }
+
+    private void Unsubscribe()
+    {
+        if (!_subscribed)
+        {
+            return;
+        }
+
+        _sessionManager.PlaybackProgress -= OnPlaybackProgress;
+        _sessionManager.PlaybackStopped -= OnPlaybackStopped;
+        _subscribed = false;
     }
 
     private void OnPlaybackProgress(object? sender, PlaybackProgressEventArgs e)
@@ -44,18 +76,21 @@ public class PlaybackCompletionTracker : IDisposable
             var userId = ExtractUserId(eventArgs);
             if (string.IsNullOrWhiteSpace(userId))
             {
+                _logger.LogDebug("[AchievementBadges] {Source} event: no user id extracted.", source);
                 return;
             }
 
             var itemObject = ExtractItemObject(eventArgs);
             if (itemObject is null)
             {
+                _logger.LogDebug("[AchievementBadges] {Source} event for user {UserId}: no item object.", source, userId);
                 return;
             }
 
             var itemId = ExtractItemId(itemObject);
             if (string.IsNullOrWhiteSpace(itemId))
             {
+                _logger.LogDebug("[AchievementBadges] {Source} event for user {UserId}: no item id.", source, userId);
                 return;
             }
 
@@ -64,6 +99,12 @@ public class PlaybackCompletionTracker : IDisposable
 
             if (runTimeTicks <= 0 || positionTicks <= 0)
             {
+                if (string.Equals(source, "stopped", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug(
+                        "[AchievementBadges] stopped event for user {UserId} item {ItemId}: runtime={RunTime} position={Position}.",
+                        userId, itemId, runTimeTicks, positionTicks);
+                }
                 return;
             }
 
@@ -296,8 +337,7 @@ public class PlaybackCompletionTracker : IDisposable
             return;
         }
 
-        _sessionManager.PlaybackProgress -= OnPlaybackProgress;
-        _sessionManager.PlaybackStopped -= OnPlaybackStopped;
+        Unsubscribe();
         _disposed = true;
     }
 }
