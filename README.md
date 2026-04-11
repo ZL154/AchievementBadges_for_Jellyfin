@@ -242,8 +242,7 @@ Rotating quests from a template pool. Everyone on the server gets the same daily
 </p>
 
 ### Recap
-Weekly, monthly and yearly breakdowns of what you've actually watched — total items, active days, top genres, top directors, and top actors. (The names below come from media metadata — Breaking Bad and Brooklyn Nine-Nine test libraries.)
-
+Weekly, monthly and yearly breakdowns of what you've actually watched — total items, active days, top genres, top directors, and top actors.
 <p align="center">
   <img alt="Recap view" src="assets/screenshots/recap.png" />
 </p>
@@ -303,7 +302,7 @@ Auto-injected into the Jellyfin nav menu — no theme changes required.
 
 This project is released under the [MIT License](LICENSE) — one of the most permissive open-source licenses in common use.
 
-**In plain English:**
+**Summary:**
 
 | You can | You must | You cannot |
 |---|---|---|
