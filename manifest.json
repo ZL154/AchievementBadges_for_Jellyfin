@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.5.23",
+        "changelog": "Hygiene pass from a full-plugin audit. Every JSON store (user badges, playback completion, audit log) now writes atomically: serialize to '<file>.tmp' then 'File.Move(..., overwrite: true)'. Previously 'File.WriteAllText' was used directly, so a process kill or power loss mid-write would truncate or corrupt the JSON file and wipe every user's unlocked badges / playback counters. File.Move is atomic on NTFS when source and target are on the same volume, which they are because the temp file is a sibling. Also fixed a StreamReader in SidebarInjectionMiddleware that was never disposed, with an explicit leaveOpen:true so the encapsulating MemoryStream 'using' still handles cleanup.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.23/Jellyfin.Plugin.AchievementBadgesv1.5.23.zip",
+        "checksum": "55E805A4C67CD25F648CE1714966FA31"
+      },
+      {
         "version": "1.5.22",
         "changelog": "Sidebar entry is now anchored next to Jellyfin's own 'Plugin Settings' / 'Plugin Pages' item instead of wherever the first '.navMenuOption' happens to be — which, depending on which other plugins are installed, could land us inside a 3rd-party section like Kevin Tweaks. The injector walks every '.navMenuOption', text-matches 'Plugin Settings' / 'Plugin Pages', and inserts ours directly after it. Fallbacks: Home item, then first nav item (previous behaviour) as last resort.",
         "targetAbi": "10.11.0.0",

@@ -245,7 +245,8 @@ public class SidebarInjectionMiddleware
 
             if (isHtml && !isCompressed)
             {
-                var html = await new StreamReader(buffer, Encoding.UTF8).ReadToEndAsync();
+                using var reader = new StreamReader(buffer, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true);
+                var html = await reader.ReadToEndAsync();
 
                 if (html.Contains("</body>", StringComparison.OrdinalIgnoreCase))
                 {

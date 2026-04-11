@@ -229,7 +229,11 @@ public class PlaybackCompletionService
     private void Save()
     {
         var json = JsonSerializer.Serialize(_playbackStates, _jsonOptions);
-        File.WriteAllText(_dataFilePath, json);
+        // Atomic write: serialize to .tmp then rename. Prevents state loss if
+        // the process is killed mid-write.
+        var tmp = _dataFilePath + ".tmp";
+        File.WriteAllText(tmp, json);
+        File.Move(tmp, _dataFilePath, overwrite: true);
     }
 
     private static UserPlaybackState CloneState(UserPlaybackState state)
