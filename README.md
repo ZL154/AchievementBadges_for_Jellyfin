@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="1070" alt="achievement-banner" src="https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/banner.svg" />
+  <img width="1070" alt="achievement-banner" src="https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png" />
 </p>
 
 ```text
