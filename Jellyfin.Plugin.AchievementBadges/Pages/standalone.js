@@ -563,9 +563,8 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-hero-streak{background:rgba(255,87,34,0.12);border-color:rgba(255,87,34,0.35);color:#bf360c;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-title-display{filter:brightness(0.7);}' +
             // Welcome banner
-            '#' + ROOT_ID + ' .ab-welcome-banner{display:flex;align-items:center;gap:14px;padding:16px 24px;border-radius:12px;margin-bottom:1.4em;background:linear-gradient(135deg,#1a1a4e,#2d1b69,#1a2744);border:1px solid rgba(251,191,36,0.35);border-bottom:2px solid rgba(251,191,36,0.45);box-shadow:0 0 20px rgba(251,191,36,0.08),0 2px 8px rgba(0,0,0,0.2);color:rgba(255,255,255,0.95);font-size:1.1em;font-weight:600;letter-spacing:0.02em;line-height:1.5;}' +
-            '#' + ROOT_ID + ' .ab-welcome-banner::before{content:"\\2728";font-size:1.5em;flex-shrink:0;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-welcome-banner{background:linear-gradient(135deg,#e8eaf6,#ede7f6,#e3f2fd);border-color:rgba(102,126,234,0.4);border-bottom:2px solid rgba(102,126,234,0.5);box-shadow:0 2px 8px rgba(102,126,234,0.1);color:rgba(0,0,0,0.85);}' +
+            '#' + ROOT_ID + ' .ab-welcome-banner{padding:14px 20px;border-radius:8px;margin-bottom:1.2em;background:rgba(255,255,255,0.06);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:none;border-left:3px solid;border-image:linear-gradient(180deg,#fbbf24,#f59e0b) 1;box-shadow:0 1px 4px rgba(0,0,0,0.1);color:rgba(255,255,255,0.88);font-size:0.95em;font-weight:500;letter-spacing:0.02em;line-height:1.5;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-welcome-banner{background:rgba(0,0,0,0.03);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 1px 4px rgba(0,0,0,0.1);color:rgba(0,0,0,0.75);}' +
             // Bug 4 — rank progress bar track visible in light theme
             '#' + ROOT_ID + '.ab-theme-light #abSaRankBarTrack{background:rgba(0,0,0,0.1) !important;}' +
             // Bug 8 — hero icon bg visible in light theme
