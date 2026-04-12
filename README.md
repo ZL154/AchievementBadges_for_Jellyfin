@@ -23,7 +23,20 @@
 
 A full progression, gamification and achievement system for Jellyfin that rewards users based on real viewing activity. Think Xbox Gamerscore meets Letterboxd, built natively into your media server.
 
-> **Status:** Active development — v1.5.37 adds user preferences, privacy controls, admin feature toggles, achievement page themes, Xbox-style toasts with sound, and diamond animations for legendary/mythic unlocks.
+> **Status:** Active development — v1.5.40 adds user preferences, privacy controls, admin feature toggles, achievement page themes, Xbox-style toasts with sound, and diamond animations for legendary/mythic unlocks.
+
+---
+
+## 📑 Table of contents
+
+- [Overview](#-overview)
+- [Core features](#-core-features) — badges, ranks, score, prestige, quests, stats, UI, preferences, admin
+- [Installation](#️-installation)
+- [Requirements](#-requirements)
+- [Troubleshooting](#-troubleshooting) — permissions, NixOS, reverse proxy
+- [API endpoints](#-api-endpoints)
+- [Screenshots](#-screenshots)
+- [License](#-license)
 
 ---
 
@@ -198,6 +211,28 @@ sudo chown -R jellyfin:jellyfin /usr/share/jellyfin/web/
 Then restart Jellyfin. The plugin will patch `index.html` on the next startup.
 
 **Still broken?** The plugin has a middleware fallback that rewrites `index.html` at runtime (no disk write needed). If that's also failing, check whether a reverse proxy (nginx/Caddy) is caching a stale `index.html` from before the plugin was installed. Clear the proxy cache or restart it.
+
+### NixOS (read-only `/nix/store`)
+
+NixOS serves Jellyfin's web files from the immutable Nix store, so neither the disk patcher nor the middleware can modify `index.html`. Use a NixOS overlay to inject the script tags at build time:
+
+```nix
+nixpkgs.overlays = [
+  (final: prev: {
+    jellyfin-web = prev.jellyfin-web.overrideAttrs (finalAttrs: previousAttrs: {
+      installPhase = ''
+        runHook preInstall
+        sed -i 's#</body>#<!-- achievementbadges-bootstrap --><script src="/Plugins/AchievementBadges/client-script/sidebar"></script><script src="/Plugins/AchievementBadges/client-script/standalone" defer></script><script src="/Plugins/AchievementBadges/client-script/enhance" defer></script></body>#' dist/index.html
+        mkdir -p $out/share
+        cp -a dist $out/share/jellyfin-web
+        runHook postInstall
+      '';
+    });
+  })
+];
+```
+
+The plugin DLL serves the JS files from embedded resources — the three `<script>` tags just tell the browser to load them. Rebuild your NixOS config after adding the overlay and restart Jellyfin.
 
 ---
 
