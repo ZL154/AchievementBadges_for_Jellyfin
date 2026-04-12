@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Achievement Badges — Regular</title>
+<style>
+  html,body{height:100%;margin:0;background:#111;color:#fff;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+  .stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  .achievement *{box-sizing:border-box;}
+  .achievement{position:relative;pointer-events:none;width:100%;}
+
+  /* ── ORIGINAL CODEPEN KEYFRAMES (untouched for smoothness) ── */
+
+  @keyframes rotate{
+    0%{transform:rotateY(0deg);}
+    50%{transform:rotateY(360deg);}
+    100%{transform:rotateY(0deg);}
+  }
+
+  @keyframes scale_circle_1{
+    0%  {transform:scale3d(0,0,0);}
+    2%  {opacity:1;}
+    5%  {transform:scale3d(1,1,1);opacity:.8;}
+    6%  {opacity:0;}
+    9%  {opacity:0;}
+    10% {transform:scale3d(1,1,1);opacity:0;}
+    90% {transform:scale3d(0,0,0);}
+    92% {opacity:1;}
+    95% {transform:scale3d(1,1,1);opacity:.8;}
+    96% {opacity:0;}
+    99% {opacity:0;}
+    100%{transform:scale3d(1,1,1);opacity:0;}
+  }
+
+  @keyframes circle_grow_move{
+    1%  {opacity:0;transform:scale(.1);}
+    4%  {transform:scale(1.1);}
+    5%  {transform:scale(1);opacity:1;}
+    11% {transform:translate(0);background-color:#2B7A0B;}
+    24% {transform:translateX(-140px);background-color:#3DA40E;}
+    85% {transform:translateX(-140px);background-color:#3DA40E;}
+    89% {transform:translateX(0);background-color:#2B7A0B;}
+    94% {transform:scale(1);}
+    96% {transform:scale(1.1);}
+    98% {transform:scale(.1);opacity:1;}
+    99% {opacity:0;}
+    100%{transform:scale(.1);}
+  }
+
+  @keyframes trophy_animate_opacity{
+    0%{opacity:0;} 20%{opacity:0;} 24%{opacity:1;}
+    90%{opacity:1;} 95%{opacity:0;} 100%{opacity:0;}
+  }
+
+  @keyframes xbox_animate_opacity{
+    0%{opacity:1;} 19%{opacity:1;transform:scale3d(1,1,1);} 23%{opacity:0;}
+    90%{opacity:0;} 95%{opacity:1;} 100%{opacity:1;}
+  }
+
+  @keyframes banner_animate{
+    0%  {width:75px;opacity:0;}
+    2%  {opacity:0;}
+    4%  {opacity:1;}
+    11% {width:75px;}
+    24% {width:355px;}
+    85% {width:355px;}
+    89% {width:75px;opacity:1;}
+    90% {opacity:0;}
+  }
+
+  @keyframes banner_color{
+    0%  {background-color:#245E07;}
+    11% {background-color:#245E07;}
+    24% {background-color:#317D0A;}
+    85% {background-color:#317D0A;}
+    89% {background-color:#245E07;}
+    100%{background-color:#245E07;}
+  }
+
+  @keyframes textSlide{
+    0%  {transform:translateY(85px);opacity:0;}
+    20% {transform:translateY(85px);opacity:0;}
+    25% {transform:translateY(0);opacity:1;}
+    79% {transform:translateY(0);opacity:1;}
+    84% {transform:translateY(-115px);opacity:0;}
+    100%{opacity:0;}
+  }
+
+  /* Shimmer: diagonal white gleam sweeps across the expanded banner */
+  @keyframes shimmerSweep{
+    0%,27%{left:-60%;opacity:0;}
+    30%{left:-60%;opacity:.8;}
+    47%{left:160%;opacity:.8;}
+    48%,100%{left:160%;opacity:0;}
+  }
+  .shimmer{
+    position:absolute;top:0;bottom:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(115deg,
+      transparent 30%,
+      rgba(255,255,255,0.10) 42%,
+      rgba(255,255,255,0.42) 50%,
+      rgba(255,255,255,0.10) 58%,
+      transparent 70%);
+    transform:skewX(-18deg);opacity:0;
+    animation:shimmerSweep 10.5s infinite;
+    pointer-events:none;z-index:10;
+  }
+
+  
+
+  /* ── Layout ── */
+  .animation{
+    width:355px;height:110px;padding:5px 0;
+    position:relative;margin:auto;
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  }
+
+  /* Auto-run infinite */
+  .circle            {animation:circle_grow_move 10.5s infinite;transform-origin:center;}
+  .circle::before    {animation:scale_circle_1 10.5s infinite;transform-origin:center;animation-iteration-count:2;}
+  .circle::after     {animation:scale_circle_1 10.5s .1s infinite;transform-origin:center;}
+  .trophy_animate    {animation:trophy_animate_opacity 10.5s infinite;}
+  .xbox_img          {animation:xbox_animate_opacity 10.5s infinite;z-index:102;}
+  .banner            {animation:banner_animate 10.5s infinite, banner_color 10.5s infinite;}
+  .achieve_disp      {animation:textSlide 10.5s infinite;}
+
+  /* ── Circle with sphere gradient for depth ── */
+  .circle{
+    width:75px;height:75px;top:0;opacity:0;margin:0 auto;
+    border-radius:100%;
+    background-color:#2B7A0B;
+    background-image:
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.10) 28%, transparent 56%),
+      radial-gradient(circle at 72% 80%, rgba(0,0,0,0.25) 0%, transparent 52%);
+    position:relative;overflow:hidden;z-index:4;
+    box-shadow:0 4px 14px rgba(0,0,0,0.45), inset 0 1px 3px rgba(255,255,255,0.12);
+  }
+  .circle::before{
+    content:"";opacity:0;width:75px;height:75px;
+    background-color:#50C820;
+    position:absolute;top:0;left:0;border-radius:50%;display:block;
+  }
+  .circle::after{
+    content:"";opacity:0;width:75px;height:75px;
+    background-color:#1A5A05;
+    position:absolute;top:0;left:0;border-radius:50%;display:block;
+  }
+  .circle .img{height:50%;left:25%;top:25%;position:absolute;z-index:100;}
+  .circle .img img{height:100%;position:absolute;}
+  .circle .trophy_1{animation:rotate 6s infinite;}
+
+  /* ── Banner with gradient depth ── */
+  .banner{
+    width:355px;height:75px;position:relative;left:0;opacity:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    right:0;margin:0 auto;
+    background-color:#245E07;
+    background-image:
+      linear-gradient(90deg, rgba(0,0,0,.20) 0%, transparent 14%, transparent 86%, rgba(0,0,0,.20) 100%),
+      linear-gradient(180deg, rgba(255,255,255,.20) 0%, rgba(255,255,255,.05) 30%, transparent 55%, rgba(0,0,0,.20) 100%);
+    overflow:hidden;border-radius:100px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.50);
+  }
+  .banner-outer{
+    display:flex;align-items:center;align-content:center;
+    width:100%;top:-75px;position:relative;
+  }
+
+  /* ── Text ── */
+  .achieve_disp{
+    display:flex;flex-direction:column;width:72%;
+    position:absolute;justify-content:center;
+    margin-left:92px;left:0;height:100%;top:0;
+  }
+  .achieve_disp .score_disp{
+    width:100%;display:flex;flex-direction:row;
+    align-items:center;margin-bottom:0;
+  }
+  .achieve_disp .achiev_name{
+    border:none;outline:none;background:none;
+    font-size:12.5pt;color:#fff;line-height:24px;
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    font-weight:500;
+  }
+  .acheive_score{margin-left:4px;margin-right:4px;color:#fff;font-weight:600;font-size:12.5pt;}
+  .unlocked{
+    width:100%;color:rgba(255,255,255,.88);
+    font-weight:500;font-size:10.5px;
+    letter-spacing:1.4px;text-transform:uppercase;
+  }
+  .gamerscore{display:flex;flex-direction:row;align-items:center;height:24px;}
+  .gamerscore img{opacity:.88;}
+  .hyphen_sep{margin:0 4px;color:rgba(255,255,255,.55);font-size:13pt;line-height:24px;}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="achievement">
+      <div class="animation">
+        <div class="circle">
+          <div class="img trophy_animate trophy_img">
+            <img class="trophy_1" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+Cjxzdmcgdmlld0JveD0iMCAwIDQ5MyA0OTMiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+Cgk8ZyBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNy4wMDAwMDAsIDUuMDAwMDAwKSI+CgkJPHJlY3QgZmlsbD0iI0ZGRkZGRiIgeD0iMTg5LjkzMTAzNCIgeT0iMzQ0LjcyIiB3aWR0aD0iNzkuODIwNDk1MyIgaGVpZ2h0PSI2NS4xMiIgcng9IjgiPgoJCTwvcmVjdD4KCQk8cmVjdCBmaWxsPSIjRkZGRkZGIiB4PSI0NS45MTExNjIxIiB5PSIwIiB3aWR0aD0iMzY1Ljc5MzEwMyIgaGVpZ2h0PSIyNC42NCIgcng9IjEyLjMyIj4KCQk8L3JlY3Q+CgkJPHBhdGggZD0iTTU4LjAzNDQ4MjgsMjMuNjQgTDQwMC45NjU1MTcsMjMuNjQgQzQwMC45NjU1MTcsMjMuNjQgMzkyLjQ5MDQ2OSwyMTIuODk4MDA4IDM1MC41OTE2MTgsMjc5LjMwOTAwNCBDMzA4LjY5Mjc2NywzNDUuNzIgMjcyLjEzMjM0NywzNDUuNzIgMjcyLjEzMjM0NywzNDUuNzIgTDE4Ni44Njc2NTMsMzQ1LjcyIEMxODYuODY3NjUzLDM0NS43MiAxNDUuNTk1MDY4LDM1Mi4wNzgwMDUgMTA1LjUxNzI0MSwyNzkuMzA5MDA0IEM2NS40Mzk0MTQyLDIwNi41NDAwMDIgNTguMDM0NDgyOCwyMy42NCA1OC4wMzQ0ODI4LDIzLjY0IFoiIGZpbGw9IiNGRkZGRkYiPgoJCTwvcGF0aD4KCQk8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLjAwMDAwMCwgNzYuNDQwMDAwKSI+CgkJCTxwYXRoIGQ9Ik0yLjY4OTI5MDI1LDExLjE3Njg0MjIgQy0xLjE4Mjk4Mzk2LDUuMDA0MDQyNjkgMS41ODYyOTQ5MywwIDguODcyMTc3ODQsMCBMNzcuMzc1ODI5MSwwIEw3Ny4zNzU4MjkxLDI2LjQgTDEyLjIzODk2NzMsMjYuNCBMMi42ODkyOTAyNSwxMS4xNzY4NDIyIFoiIGZpbGw9IiNGRkZGRkYiPgoJCQk8L3BhdGg+CgkJCTxwYXRoIGQ9Ik0xNS44Mjc1ODYyLDE1Ljg0IEMxNS44Mjc1ODYyLDE1Ljg0IDM1Ljc4NzE2NTksMTMxLjY4MDk1NiA1OS45NTE1OTQ4LDE3MS4wMDA5ODkgQzg0LjExNjAyMzYsMjEwLjMyMTAyMiAxMzEuOTM2NTkyLDIwNC43NzEwMTEgMTMxLjkzNjU5MiwyMDQuNzcxMDExIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iMjciIHN0cm9rZS1saW5lY2FwPSJzcXVhcmUiPgoJCQk8L3BhdGg+CgkJPC9nPgoJCTxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDM5My4wMDAwMDAsIDE3OS40NDAwMDApIHNjYWxlKC0xLCAxKSB0cmFuc2xhdGUoLTM5My4wMDAwMDAsIC0xNzkuNDQwMDAwKSB0cmFuc2xhdGUoMzI3LjAwMDAwMCwgNzYuNDQwMDAwKSI+CgkJCTxwYXRoIGQ9Ik0yLjY4OTI5MDI1LDExLjE3Njg0MjIgQy0xLjE4Mjk4Mzk2LDUuMDA0MDQyNjkgMS41ODYyOTQ5MywwIDguODcyMTc3ODQsMCBMNzcuMzc1ODI5MSwwIEw3Ny4zNzU4MjkxLDI2LjQgTDEyLjIzODk2NzMsMjYuNCBMMi42ODkyOTAyNSwxMS4xNzY4NDIyIFoiIGZpbGw9IiNGRkZGRkYiPgoJCQk8L3BhdGg+CgkJCTxwYXRoIGQ9Ik0xNS44Mjc1ODYyLDE1Ljg0IEMxNS44Mjc1ODYyLDE1Ljg0IDM1Ljc4NzE2NTksMTMxLjY4MDk1NiA1OS45NTE1OTQ4LDE3MS4wMDA5ODkgQzg0LjExNjAyMzYsMjEwLjMyMTAyMiAxMzEuOTM2NTkyLDIwNC43NzEwMTEgMTMxLjkzNjU5MiwyMDQuNzcxMDExIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iMjciIHN0cm9rZS1saW5lY2FwPSJzcXVhcmUiPgoJCQk8L3BhdGg+CgkJPC9nPgoJCTxwYXRoIGQ9Ik0yMzAuNTg0MTQ5LDM3OS4xNiBDMzEyLjMxMDM3MywzNzkuMTYgMzA0LjQ0NjIxOCw0NDQuMjggMzA0LjQ0NjIxOCw0NDQuMjggTDE1Ni43MjIwOCw0NDQuMjggQzE1Ni43MjIwOCw0NDQuMjggMTQ4Ljg1NzkyNSwzNzkuMTYgMjMwLjU4NDE0OSwzNzkuMTYgWiIgZmlsbD0iI0ZGRkZGRiI+CgkJPC9wYXRoPgoJCTxyZWN0IGZpbGw9IiNGRkZGRkYiIHg9IjE0Mi40NDgyNzYiIHk9IjQ0My4yOCIgd2lkdGg9IjE3NS44NjIwNjkiIGhlaWdodD0iMzguNzIiPgoJCTwvcmVjdD4KCTwvZz4KPC9zdmc+Cg=="/>
+            <img class="trophy_2" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+Cjxzdmcgdmlld0JveD0iMCAwIDQ5MyA0OTMiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+Cgk8ZyBmaWxsPSIjZmZmIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg2Mi4wMDAwMDAsIDUuMDAwMDAwKSI+CgkJPHJlY3QgeD0iMTQ0LjkzMTAzNCIgeT0iMzQ0LjcyIiB3aWR0aD0iNzkuODIwNDk1MyIgaGVpZ2h0PSI2NS4xMiIgcng9IjgiPgoJCTwvcmVjdD4KCQk8cmVjdCB4PSIwLjkxMTE2MjE0NyIgeT0iMCIgd2lkdGg9IjM2NS43OTMxMDMiIGhlaWdodD0iMjQuNjQiIHJ4PSIxMi4zMiI+CgkJPC9yZWN0PgoJCTxwYXRoIGQ9Ik0xMy4wMzQ0ODI4LDIzLjY0IEwzNTUuOTY1NTE3LDIzLjY0IEMzNTUuOTY1NTE3LDIzLjY0IDM0Ny40OTA0NjksMjEyLjg5ODAwOCAzMDUuNTkxNjE4LDI3OS4zMDkwMDQgQzI2My42OTI3NjcsMzQ1LjcyIDIyNy4xMzIzNDcsMzQ1LjcyIDIyNy4xMzIzNDcsMzQ1LjcyIEwxNDEuODY3NjUzLDM0NS43MiBDMTQxLjg2NzY1MywzNDUuNzIgMTAwLjU5NTA2OCwzNTIuMDc4MDA1IDYwLjUxNzI0MTEsMjc5LjMwOTAwNCBDMjAuNDM5NDE0MiwyMDYuNTQwMDAyIDEzLjAzNDQ4MjgsMjMuNjQgMTMuMDM0NDgyOCwyMy42NCBaIj4KCQk8L3BhdGg+CgkJPHBhdGggZD0iTTE4NS41ODQxNDksMzc5LjE2IEMyNjcuMzEwMzczLDM3OS4xNiAyNTkuNDQ2MjE4LDQ0NC4yOCAyNTkuNDQ2MjE4LDQ0NC4yOCBMMTExLjcyMjA4LDQ0NC4yOCBDMTExLjcyMjA4LDQ0NC4yOCAxMDMuODU3OTI1LDM3OS4xNiAxODUuNTg0MTQ5LDM3OS4xNiBaIj4KCQk8L3BhdGg+CgkJPHJlY3QgeD0iOTcuNDQ4Mjc1OSIgeT0iNDQzLjI4IiB3aWR0aD0iMTc1Ljg2MjA2OSIgaGVpZ2h0PSIzOC43MiI+CgkJPC9yZWN0PgoJPC9nPgo8L3N2Zz4K"/>
+          </div>
+          <div class="img xbox_img">
+            <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+Cgk8cGF0aCBmaWxsPSIjZmZmIiBkPSJNNC4xMDIgMjEuMDMzQzYuMjExIDIyLjg4MSA4Ljk3NyAyNCAxMiAyNGMzLjAyNiAwIDUuNzg5LTEuMTE5IDcuOTAyLTIuOTY3IDEuODc3LTEuOTEyLTQuMzE2LTguNzA5LTcuOTAyLTExLjQxNy0zLjU4MiAyLjcwOC05Ljc3OSA5LjUwNS03Ljg5OCAxMS40MTd6bTExLjE2LTE0LjQwNmMyLjUgMi45NjEgNy40ODQgMTAuMzEzIDYuMDc2IDEyLjkxMkMyMy4wMDIgMTcuNDggMjQgMTQuODYxIDI0IDEyLjAwNGMwLTMuMzQtMS4zNjUtNi4zNjItMy41Ny04LjUzNiAwIDAtLjAyNy0uMDIyLS4wODItLjA0Mi0uMDYzLS4wMjItLjE1Mi0uMDQ1LS4yODEtLjA0NS0uNTkyIDAtMS45ODUuNDM0LTQuODA1IDMuMjQ2ek0zLjY1NCAzLjQyNmMtLjA1Ny4wMi0uMDgyLjA0MS0uMDg2LjA0MkMxLjM2NSA1LjY0MiAwIDguNjY0IDAgMTIuMDA0YzAgMi44NTQuOTk4IDUuNDczIDIuNjYxIDcuNTMzLTEuNDAxLTIuNjA1IDMuNTc5LTkuOTUxIDYuMDgtMTIuOTEtMi44Mi0yLjgxMy00LjIxNi0zLjI0NS00LjgwNi0zLjI0NS0uMTMxIDAtLjIyMy4wMjEtLjI4MS4wNDZ2LS4wMDJ6TTEyIDMuNTUxUzkuMDU1IDEuODI4IDYuNzU1IDEuNzQ2Yy0uOTAzLS4wMzMtMS40NTQuMjk1LTEuNTIxLjMzOUM3LjM3OS42NDYgOS42NTkgMCAxMS45ODQgMEgxMmMyLjMzNCAwIDQuNjA1LjY0NiA2Ljc2NiAyLjA4NS0uMDY4LS4wNDYtLjYxNS0uMzcyLTEuNTItLjMzOUMxNC45NDYgMS44MjggMTIgMy41NDUgMTIgMy41NDV2LjAwNnoiIC8+Cjwvc3ZnPgo="/>
+          </div>
+          
+        </div>
+        <div class="banner-outer">
+          <div class="banner">
+            <div class="shimmer"></div>
+            <div class="achieve_disp">
+              <span class="unlocked">Achievement unlocked</span>
+              <div class="score_disp">
+                <div class="gamerscore">
+                  <img width="18" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+Cjxzdmcgdmlld0JveD0iMCAwIDQ5MyA0OTMiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8ZyBmaWxsPSIjRkZGRkZGIj4KICAgICAgICAgICAgPHBhdGggZD0iTTI0Nyw0NjggQzM2OS4wNTQ5Myw0NjggNDY4LDM2OS4wNTQ5MyA0NjgsMjQ3IEM0NjgsMTI0Ljk0NTA3IDM2OS4wNTQ5MywyNiAyNDcsMjYgQzEyNC45NDUwNywyNiAyNiwxMjQuOTQ1MDcgMjYsMjQ3IEMyNiwzNjkuMDU0OTMgMTI0Ljk0NTA3LDQ2OCAyNDcsNDY4IFogTTIzNi40OTcxNTksMjMxLjY1MzY2MSBMMzMzLjg3MjUyNiwyMzEuNjUzNjYxIEwzMzMuODcyNTI2LDM1OC45MTMxOTIgQzMxOC4wOTA5MjIsMzY0LjA2MTggMzAzLjIzMjkzMywzNjcuNjcxMzY4IDI4OS4yOTgxMTIsMzY5Ljc0MjAwNCBDMjc1LjM2MzI5MiwzNzEuODEyNjQgMjYxLjEyMDg4OCwzNzIuODQ3OTQzIDI0Ni41NzA0NzMsMzcyLjg0Nzk0MyBDMjA5LjUyMjg3OCwzNzIuODQ3OTQzIDE4MS4yMzM5MzgsMzYxLjk2MzI3NiAxNjEuNzAyODA0LDM0MC4xOTM2MTcgQzE0Mi4xNzE2NywzMTguNDIzOTU4IDEzMi40MDYyNSwyODcuMTY5MDE2IDEzMi40MDYyNSwyNDYuNDI3ODU1IEMxMzIuNDA2MjUsMjA2LjgwNTk1NiAxNDMuNzM4NjE1LDE3NS45MTQ3NjkgMTY2LjQwMzY4NCwxNTMuNzUzMzY4IEMxODkuMDY4NzUzLDEzMS41OTE5NjcgMjIwLjQ5MTU4MiwxMjAuNTExNDMyIDI2MC42NzMxMTIsMTIwLjUxMTQzMiBDMjg1Ljg1NjUyMywxMjAuNTExNDMyIDMxMC4xNDQxNTgsMTI1LjU0ODAzOSAzMzMuNTM2NzQ5LDEzNS42MjE0MDMgTDMxNi4yNDQyMjcsMTc3LjI1Nzc2NyBDMjk4LjMzNjAyNCwxNjguMzAzNjY1IDI3OS43MDA1NzksMTYzLjgyNjY4MiAyNjAuMzM3MzM1LDE2My44MjY2ODIgQzIzNy44NDAxNTUsMTYzLjgyNjY4MiAyMTkuODIwMjk2LDE3MS4zODE1OTEgMjA2LjI3NzIxOCwxODYuNDkxNjM4IEMxOTIuNzM0MTM5LDIwMS42MDE2ODQgMTg1Ljk2MjcwMiwyMjEuOTE1OTk3IDE4NS45NjI3MDIsMjQ3LjQzNTE4NiBDMTg1Ljk2MjcwMiwyNzQuMDczNjM4IDE5MS40MTkwMjUsMjk0LjQxNTkzMiAyMDIuMzMxODM3LDMwOC40NjI2NzkgQzIxMy4yNDQ2NDgsMzIyLjUwOTQyNSAyMjkuMTA5OTU4LDMyOS41MzI2OTMgMjQ5LjkyODI0NCwzMjkuNTMyNjkzIEMyNjAuNzg1MDkyLDMyOS41MzI2OTMgMjcxLjgwOTY2NCwzMjguNDEzNDQ3IDI4My4wMDIyOTEsMzI2LjE3NDkyMiBMMjgzLjAwMjI5MSwyNzQuOTY4OTEgTDIzNi40OTcxNTksMjc0Ljk2ODkxIEwyMzYuNDk3MTU5LDIzMS42NTM2NjEgWiI+PC9wYXRoPgogICAgPC9nPgo8L3N2Zz4="/>
+                  <span class="acheive_score">100</span>
+                </div>
+                <span class="hyphen_sep">&ndash;</span>
+                <span class="achiev_name">Achievement Badges</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    var snd = new Audio('data:audio/mpeg;base64,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9zmjYjPueIfvrrg8sJl0kkjAB7uR41Aa4pYcL9rtl8eIZjysJanrAlWnk1h6ouaGhAhmolKbJTOVcx2SmxH7SIv6GWpz6LNPqVXFO1cHlhMukkkYAPdyPGoDXFLDhftdsvjxDMeVhLU9YEq08msPVFzQ0IEM1EpTZKZyrmOyU2I/aRF/Qy1OfRZp9Sq4p2rAQrkAVn/QBe//nr0rOcmBxpAS5b+pOIzDb24RdWx+5murNDr1NuQjVQTGB+XKakpX3flICsfftJ19T7Xx+5Dc6lCuQBWf9AF7/+evSs5yYHGkBLlv6k4jMNvbhF1bH7ma6s0OvU3/+3IAtwACDhvRaflKTEHDei0/KUmITG9JqGFpMQmN6TUMLSa5CNVBMYH5cpqSlfd+UgKx9+0nX1PtfH7kNzqXLLQXrJAgABJv/KlrMZPCUjGNtOEQnckEAmUw56leK+azdTmYcqx0RheiAKTT7BQXvnaYAUN/2gTiv+LCrlloL1kgQAAk3/lS1mMnhKRjG2nCITuSCATKYc9SvFfNZupzMOVY6IwvRAFJp9goL3ztMAKG/7QJxX/FhUBQm6sBiZ/AoAAJbpJhjwGhDLjlSmSP+M6WLDUo/AQEMzZ4aqJJkLEu0Iz3qe2mx9z1Z7//KqE3VgMTP4FAABLdJMMeA0IZccqUyR/xnSxYalH4CAhmbPDVRJMhYl2hGe9T202PuerPf/5VCf8r7SRoAAEb5iBQXZlTWnGygAx7gv/7cAC9gAICGs5jGFpMQENZzGMLSYecbzmsZMkw843nNYyZJgaFxJNWIsRtgVhUVZlDrMUiLPXxYRa+jZ0oT/lfaSNAAAjfMQKC7Mqa042UAGPcEDQuJJqxFiNsCsKirModZikRZ6+LCLX0bOkt2S2AEAAADKxcAKp3GaYbxxMTNYWPf+V/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////+3IAyoABpxbNephJyDTi2a9TCTkF9FsppuSnIL6LZTTclOT//////////////////////////LdktgBAAAAysXACqdxmmG8cTEzWFj3/lf/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////7cADxAAb+CcjgZnkoGEE5HAzPJQAAAS4AAAAgAAAlwAAABP//////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/+3IA/4AIsABLgAAACAAACXAAAAEAAAEuAAAAIAAAJcAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFRBR1hib3ggMzYwIEFjaGlldmVtZW50IFVubG9ja2VkIFhib3ggMzYwIEFjaGlldmVtZW50IFVubG9ja2VkIFhib3ggMzYwAAAAAAAAAAAAAAAAAAAAAAAAAAAAADIwMDcoYykgTWljcm9zb2Z0IENvcnAuICAgICAgICAgICAM');
+    snd.volume = 0.6;
+    // Play sound at the start of each animation cycle
+    function playLoop() {
+      snd.currentTime = 0;
+      snd.play().catch(function(){});
+    }
+    // First play needs a user gesture on most browsers — click anywhere
+    document.addEventListener('click', function() {
+      playLoop();
+      // Then auto-loop every 10.5s
+      setInterval(playLoop, 10500);
+    }, { once: true });
+  </script>
+</body>
+</html>
