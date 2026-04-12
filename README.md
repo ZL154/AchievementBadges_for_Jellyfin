@@ -156,6 +156,33 @@ https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/mani
 
 ---
 
+## 🔍 Troubleshooting
+
+### Sidebar / toasts / UI not showing up
+
+The plugin injects its scripts into Jellyfin's `index.html` at startup. If the web directory isn't writable, the injection fails silently and no UI loads (no sidebar entry, no toasts, no achievements page).
+
+**Diagnose:** visit `https://your-server/Plugins/AchievementBadges/test` — the JSON response shows:
+- `DiagIndexFound` — whether `index.html` was located
+- `DiagIndexPatched` — whether the script tags were successfully written
+- `DiagLastError` — the exact error if patching failed (usually `Unauthorized: Access denied`)
+
+**Common cause:** on Docker or Linux installs, Jellyfin doesn't have write access to `/usr/share/jellyfin/web/`. Fix by granting write permission:
+
+```bash
+# Docker: run inside the container
+chmod -R a+w /usr/share/jellyfin/web/
+
+# Systemd: fix ownership
+sudo chown -R jellyfin:jellyfin /usr/share/jellyfin/web/
+```
+
+Then restart Jellyfin. The plugin will patch `index.html` on the next startup.
+
+**Still broken?** The plugin has a middleware fallback that rewrites `index.html` at runtime (no disk write needed). If that's also failing, check whether a reverse proxy (nginx/Caddy) is caching a stale `index.html` from before the plugin was installed. Clear the proxy cache or restart it.
+
+---
+
 ## 📡 API endpoints
 
 ### User-facing (require auth)
