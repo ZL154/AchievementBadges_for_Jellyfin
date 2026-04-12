@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Xbox-style achievement toast animation" src="assets/achievement-animated.gif" />
+  <img alt="achievement-banner" src="https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png" />
 </p>
 
 ```text
