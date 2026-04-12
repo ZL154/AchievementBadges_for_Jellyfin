@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.5.27",
+        "changelog": "Achievement unlock sound + richer toast visuals. The Xbox 360 achievement chime now plays when a badge unlocks (inlined as 7KB base64, respects user prefs EnableSound). Banner now has a horizontal gradient (darker edges → transparent center) layered with the existing vertical sheen, giving it noticeably more depth instead of a flat single-color fill. All six rarity base colors darkened slightly so the 'bright' shift during banner expansion (24-85% of the animation) is more visible — the color change from base to bright now reads as a real transition instead of being barely noticeable.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.27/Jellyfin.Plugin.AchievementBadgesv1.5.27.zip",
+        "checksum": "49A7668E3B27B45C67951882616D5B20"
+      },
+      {
         "version": "1.5.26",
         "changelog": "Fix skewed ETA calculations. ETAs were computed by dividing remaining progress by (counter / DaysWatched), where DaysWatched is the number of distinct days you actually watched something. This made ETAs wildly optimistic because it assumed you watch every day. A user who's been on Jellyfin for 365 days but only watched on 67 of them would get an ETA based on their watching-day rate (3.1/day) instead of their calendar-day rate (0.57/day), making a 4-year achievement look like it's 256 days away. Now uses calendar days since first recorded watch date (earliest entry in WatchDates) as the denominator, so ETAs reflect actual real-world pace including off-days.",
         "targetAbi": "10.11.0.0",
