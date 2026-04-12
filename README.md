@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/Jellyfin-10.11%2B-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
   <img src="https://img.shields.io/badge/Type-Plugin-E50914?style=for-the-badge&labelColor=000000&color=E50914" />
   <img src="https://img.shields.io/badge/System-Achievements-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
-  <img src="https://img.shields.io/badge/Version-1.5.25-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
+  <img src="https://img.shields.io/badge/Version-1.5.37-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
   <img src="https://img.shields.io/badge/License-MIT-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
 </p>
 
@@ -23,7 +23,7 @@
 
 A full progression, gamification and achievement system for Jellyfin that rewards users based on real viewing activity. Think Xbox Gamerscore meets Letterboxd, built natively into your media server.
 
-> **Status:** Feature-complete as of v1.5.11 — the 1.5.12–1.5.18 releases have focused on polish (Xbox-style toasts, gradient tones, banner refinement). Bug fixes and Jellyfin version compatibility will continue; new features will be considered via [pull request](https://github.com/ZL154/AchievementBadges_for_Jellyfin/pulls) or by Issues.
+> **Status:** Active development — v1.5.37 adds user preferences, privacy controls, admin feature toggles, achievement page themes, Xbox-style toasts with sound, and diamond animations for legendary/mythic unlocks.
 
 ---
 
@@ -81,25 +81,43 @@ Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin
 - **Category leaderboards** — Score, Movies, Episodes, Hours, Best Streak, Series
 
 ### 🏠 UI integration
-- **Sidebar entry** auto-injected into the Jellyfin nav menu
-- **Equipped badge showcase** in header + profile
-- **Xbox-style unlock toasts** that pop up during playback (polled every 30s), with per-rarity glow, shimmer sweep and confetti on rare+ unlocks
-- **Admin toast preview** — test buttons in the admin panel fire a sample toast for each rarity tier
+- **Sidebar entry** auto-injected into the Jellyfin nav menu (works on web, iOS, and Android after restart)
+- **Equipped badge showcase** in header + profile (configurable slot count, 1-10)
+- **Xbox-style unlock toasts** with per-rarity colors (6 tiers), Xbox logo → trophy swap, shimmer sweep, and confetti on rare+ unlocks
+- **Achievement sound** — Xbox 360 chime for common/uncommon, rare Xbox One chime for rare/epic/legendary/mythic
+- **Diamond spritesheet** for legendary/mythic unlocks (147-frame rotating crystal animation)
+- **One-at-a-time toast queue** — multiple simultaneous unlocks play sequentially so each gets its full animation
+- **Toasts during playback** — unlocks fire within ~1s of earning via playback event hooks + DOM fallback
+- **Admin toast preview** — test buttons for each rarity tier
 - **Standalone achievements page** at `#!/achievements`
 - **Shareable profile card** — server-rendered HTML at `/Plugins/AchievementBadges/users/{id}/profile-card`
 
+### ⚙️ User preferences
+A gear icon on the achievements page opens a full settings panel with auto-save:
+- **Toast controls** — enable/disable toasts, sound, confetti, milestone toasts
+- **Minimum toast rarity** — filter out common spam (All / Rare+ / Epic+ / Legendary+)
+- **Privacy** — hide from leaderboard, compare profiles, activity feed, prestige board
+- **Achievement page themes** — Default, Dark, or Light (scoped to achievements page only, doesn't affect Jellyfin)
+- **Spoiler mode** — hides locked badge descriptions with "???" so you discover them naturally
+- **Equipped badge slots** — choose how many badges show in your showcase (1-10)
+- **Auto-equip new unlocks** — newly earned badges automatically fill empty slots
+
 ### 🛠️ Admin features
-- **Enable/disable individual badges** — useful if your server can't satisfy some criteria (e.g. not enough libraries)
+- **Feature Controls** — kill switches for leaderboard, compare, activity feed, prestige, quests
+- **Force Privacy Mode** — override all users to hidden from all social features
+- **Max Equipped Badges** — server-wide cap (1-10)
+- **Restrict Badge Visibility** — users can only see their own badges
+- **Disable Badge Categories** — hide entire categories (e.g. "Late Night" for family servers)
+- **Custom Welcome Message** — text shown on the achievements page
+- **Reset User Progress** — wipe a specific user's badges via admin endpoint
+- **Enable/disable individual badges** — useful if your server can't satisfy some criteria
 - **Visual badge editor** — form-based creator for custom badges
 - **JSON editor** alternative for power users
 - **Seasonal challenges** — time-limited goals with start/end dates
 - **Challenge templates** — one-click add for Monthly Marathon, October Horror, New Year, Summer Blockbuster
-- **Webhook notifications** — Discord/Slack-compatible POST on every unlock, auto-detects format
-- **Audit log** — last 5,000 unlock events with timestamps and user details
+- **Webhook notifications** — Discord/Slack-compatible POST on every unlock
+- **Audit log** — last 5,000 unlock events with timestamps
 - **Progress injection** — set arbitrary counter values for testing / gifting
-- **Export / import** profile JSON for server migration
-- **Per-badge reset** — wipe a single badge without nuking the whole profile
-- **UI feature toggles** — disable toasts, home widget, item ribbon individually
 - **Admin auth lockdown** — all admin endpoints require elevated permissions
 
 ### 🔒 Tracking
@@ -230,6 +248,8 @@ GET/POST  /Plugins/AchievementBadges/admin/webhook                    — webhoo
 GET/POST  /Plugins/AchievementBadges/admin/ui-features                — UI feature toggles
 GET       /Plugins/AchievementBadges/admin/audit-log?limit=200
 POST      /Plugins/AchievementBadges/admin/users/{userId}/inject-counters
+GET/POST  /Plugins/AchievementBadges/admin/feature-config              — feature kill switches + admin controls
+DELETE    /Plugins/AchievementBadges/admin/users/{userId}/reset         — wipe user's achievement progress
 ```
 
 ---
