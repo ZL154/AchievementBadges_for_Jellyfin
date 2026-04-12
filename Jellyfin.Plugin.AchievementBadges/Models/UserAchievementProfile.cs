@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Jellyfin.Plugin.AchievementBadges.Models;
 
@@ -54,26 +55,52 @@ public class CompareHistoryEntry
 public class UserNotificationPreferences
 {
     // Existing toast controls
+    [JsonPropertyName("EnableUnlockToasts")]
     public bool EnableUnlockToasts { get; set; } = true;
+
+    [JsonPropertyName("EnableMilestoneToasts")]
     public bool EnableMilestoneToasts { get; set; } = true;
+
+    [JsonPropertyName("EnableConfetti")]
     public bool EnableConfetti { get; set; } = true;
+
+    [JsonPropertyName("AppearInActivityFeed")]
     public bool AppearInActivityFeed { get; set; } = true;
+
+    [JsonPropertyName("EnableCoWatchBonus")]
     public bool EnableCoWatchBonus { get; set; } = true;
 
     // Toast controls
+    [JsonPropertyName("EnableSound")]
     public bool EnableSound { get; set; } = true;
+
+    [JsonPropertyName("MinimumToastRarity")]
     public string MinimumToastRarity { get; set; } = "all"; // "all", "rare", "epic", "legendary"
 
     // Privacy
+    [JsonPropertyName("HideFromLeaderboard")]
     public bool HideFromLeaderboard { get; set; } = false;
+
+    [JsonPropertyName("HideFromCompare")]
     public bool HideFromCompare { get; set; } = false;
+
+    [JsonPropertyName("HideFromPrestigeBoard")]
     public bool HideFromPrestigeBoard { get; set; } = false;
 
     // Display
+    [JsonPropertyName("AchievementPageTheme")]
     public string AchievementPageTheme { get; set; } = "default"; // "default", "dark", "light"
+
+    [JsonPropertyName("SpoilerMode")]
     public bool SpoilerMode { get; set; } = false;
+
+    [JsonPropertyName("EquippedBadgeSlots")]
     public int EquippedBadgeSlots { get; set; } = 5; // 1-10
+
+    [JsonPropertyName("AutoEquipNewUnlocks")]
     public bool AutoEquipNewUnlocks { get; set; } = true;
+
+    [JsonPropertyName("EnablePushNotifications")]
     public bool EnablePushNotifications { get; set; } = false;
 }
 
