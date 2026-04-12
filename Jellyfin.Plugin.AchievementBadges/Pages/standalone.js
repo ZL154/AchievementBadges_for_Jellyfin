@@ -319,17 +319,17 @@
             '#' + ROOT_ID + ' .ab-r-legendary{color:#fbbf24;}' +
             '#' + ROOT_ID + ' .ab-r-mythic{color:#f43f5e;}' +
             // Rarity-colored borders on badge cards
-            '#' + ROOT_ID + ' .ab-card.ab-r-common-border{border-color:rgba(159,179,200,0.3);}' +
-            '#' + ROOT_ID + ' .ab-card.ab-r-uncommon-border{border-color:rgba(52,211,153,0.4);box-shadow:0 0 0 1px rgba(52,211,153,0.1);}' +
-            '#' + ROOT_ID + ' .ab-card.ab-r-rare-border{border-color:rgba(96,165,250,0.45);box-shadow:0 0 0 1px rgba(96,165,250,0.15);}' +
-            '#' + ROOT_ID + ' .ab-card.ab-r-epic-border{border-color:rgba(167,139,250,0.5);box-shadow:0 0 0 1px rgba(167,139,250,0.2),0 0 20px rgba(167,139,250,0.08);}' +
+            '#' + ROOT_ID + ' .ab-card.ab-r-common-border{border:2px solid rgba(159,179,200,0.6);box-shadow:0 0 0 1px rgba(159,179,200,0.15);}' +
+            '#' + ROOT_ID + ' .ab-card.ab-r-uncommon-border{border:2px solid rgba(52,211,153,0.65);box-shadow:0 0 0 1px rgba(52,211,153,0.2);}' +
+            '#' + ROOT_ID + ' .ab-card.ab-r-rare-border{border:2px solid rgba(96,165,250,0.65);box-shadow:0 0 0 1px rgba(96,165,250,0.25),0 0 16px rgba(96,165,250,0.08);}' +
+            '#' + ROOT_ID + ' .ab-card.ab-r-epic-border{border:2px solid rgba(167,139,250,0.7);box-shadow:0 0 0 1px rgba(167,139,250,0.3),0 0 20px rgba(167,139,250,0.12);}' +
             '#' + ROOT_ID + ' .ab-card.ab-r-legendary-border{border-color:rgba(251,191,36,0.55);box-shadow:0 0 0 1px rgba(251,191,36,0.25),0 0 24px rgba(251,191,36,0.12);}' +
             '#' + ROOT_ID + ' .ab-card.ab-r-mythic-border{border-color:rgba(244,63,94,0.6);box-shadow:0 0 0 1px rgba(244,63,94,0.3),0 0 28px rgba(244,63,94,0.15);}' +
             // Same borders for goal cards
-            '#' + ROOT_ID + ' .ab-goal-card.ab-r-common-border{border-color:rgba(159,179,200,0.35);}' +
-            '#' + ROOT_ID + ' .ab-goal-card.ab-r-uncommon-border{border-color:rgba(52,211,153,0.45);}' +
-            '#' + ROOT_ID + ' .ab-goal-card.ab-r-rare-border{border-color:rgba(96,165,250,0.5);}' +
-            '#' + ROOT_ID + ' .ab-goal-card.ab-r-epic-border{border-color:rgba(167,139,250,0.55);}' +
+            '#' + ROOT_ID + ' .ab-goal-card.ab-r-common-border{border:2px solid rgba(159,179,200,0.6);}' +
+            '#' + ROOT_ID + ' .ab-goal-card.ab-r-uncommon-border{border:2px solid rgba(52,211,153,0.65);}' +
+            '#' + ROOT_ID + ' .ab-goal-card.ab-r-rare-border{border:2px solid rgba(96,165,250,0.65);}' +
+            '#' + ROOT_ID + ' .ab-goal-card.ab-r-epic-border{border:2px solid rgba(167,139,250,0.7);}' +
             '#' + ROOT_ID + ' .ab-goal-card.ab-r-legendary-border{border-color:rgba(251,191,36,0.6);}' +
             '#' + ROOT_ID + ' .ab-goal-card.ab-r-mythic-border{border-color:rgba(244,63,94,0.65);}' +
             '#' + ROOT_ID + ' .ab-lb-row{display:flex;justify-content:space-between;gap:1em;padding:0.75em 0;border-bottom:1px solid rgba(255,255,255,0.08);}' +
@@ -536,16 +536,16 @@
             '#' + ROOT_ID + '.ab-theme-light #abSaPanelQuests div[style*="background:rgba(255,255,255,0.08)"]{background:rgba(0,0,0,0.08) !important;}' +
             // Light theme — badge card rarity borders and equipped highlight
             '#' + ROOT_ID + '.ab-theme-light .ab-card .ab-card-icon{background:rgba(0,0,0,0.07);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-common-border{border-color:rgba(159,179,200,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-uncommon-border{border-color:rgba(52,211,153,0.5) !important;box-shadow:0 0 0 1px rgba(52,211,153,0.15);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-rare-border{border-color:rgba(96,165,250,0.5) !important;box-shadow:0 0 0 1px rgba(96,165,250,0.2);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-epic-border{border-color:rgba(167,139,250,0.5) !important;box-shadow:0 0 0 1px rgba(167,139,250,0.25),0 0 20px rgba(167,139,250,0.1);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-common-border{border:2px solid rgba(120,144,170,0.7) !important;box-shadow:0 0 0 1px rgba(120,144,170,0.2);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-uncommon-border{border:2px solid rgba(16,185,129,0.7) !important;box-shadow:0 0 0 1px rgba(16,185,129,0.2);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-rare-border{border:2px solid rgba(59,130,246,0.7) !important;box-shadow:0 0 0 1px rgba(59,130,246,0.25);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-epic-border{border:2px solid rgba(139,92,246,0.7) !important;box-shadow:0 0 0 1px rgba(139,92,246,0.3),0 0 20px rgba(139,92,246,0.1);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-legendary-border{border-color:rgba(251,191,36,0.5) !important;box-shadow:0 0 0 1px rgba(251,191,36,0.3),0 0 24px rgba(251,191,36,0.15);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-mythic-border{border-color:rgba(244,63,94,0.5) !important;box-shadow:0 0 0 1px rgba(244,63,94,0.35),0 0 28px rgba(244,63,94,0.18);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-common-border{border-color:rgba(159,179,200,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-uncommon-border{border-color:rgba(52,211,153,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-rare-border{border-color:rgba(96,165,250,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-epic-border{border-color:rgba(167,139,250,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-common-border{border:2px solid rgba(120,144,170,0.7) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-uncommon-border{border:2px solid rgba(16,185,129,0.7) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-rare-border{border:2px solid rgba(59,130,246,0.7) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-epic-border{border:2px solid rgba(139,92,246,0.7) !important;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-legendary-border{border-color:rgba(251,191,36,0.5) !important;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-mythic-border{border-color:rgba(244,63,94,0.5) !important;}' +
             // Light theme — "Your data" section stat numbers and histogram bars
@@ -563,8 +563,9 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-hero-streak{background:rgba(255,87,34,0.12);border-color:rgba(255,87,34,0.35);color:#bf360c;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-title-display{filter:brightness(0.7);}' +
             // Welcome banner
-            '#' + ROOT_ID + ' .ab-welcome-banner{padding:0.9em 1.2em;border-radius:12px;margin-bottom:1.2em;background:linear-gradient(135deg,rgba(102,126,234,0.12),rgba(118,75,162,0.08));border:1px solid rgba(102,126,234,0.25);color:rgba(255,255,255,0.9);font-size:0.95em;line-height:1.5;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-welcome-banner{background:linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.06));border-color:rgba(102,126,234,0.3);color:rgba(0,0,0,0.8);}' +
+            '#' + ROOT_ID + ' .ab-welcome-banner{display:flex;align-items:center;gap:14px;padding:16px 24px;border-radius:12px;margin-bottom:1.4em;background:linear-gradient(135deg,#1a1a4e,#2d1b69,#1a2744);border:1px solid rgba(251,191,36,0.35);border-bottom:2px solid rgba(251,191,36,0.45);box-shadow:0 0 20px rgba(251,191,36,0.08),0 2px 8px rgba(0,0,0,0.2);color:rgba(255,255,255,0.95);font-size:1.1em;font-weight:600;letter-spacing:0.02em;line-height:1.5;}' +
+            '#' + ROOT_ID + ' .ab-welcome-banner::before{content:"\\2728";font-size:1.5em;flex-shrink:0;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-welcome-banner{background:linear-gradient(135deg,#e8eaf6,#ede7f6,#e3f2fd);border-color:rgba(102,126,234,0.4);border-bottom:2px solid rgba(102,126,234,0.5);box-shadow:0 2px 8px rgba(102,126,234,0.1);color:rgba(0,0,0,0.85);}' +
             // Bug 4 — rank progress bar track visible in light theme
             '#' + ROOT_ID + '.ab-theme-light #abSaRankBarTrack{background:rgba(0,0,0,0.1) !important;}' +
             // Bug 8 — hero icon bg visible in light theme
