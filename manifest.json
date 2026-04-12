@@ -9,6 +9,13 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.5.38",
+        "changelog": "Definitive bug fix release. Activity feed privacy: fixed JSON key casing mismatch — both save functions now delete stale keys before setting canonical values, added [JsonPropertyName] attributes to all preference properties. Spoiler mode: GetBadge() single-badge endpoint now applies spoiler logic (was only applied in the list endpoint). Badge rarity borders: fixed class name mismatch (CSS used rarity-*-border but JS applies ab-r-*-border). Rank progress bar: added ID to track element for light-theme override. Welcome message: new public-config endpoint (no admin auth) + banner display on achievements page. CASSETTE/VINYL text: added 350+ Material Icons allowlist, invalid icons fall back to emoji_events. Light theme: bumped all secondary text to rgba(0,0,0,0.6)+ minimum, fixed showcase cards, equipped empty state, profile link, hero icons, inline-style progress tracks.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.38/Jellyfin.Plugin.AchievementBadgesv1.5.38.zip",
+        "checksum": "22FFA5A920472E346E0888F5C4A47825"
+      },
+      {
         "version": "1.5.37",
         "changelog": "Comprehensive fix for all remaining bugs. Admin Feature Controls section added to the EXISTING admin page (Pages/index.html) instead of a separate config page — all 10 controls now visible with load/save via feature-config API. Activity feed privacy fixed: saveSettingsPrefs now sends BOTH camelCase and PascalCase keys since C# deserializer wasn't matching camelCase fields. Theme persistence fixed: theme now re-applies every time the page renders via loadAll(), not just on first visit. Light theme: massive CSS override pass covering heatmap cells, SVG text in rings/radar/clock, quest card backgrounds, badge rarity borders, streak header numbers, stats section values, prestige button, and all remaining invisible elements.",
         "targetAbi": "10.11.0.0",

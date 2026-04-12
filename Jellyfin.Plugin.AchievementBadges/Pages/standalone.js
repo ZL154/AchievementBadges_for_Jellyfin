@@ -14,8 +14,10 @@
         emoji_events:'\ud83c\udfc6'
     };
 
+    var VALID_MATERIAL_ICONS = ['play_circle','travel_explore','weekend','chair','home','movie_filter','live_tv','theaters','local_fire_department','bolt','military_tech','auto_awesome','movie','tv','dark_mode','nights_stay','bedtime','wb_sunny','light_mode','sunny','event','event_available','celebration','stars','collections_bookmark','inventory_2','today','calendar_month','favorite','timeline','insights','all_inclusive','speed','rocket_launch','whatshot','emoji_events','cake','help','settings','push_pin','schedule','star','emoji_objects','public','new_releases','verified','workspace_premium','school','science','psychology','self_improvement','fitness_center','sports_esports','music_note','headphones','album','library_music','radio','audiotrack','mic','piano','queue_music','smart_display','videocam','camera','photo_camera','image','panorama','landscape','terrain','forest','water','air','thermostat','ac_unit','cloud','thunderstorm','filter_drama','nightlight','shield','security','lock','vpn_key','token','diamond','paid','monetization_on','savings','account_balance','storefront','shopping_cart','redeem','card_giftcard','loyalty','volunteer_activism','diversity_3','groups','person','face','sentiment_satisfied','mood','thumb_up','handshake','pets','cruelty_free','eco','recycling','compost','energy_savings_leaf','solar_power','wind_power','electric_bolt','flash_on','highlight','lightbulb','tips_and_updates','edit','draw','brush','palette','color_lens','format_paint','architecture','design_services','construction','build','handyman','plumbing','hardware','precision_manufacturing','biotech','api','code','terminal','data_object','storage','dns','hub','lan','router','wifi','bluetooth','cast','devices','phone_android','laptop','desktop_windows','monitor','tablet','watch','headset','speaker','tv_gen','display_settings','tune','equalizer','graphic_eq','surround_sound','spatial_audio','volume_up','notifications','campaign','flag','bookmark','label','tag','sell','receipt','description','article','newspaper','feed','forum','chat','message','mail','send','attach_file','link','share','ios_share','content_copy','content_cut','content_paste','delete','remove','add','done','close','check','clear','search','zoom_in','zoom_out','filter_list','sort','swap_vert','swap_horiz','compare_arrows','open_in_new','launch','download','upload','cloud_upload','cloud_download','sync','refresh','replay','undo','redo','history','update','access_time','timer','alarm','hourglass_empty','pending','autorenew','loop','rotate_right','flip','crop','straighten','transform','animation','motion_photos_auto','slow_motion_video','speed','fast_forward','fast_rewind','skip_next','skip_previous','play_arrow','pause','stop','fiber_manual_record','circle','square','hexagon','pentagon','change_history','category','shapes','interests','extension','puzzle','casino','sports_bar','local_bar','restaurant','local_dining','local_pizza','bakery_dining','lunch_dining','dinner_dining','brunch_dining','tapas','ramen_dining','icecream','local_cafe','coffee','emoji_food_beverage','liquor','wine_bar','nightlife','attractions','park','beach_access','pool','hot_tub','spa','sailing','kayaking','surfing','skateboarding','snowboarding','hiking','directions_bike','directions_run','directions_walk','flight','airport_shuttle','directions_car','directions_bus','directions_railway','directions_boat','navigation','explore','map','place','location_on','my_location','near_me','gps_fixed','compass_calibration','north','south','east','west','language','translate','g_translate'];
     function icon(name) {
         var safe = (name || 'emoji_events').toLowerCase().replace(/[^a-z0-9_]/g, '');
+        if (safe && VALID_MATERIAL_ICONS.indexOf(safe) === -1) safe = 'emoji_events';
         return '<span class="material-icons" aria-hidden="true" style="font-family:\'Material Icons\';font-size:1.4em;line-height:1;vertical-align:middle;">' + safe + '</span>';
     }
 
@@ -384,8 +386,8 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-card{background:rgba(255,255,255,0.92);border-color:rgba(0,0,0,0.12);color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-tab{background:rgba(0,0,0,0.05);border-color:rgba(0,0,0,0.12);color:rgba(0,0,0,0.75);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-tab.active{background:rgba(0,0,0,0.12);color:rgba(0,0,0,0.9);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-eyebrow{color:rgba(0,0,0,0.55);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-muted{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-eyebrow{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-muted{color:rgba(0,0,0,0.6);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-input,#' + ROOT_ID + '.ab-theme-light .ab-select{background:rgba(255,255,255,0.95);border-color:rgba(0,0,0,0.15);color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-select option{background:#fff;color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-toggle,#' + ROOT_ID + '.ab-theme-light .ab-setting-row{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.1);}' +
@@ -412,7 +414,7 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-cmp-bar{background:rgba(0,0,0,0.08);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-cmp-name{color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-cmp-val{color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-cmp-label{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-cmp-label{color:rgba(0,0,0,0.6);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-cmp-winner{color:#16a34a;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-cmp-vs{color:rgba(0,0,0,0.4);}' +
             // Light theme — leaderboard / podium
@@ -427,10 +429,10 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-lb-row{border-bottom-color:rgba(0,0,0,0.08);color:rgba(0,0,0,0.85);}' +
             // Light theme — recap section
             '#' + ROOT_ID + '.ab-theme-light .ab-recap-big-num{background:linear-gradient(135deg,#1e3a5f,#4338ca);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-recap-big-label{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-recap-big-label{color:rgba(0,0,0,0.6);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-recap-mini{background:rgba(0,0,0,0.04);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-recap-mini-num{color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-recap-mini-label{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-recap-mini-label{color:rgba(0,0,0,0.6);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-recap-section{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.1);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-recap-section-title{color:rgba(0,0,0,0.6);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-recap-bar-name{color:rgba(0,0,0,0.85);}' +
@@ -441,11 +443,11 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-card{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.1);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-card:hover{border-color:rgba(0,0,0,0.25);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-big{color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-label{color:rgba(0,0,0,0.55);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-icon{color:rgba(0,0,0,0.5);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-section-title{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-label{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-icon{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-section-title{color:rgba(0,0,0,0.6);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-list li{border-bottom-color:rgba(0,0,0,0.08);color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-list li span{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-list li span{color:rgba(0,0,0,0.6);}' +
             // Light theme — badge cards: shadows, descriptions, footer text
             '#' + ROOT_ID + '.ab-theme-light .ab-card{box-shadow:0 2px 8px rgba(0,0,0,0.08);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-desc{color:rgba(0,0,0,0.7);}' +
@@ -458,12 +460,12 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-badge-pts{color:rgba(0,0,0,0.6);}' +
             // Light theme — toggle label/description text
             '#' + ROOT_ID + '.ab-theme-light .ab-toggle-label{color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-toggle-desc{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-toggle-desc{color:rgba(0,0,0,0.6);}' +
             // Light theme — generic white text fallback
             '#' + ROOT_ID + '.ab-theme-light .ab-btn{color:rgba(0,0,0,0.8);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-pager{color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-error{color:#dc2626;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-eta{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-eta{color:rgba(0,0,0,0.6);}' +
             // Light theme — streak heatmap cells
             '#' + ROOT_ID + '.ab-theme-light .ab-streak-cell{background:rgba(0,0,0,0.06);border:1px solid rgba(0,0,0,0.1);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-streak-cell[style*="background"]{border-color:rgba(0,0,0,0.15);}' +
@@ -479,7 +481,7 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-server-label{color:rgba(0,0,0,0.6);opacity:1;}' +
             // Light theme — notification/pref labels
             '#' + ROOT_ID + '.ab-theme-light .ab-pref-label{color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-pref-desc{color:rgba(0,0,0,0.55);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-pref-desc{color:rgba(0,0,0,0.6);opacity:1;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-pref{color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-prefs{color:rgba(0,0,0,0.85);}' +
             // Light theme — badge card border + shadow
@@ -496,15 +498,15 @@
             // Light theme — category completion rings
             '#' + ROOT_ID + '.ab-theme-light .ab-cat-ring{background:rgba(0,0,0,0.03);color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-cat-ring-label{color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-cat-ring-sub{color:rgba(0,0,0,0.55);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-cat-ring-sub{color:rgba(0,0,0,0.6);opacity:1;}' +
             // Light theme — activity feed
             '#' + ROOT_ID + '.ab-theme-light .ab-feed-row{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.08);color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-feed-icon{background:rgba(0,0,0,0.07);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-feed-text{color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-feed-meta{color:rgba(0,0,0,0.55);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-feed-meta{color:rgba(0,0,0,0.6);opacity:1;}' +
             // Light theme — goal cards
             '#' + ROOT_ID + '.ab-theme-light .ab-goal-card{background:linear-gradient(135deg,rgba(102,126,234,0.08),rgba(118,75,162,0.06));border-color:rgba(102,126,234,0.3);color:rgba(0,0,0,0.85);}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-goal-label{color:rgba(0,0,0,0.55);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-label{color:rgba(0,0,0,0.6);opacity:1;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-goal-text{color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-goal-meta{color:rgba(0,0,0,0.6);opacity:1;}' +
             // Light theme — settings section
@@ -512,7 +514,7 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-settings-grid{color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-setting-row{color:rgba(0,0,0,0.85);}' +
             // Light theme — muted text override
-            '#' + ROOT_ID + '.ab-theme-light .ab-muted{color:rgba(0,0,0,0.5);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-muted{color:rgba(0,0,0,0.6);}' +
             // Light theme — input fields
             '#' + ROOT_ID + '.ab-theme-light .ab-input{background:rgba(255,255,255,0.95);border:1px solid rgba(0,0,0,0.15);color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-select{background:rgba(255,255,255,0.95);border:1px solid rgba(0,0,0,0.15);color:rgba(0,0,0,0.85);}' +
@@ -528,18 +530,24 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-streak-num{background:linear-gradient(135deg,#e65100,#bf360c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}' +
             '#' + ROOT_ID + '.ab-theme-light .ab-streak-cell-on{background:linear-gradient(135deg,#388e3c,#4caf50) !important;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.1);}' +
             // Light theme — quest cards text
-            '#' + ROOT_ID + '.ab-theme-light #abSaPanelQuests .ab-muted{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light #abSaPanelQuests .ab-muted{color:rgba(0,0,0,0.6);}' +
             '#' + ROOT_ID + '.ab-theme-light #abSaPanelQuests [style*="font-weight:700"]{color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light #abSaPanelQuests div[style*="background:rgba(255,255,255,0.04)"]{background:rgba(0,0,0,0.03) !important;border-color:rgba(0,0,0,0.1) !important;color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light #abSaPanelQuests div[style*="background:rgba(255,255,255,0.08)"]{background:rgba(0,0,0,0.08) !important;}' +
             // Light theme — badge card rarity borders and equipped highlight
             '#' + ROOT_ID + '.ab-theme-light .ab-card .ab-card-icon{background:rgba(0,0,0,0.07);}' +
-            '#' + ROOT_ID + '.ab-theme-light .rarity-common-border{border-color:rgba(159,179,200,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .rarity-uncommon-border{border-color:rgba(52,211,153,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .rarity-rare-border{border-color:rgba(96,165,250,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .rarity-epic-border{border-color:rgba(167,139,250,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .rarity-legendary-border{border-color:rgba(251,191,36,0.5) !important;}' +
-            '#' + ROOT_ID + '.ab-theme-light .rarity-mythic-border{border-color:rgba(244,63,94,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-common-border{border-color:rgba(159,179,200,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-uncommon-border{border-color:rgba(52,211,153,0.5) !important;box-shadow:0 0 0 1px rgba(52,211,153,0.15);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-rare-border{border-color:rgba(96,165,250,0.5) !important;box-shadow:0 0 0 1px rgba(96,165,250,0.2);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-epic-border{border-color:rgba(167,139,250,0.5) !important;box-shadow:0 0 0 1px rgba(167,139,250,0.25),0 0 20px rgba(167,139,250,0.1);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-legendary-border{border-color:rgba(251,191,36,0.5) !important;box-shadow:0 0 0 1px rgba(251,191,36,0.3),0 0 24px rgba(251,191,36,0.15);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card.ab-r-mythic-border{border-color:rgba(244,63,94,0.5) !important;box-shadow:0 0 0 1px rgba(244,63,94,0.35),0 0 28px rgba(244,63,94,0.18);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-common-border{border-color:rgba(159,179,200,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-uncommon-border{border-color:rgba(52,211,153,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-rare-border{border-color:rgba(96,165,250,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-epic-border{border-color:rgba(167,139,250,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-legendary-border{border-color:rgba(251,191,36,0.5) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-card.ab-r-mythic-border{border-color:rgba(244,63,94,0.5) !important;}' +
             // Light theme — "Your data" section stat numbers and histogram bars
             '#' + ROOT_ID + '.ab-theme-light #abSaPanelStats h3{color:rgba(0,0,0,0.85);}' +
             '#' + ROOT_ID + '.ab-theme-light #abSaPanelStats h4{color:rgba(0,0,0,0.75);}' +
@@ -553,7 +561,50 @@
             '#' + ROOT_ID + '.ab-theme-light .ab-prestige-btn:disabled{color:rgba(0,0,0,0.4);}' +
             // Light theme — hero section text
             '#' + ROOT_ID + '.ab-theme-light .ab-hero-streak{background:rgba(255,87,34,0.12);border-color:rgba(255,87,34,0.35);color:#bf360c;}' +
-            '#' + ROOT_ID + '.ab-theme-light .ab-title-display{filter:brightness(0.7);}';
+            '#' + ROOT_ID + '.ab-theme-light .ab-title-display{filter:brightness(0.7);}' +
+            // Welcome banner
+            '#' + ROOT_ID + ' .ab-welcome-banner{padding:0.9em 1.2em;border-radius:12px;margin-bottom:1.2em;background:linear-gradient(135deg,rgba(102,126,234,0.12),rgba(118,75,162,0.08));border:1px solid rgba(102,126,234,0.25);color:rgba(255,255,255,0.9);font-size:0.95em;line-height:1.5;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-welcome-banner{background:linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.06));border-color:rgba(102,126,234,0.3);color:rgba(0,0,0,0.8);}' +
+            // Bug 4 — rank progress bar track visible in light theme
+            '#' + ROOT_ID + '.ab-theme-light #abSaRankBarTrack{background:rgba(0,0,0,0.1) !important;}' +
+            // Bug 8 — hero icon bg visible in light theme
+            '#' + ROOT_ID + '.ab-theme-light .ab-hero-icon{background:rgba(0,0,0,0.07);}' +
+            // Bug 8 — showcase card backgrounds visible in light theme
+            '#' + ROOT_ID + '.ab-theme-light .ab-sc-card{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.12);color:rgba(0,0,0,0.85);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-sc-icon{background:rgba(0,0,0,0.07);}' +
+            // Bug 8 — equipped empty dashed border visible in light theme
+            '#' + ROOT_ID + '.ab-theme-light #abSaEquippedEmpty{border-color:rgba(0,0,0,0.2) !important;color:rgba(0,0,0,0.55);}' +
+            // Bug 8 — profile card link text
+            '#' + ROOT_ID + '.ab-theme-light #abSaProfileCardLink{color:rgba(0,0,0,0.6);}' +
+            // Bug 8 — inline progress bar backgrounds (quest, pinned goals) visible in light theme
+            '#' + ROOT_ID + '.ab-theme-light div[style*="background:rgba(255,255,255,0.12)"]{background:rgba(0,0,0,0.1) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light div[style*="background:rgba(255,255,255,0.08)"]{background:rgba(0,0,0,0.08) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light div[style*="background:rgba(255,255,255,0.04)"]{background:rgba(0,0,0,0.03) !important;border-color:rgba(0,0,0,0.1) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light div[style*="background:rgba(255,255,255,0.1)"]{background:rgba(0,0,0,0.08) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light div[style*="border:1px dashed rgba(255,255,255"]{border-color:rgba(0,0,0,0.2) !important;}' +
+            // Bug 6 — bump up faint light-mode description/subtitle text
+            '#' + ROOT_ID + '.ab-theme-light .ab-desc{color:rgba(0,0,0,0.75) !important;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-hero-sub{color:rgba(0,0,0,0.65);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-muted{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-eyebrow{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-toggle-desc{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-pref-desc{color:rgba(0,0,0,0.6);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-feed-meta{color:rgba(0,0,0,0.6);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-card-meta{color:rgba(0,0,0,0.65);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-meta{color:rgba(0,0,0,0.65);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-goal-label{color:rgba(0,0,0,0.6);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-cat-ring-sub{color:rgba(0,0,0,0.6);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-record-label{color:rgba(0,0,0,0.65);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-server-label{color:rgba(0,0,0,0.65);opacity:1;}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-stat-t{color:rgba(0,0,0,0.65);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-label{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-icon{color:rgba(0,0,0,0.55);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-section-title{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-wrapped-list li span{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-streak-label{color:rgba(0,0,0,0.65);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-eta{color:rgba(0,0,0,0.6);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-prog-text{color:rgba(0,0,0,0.7);}' +
+            '#' + ROOT_ID + '.ab-theme-light .ab-badge-pts{color:rgba(0,0,0,0.65);}';
         document.head.appendChild(s);
     }
 
@@ -567,6 +618,7 @@
         if (r) { r.innerHTML = ''; } else { r = document.createElement('div'); r.id = ROOT_ID; }
         r.innerHTML =
             '<div class="ab-wrap">' +
+                '<div id="abSaWelcomeBanner" class="ab-welcome-banner" style="display:none;"></div>' +
                 '<div class="ab-topbar">' +
                     '<h2 style="margin:0;">Achievements</h2>' +
                     '<a class="ab-back" href="/web/index.html#!/home">\u2190 Back Home</a>' +
@@ -585,7 +637,7 @@
                         '</div>' +
                         '<div style="margin-top:0.75em;">' +
                             '<div id="abSaRankBarText" class="ab-eyebrow" style="display:flex; justify-content:space-between;"><span>Rank progress</span><span id="abSaRankBarPct">0%</span></div>' +
-                            '<div style="height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden; margin-top:4px;">' +
+                            '<div id="abSaRankBarTrack" style="height:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden; margin-top:4px;">' +
                                 '<div id="abSaRankBarFill" style="height:100%; width:0%; background:#667eea; transition:width 0.4s;"></div>' +
                             '</div>' +
                         '</div>' +
@@ -1714,7 +1766,12 @@
         fetchJson('Plugins/AchievementBadges/users/' + userId + '/preferences').then(function (existing) {
             var payload = existing || {};
             box.querySelectorAll('input[data-pref]').forEach(function (cb) {
-                payload[cb.getAttribute('data-pref')] = cb.checked;
+                var key = cb.getAttribute('data-pref');
+                // Remove any camelCase duplicate from the GET response before setting PascalCase
+                var camel = key.charAt(0).toLowerCase() + key.slice(1);
+                delete payload[camel];
+                delete payload[key];
+                payload[key] = cb.checked;
             });
             return fetchJson('Plugins/AchievementBadges/users/' + userId + '/preferences', 'POST', payload);
         }).catch(function () { });
@@ -1840,15 +1897,20 @@
             box.querySelectorAll('input[data-settings-key]').forEach(function (cb) {
                 var key = cb.getAttribute('data-settings-key');
                 if (key === 'hideFromActivityFeed') {
+                    // Remove both casing variants then set canonical PascalCase
+                    delete payload['appearInActivityFeed'];
+                    delete payload['AppearInActivityFeed'];
                     payload['AppearInActivityFeed'] = !cb.checked;
                 } else {
-                    // Send both camelCase and PascalCase to ensure C# model matches
+                    // Remove old camelCase key from GET response, set both to be safe
+                    delete payload[key];
                     payload[key] = cb.checked;
                     payload[toPascalCase(key)] = cb.checked;
                 }
             });
             box.querySelectorAll('select[data-settings-select]').forEach(function (sel) {
                 var key = sel.getAttribute('data-settings-select');
+                delete payload[key];
                 payload[key] = sel.value;
                 payload[toPascalCase(key)] = sel.value;
             });
@@ -1861,6 +1923,7 @@
                     if (v > max) v = max;
                     inp.value = v;
                     var key = inp.getAttribute('data-settings-number');
+                    delete payload[key];
                     payload[key] = v;
                     payload[toPascalCase(key)] = v;
                 }
@@ -1965,6 +2028,20 @@
         var eqIds = {};
         // fire login ping (safe even if it fails)
         fetchJson('Plugins/AchievementBadges/users/' + userId + '/login-ping', 'POST').catch(function () {});
+
+        // Fetch and show welcome message if configured
+        fetchJson('Plugins/AchievementBadges/public-config').then(function (cfg) {
+            var banner = el('abSaWelcomeBanner');
+            if (banner && cfg && cfg.WelcomeMessage) {
+                banner.textContent = cfg.WelcomeMessage;
+                banner.style.display = 'block';
+            } else if (banner && cfg && cfg.welcomeMessage) {
+                banner.textContent = cfg.welcomeMessage;
+                banner.style.display = 'block';
+            } else if (banner) {
+                banner.style.display = 'none';
+            }
+        }).catch(function () {});
 
         return Promise.all([
             fetchJson('Plugins/AchievementBadges/users/' + userId),

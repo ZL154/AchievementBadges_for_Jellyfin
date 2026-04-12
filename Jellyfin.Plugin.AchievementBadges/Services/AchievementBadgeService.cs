@@ -1119,7 +1119,28 @@ public class AchievementBadgeService
             }
 
             var badge = profile.Badges.FirstOrDefault(b => b.Id.Equals(badgeId, StringComparison.OrdinalIgnoreCase));
-            return badge is null ? null : CloneBadge(badge);
+            if (badge is null) return null;
+
+            var clone = CloneBadge(badge);
+
+            // Apply spoiler mode and secret badge filtering (same as GetEnabledBadgeClones)
+            var defsById = GetActiveDefinitions()
+                .ToDictionary(d => d.Id, d => d, StringComparer.OrdinalIgnoreCase);
+            var isSecret = defsById.TryGetValue(clone.Id, out var def) && def.IsSecret;
+            var spoilerMode = profile.Preferences?.SpoilerMode ?? false;
+
+            if (isSecret && !clone.Unlocked)
+            {
+                clone.Title = "???";
+                clone.Description = "Hidden achievement — keep watching to discover it.";
+                clone.Icon = "help";
+            }
+            else if (spoilerMode && !clone.Unlocked)
+            {
+                clone.Description = "???";
+            }
+
+            return clone;
         }
     }
 

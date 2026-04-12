@@ -1073,6 +1073,24 @@ public class AchievementBadgesController : ControllerBase
         return Ok(new { Success = true });
     }
 
+    // ---------- Public: feature flags (non-sensitive, for the standalone page) ---
+
+    [HttpGet("public-config")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetPublicConfig()
+    {
+        var c = Plugin.Instance?.Configuration;
+        return Ok(new
+        {
+            WelcomeMessage = c?.WelcomeMessage ?? "",
+            LeaderboardEnabled = c?.LeaderboardEnabled ?? true,
+            CompareEnabled = c?.CompareEnabled ?? true,
+            ActivityFeedEnabled = c?.ActivityFeedEnabled ?? true,
+            PrestigeEnabled = c?.PrestigeEnabled ?? true,
+            QuestsEnabled = c?.QuestsEnabled ?? true
+        });
+    }
+
     // ---------- Admin: Feature config -----------------------------------
 
     [HttpGet("admin/feature-config")]
