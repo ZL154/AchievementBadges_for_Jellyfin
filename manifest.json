@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.5.40",
+        "changelog": "Welcome banner redesigned as minimal frosted glass with gold left accent bar — no emoji, just clean text. Hidden users can now see their own activity feed entries while remaining hidden from others.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.40/Jellyfin.Plugin.AchievementBadgesv1.5.40.zip",
+        "checksum": "F5C4B7EEC0F09A55604DE7C5853343F4"
+      },
+      {
         "version": "1.5.39",
         "changelog": "Welcome banner redesigned (gradient bg, sparkle icon, gold accent, works in both themes). Rarity borders boosted for common/uncommon/rare/epic (2px solid + box-shadow). Activity feed privacy now filters ALL entries (old + new) unconditionally. Plugin catalogue image set to the blue achievement badge.",
         "targetAbi": "10.11.0.0",

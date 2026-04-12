@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Jellyfin.Plugin.AchievementBadges.Models;
 using Jellyfin.Plugin.AchievementBadges.Services;
@@ -578,7 +579,8 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetActivityFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? userId = null)
     {
-        return Ok(_badgeService.GetActivityFeed(page, pageSize, userId));
+        var requestingUserId = User.FindFirst("Jellyfin-UserId")?.Value;
+        return Ok(_badgeService.GetActivityFeed(page, pageSize, userId, requestingUserId));
     }
 
     [HttpGet("users/{userId}/check-milestones")]

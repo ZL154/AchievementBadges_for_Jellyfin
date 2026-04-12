@@ -127,7 +127,7 @@ public class AchievementBadgeService
         }
     }
 
-    public object GetActivityFeed(int page = 1, int pageSize = 20, string? filterUserId = null)
+    public object GetActivityFeed(int page = 1, int pageSize = 20, string? filterUserId = null, string? requestingUserId = null)
     {
         var config = Plugin.Instance?.Configuration;
         if (config != null && !config.ActivityFeedEnabled)
@@ -139,6 +139,7 @@ public class AchievementBadgeService
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
         var canon = string.IsNullOrWhiteSpace(filterUserId) ? null : NormalizeUserId(filterUserId);
+        var requestingCanon = string.IsNullOrWhiteSpace(requestingUserId) ? null : NormalizeUserId(requestingUserId);
 
         lock (_lock)
         {
@@ -146,9 +147,10 @@ public class AchievementBadgeService
             foreach (var profile in _userProfiles.Values)
             {
                 if (canon != null && !string.Equals(profile.UserId, canon, StringComparison.OrdinalIgnoreCase)) continue;
-                // Users who opted out are always excluded — checks current preferences at display time
-                // so that toggling the setting retroactively hides/shows ALL their entries (old and new)
-                if (profile.Preferences != null && !profile.Preferences.AppearInActivityFeed) continue;
+                // Users who opted out are excluded from others' views, but can always see their own entries.
+                // This checks current preferences at display time so toggling retroactively hides/shows entries.
+                bool isOwnProfile = requestingCanon != null && string.Equals(profile.UserId, requestingCanon, StringComparison.OrdinalIgnoreCase);
+                if (!isOwnProfile && profile.Preferences != null && !profile.Preferences.AppearInActivityFeed) continue;
                 foreach (var b in profile.Badges)
                 {
                     if (b.Unlocked && b.UnlockedAt.HasValue && IsBadgeEnabled(b.Id))
