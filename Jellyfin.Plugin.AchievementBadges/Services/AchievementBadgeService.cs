@@ -146,8 +146,9 @@ public class AchievementBadgeService
             foreach (var profile in _userProfiles.Values)
             {
                 if (canon != null && !string.Equals(profile.UserId, canon, StringComparison.OrdinalIgnoreCase)) continue;
-                // Users who opted out appear only when a specific user filter requests them
-                if (canon == null && profile.Preferences != null && !profile.Preferences.AppearInActivityFeed) continue;
+                // Users who opted out are always excluded — checks current preferences at display time
+                // so that toggling the setting retroactively hides/shows ALL their entries (old and new)
+                if (profile.Preferences != null && !profile.Preferences.AppearInActivityFeed) continue;
                 foreach (var b in profile.Badges)
                 {
                     if (b.Unlocked && b.UnlockedAt.HasValue && IsBadgeEnabled(b.Id))

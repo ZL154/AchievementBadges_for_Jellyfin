@@ -6,8 +6,15 @@
     "overview": "Unlockable viewing achievement badges for Jellyfin users.",
     "owner": "ZL154",
     "category": "General",
-    "imageUrl": "",
+    "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
+      {
+        "version": "1.5.39",
+        "changelog": "Welcome banner redesigned (gradient bg, sparkle icon, gold accent, works in both themes). Rarity borders boosted for common/uncommon/rare/epic (2px solid + box-shadow). Activity feed privacy now filters ALL entries (old + new) unconditionally. Plugin catalogue image set to the blue achievement badge.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.39/Jellyfin.Plugin.AchievementBadgesv1.5.39.zip",
+        "checksum": "EFC2C04D2F1C1E60BD61373E593F0A90"
+      },
       {
         "version": "1.5.38",
         "changelog": "Definitive bug fix release. Activity feed privacy: fixed JSON key casing mismatch — both save functions now delete stale keys before setting canonical values, added [JsonPropertyName] attributes to all preference properties. Spoiler mode: GetBadge() single-badge endpoint now applies spoiler logic (was only applied in the list endpoint). Badge rarity borders: fixed class name mismatch (CSS used rarity-*-border but JS applies ab-r-*-border). Rank progress bar: added ID to track element for light-theme override. Welcome message: new public-config endpoint (no admin auth) + banner display on achievements page. CASSETTE/VINYL text: added 350+ Material Icons allowlist, invalid icons fall back to emoji_events. Light theme: bumped all secondary text to rgba(0,0,0,0.6)+ minimum, fixed showcase cards, equipped empty state, profile link, hero icons, inline-style progress tracks.",
