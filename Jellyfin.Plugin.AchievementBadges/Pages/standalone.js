@@ -676,6 +676,7 @@
                         '<select id="abSaFilter" class="ab-select">' +
                             '<option value="all">All badges</option>' +
                             '<option value="unlocked">Unlocked only</option>' +
+                            '<option value="recent">Recently unlocked</option>' +
                             '<option value="locked">Locked only</option>' +
                             '<option value="close">Close to unlock (&gt;50%)</option>' +
                             '<option value="r-common">Rarity: Common</option>' +
@@ -945,6 +946,7 @@
     var pinnedIdsGlobal = {};
     var equippedTitleId = null;
     var badgeEtaMap = {};
+    var publicConfigGlobal = {};
     var currentSearch = '';
     var currentFilter = 'all';
     var currentCategory = '';
@@ -968,6 +970,7 @@
         }
         if (currentCategory && (b.Category || '') !== currentCategory) return false;
         if (currentFilter === 'unlocked') return !!b.Unlocked;
+        if (currentFilter === 'recent') return !!b.Unlocked;
         if (currentFilter === 'locked') return !b.Unlocked;
         if (currentFilter === 'close') {
             if (b.Unlocked) return false;
@@ -1019,7 +1022,24 @@
 
     function applyFilter() {
         var filtered = allBadges.filter(passesFilter);
-        var sorted = applySort(filtered);
+        var sorted;
+        if (currentFilter === 'recent') {
+            // Sort by UnlockedAt descending (most recent first) and limit to top 10.
+            // This overrides any other sort selection because "recent" is intrinsically time-ordered.
+            sorted = filtered.slice().sort(function (a, b) {
+                var ta = a.UnlockedAt ? new Date(a.UnlockedAt).getTime() : 0;
+                var tb = b.UnlockedAt ? new Date(b.UnlockedAt).getTime() : 0;
+                return tb - ta;
+            }).slice(0, 10);
+            // Still keep pinned badges on top (stable secondary sort, matches applySort behavior)
+            sorted.sort(function (a, b) {
+                var pa = pinnedIdsGlobal[a.Id] ? 0 : 1;
+                var pb = pinnedIdsGlobal[b.Id] ? 0 : 1;
+                return pa - pb;
+            });
+        } else {
+            sorted = applySort(filtered);
+        }
         renderBadges(sorted, equippedIdsGlobal);
         var empty = el('abSaEmptyFilter');
         if (empty) empty.style.display = (sorted.length === 0 && allBadges.length > 0) ? 'block' : 'none';
@@ -1740,6 +1760,11 @@
         var box = el('abSaPrefs');
         if (!box) return;
         prefs = prefs || { EnableUnlockToasts: true, EnableMilestoneToasts: true, EnableConfetti: true, AppearInActivityFeed: true, EnableCoWatchBonus: true };
+        // Hide AppearInActivityFeed when the admin has force-enabled privacy mode or
+        // disabled the activity feed entirely — the user's preference is moot in those cases.
+        var pc = publicConfigGlobal || {};
+        var hideAppearInActivity = !!(pc.ForcePrivacyMode || pc.forcePrivacyMode)
+            || pc.ActivityFeedEnabled === false || pc.activityFeedEnabled === false;
         var defs = [
             { key: 'EnableUnlockToasts', label: 'Unlock toasts', desc: 'Pop up a notification when you unlock a badge' },
             { key: 'EnableMilestoneToasts', label: 'Milestone toasts', desc: '25/50/75/100% completion celebrations' },
@@ -1747,6 +1772,9 @@
             { key: 'AppearInActivityFeed', label: 'Appear in activity feed', desc: 'Let other users see your unlocks in the feed' },
             { key: 'EnableCoWatchBonus', label: 'Co-watch bonus', desc: 'Earn bonus score when another user watches the same item within an hour' }
         ];
+        if (hideAppearInActivity) {
+            defs = defs.filter(function (d) { return d.key !== 'AppearInActivityFeed'; });
+        }
         box.innerHTML = defs.map(function (d) {
             var checked = prefs[d.key] !== false;
             return '<label class="ab-pref">' +
@@ -1819,6 +1847,56 @@
         var pageTheme = prefs.achievementPageTheme || prefs.AchievementPageTheme || 'default';
         var slots = prefs.equippedBadgeSlots || prefs.EquippedBadgeSlots || 5;
 
+        // Admin-forced feature flags (from public-config). When an admin has forced a behavior
+        // globally, the corresponding user toggle is moot and hidden.
+        var pc = publicConfigGlobal || {};
+        var forcePrivacy = !!(pc.ForcePrivacyMode || pc.forcePrivacyMode);
+        var forceSpoiler = !!(pc.ForceSpoilerMode || pc.forceSpoilerMode);
+        var lbOff = pc.LeaderboardEnabled === false || pc.leaderboardEnabled === false;
+        var compareOff = pc.CompareEnabled === false || pc.compareEnabled === false;
+        var activityOff = pc.ActivityFeedEnabled === false || pc.activityFeedEnabled === false;
+        var prestigeOff = pc.PrestigeEnabled === false || pc.prestigeEnabled === false;
+
+        // Individual privacy toggles: hidden when admin forces privacy OR when the feature itself
+        // is globally disabled (in which case the "hide me from X" toggle is meaningless).
+        var hideLeaderboardToggle = forcePrivacy || lbOff;
+        var hideCompareToggle = forcePrivacy || compareOff;
+        var hideActivityToggle = forcePrivacy || activityOff;
+        var hidePrestigeToggle = forcePrivacy || prestigeOff;
+        var privacySectionHidden = hideLeaderboardToggle && hideCompareToggle && hideActivityToggle && hidePrestigeToggle;
+
+        function maybeToggle(hidden, key, label, desc, checked) {
+            if (hidden) return '';
+            return toggle(key, label, desc, checked);
+        }
+
+        var privacySectionHtml = '';
+        if (!privacySectionHidden) {
+            var privacyNote = forcePrivacy
+                ? '<div class="ab-muted" style="font-size:0.85em; margin-bottom:0.5em;">Privacy is enforced server-side by admin.</div>'
+                : '';
+            privacySectionHtml =
+                '<div class="ab-settings-section">' +
+                    '<div class="ab-eyebrow">Privacy</div>' +
+                    privacyNote +
+                    '<div class="ab-settings-grid">' +
+                        maybeToggle(hideLeaderboardToggle, 'hideFromLeaderboard', 'Hide from leaderboard', 'Remove yourself from the public leaderboard', prefs.hideFromLeaderboard === true || prefs.HideFromLeaderboard === true) +
+                        maybeToggle(hideCompareToggle, 'hideFromCompare', 'Hide from compare profiles', 'Prevent others from comparing with you', prefs.hideFromCompare === true || prefs.HideFromCompare === true) +
+                        maybeToggle(hideActivityToggle, 'hideFromActivityFeed', 'Hide from activity feed', 'Prevent your unlocks from appearing in the server feed', prefs.appearInActivityFeed === false || prefs.AppearInActivityFeed === false) +
+                        maybeToggle(hidePrestigeToggle, 'hideFromPrestigeBoard', 'Hide from prestige board', 'Remove yourself from the prestige leaderboard', prefs.hideFromPrestigeBoard === true || prefs.HideFromPrestigeBoard === true) +
+                    '</div>' +
+                '</div>';
+        }
+
+        var spoilerRowHtml = forceSpoiler
+            ? '<div class="ab-setting-row">' +
+                '<div class="ab-toggle-info">' +
+                    '<div class="ab-toggle-label">Spoiler mode</div>' +
+                    '<div class="ab-toggle-desc">Enforced by admin.</div>' +
+                '</div>' +
+              '</div>'
+            : toggle('spoilerMode', 'Spoiler mode', 'Hide locked badge descriptions to avoid spoilers', prefs.spoilerMode === true || prefs.SpoilerMode === true);
+
         var html =
             '<div class="ab-settings-section">' +
                 '<div class="ab-eyebrow">Toast & Sound</div>' +
@@ -1838,15 +1916,7 @@
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="ab-settings-section">' +
-                '<div class="ab-eyebrow">Privacy</div>' +
-                '<div class="ab-settings-grid">' +
-                    toggle('hideFromLeaderboard', 'Hide from leaderboard', 'Remove yourself from the public leaderboard', prefs.hideFromLeaderboard === true || prefs.HideFromLeaderboard === true) +
-                    toggle('hideFromCompare', 'Hide from compare profiles', 'Prevent others from comparing with you', prefs.hideFromCompare === true || prefs.HideFromCompare === true) +
-                    toggle('hideFromActivityFeed', 'Hide from activity feed', 'Prevent your unlocks from appearing in the server feed', prefs.appearInActivityFeed === false || prefs.AppearInActivityFeed === false) +
-                    toggle('hideFromPrestigeBoard', 'Hide from prestige board', 'Remove yourself from the prestige leaderboard', prefs.hideFromPrestigeBoard === true || prefs.HideFromPrestigeBoard === true) +
-                '</div>' +
-            '</div>' +
+            privacySectionHtml +
             '<div class="ab-settings-section">' +
                 '<div class="ab-eyebrow">Display & Features</div>' +
                 '<div class="ab-settings-grid">' +
@@ -1858,7 +1928,7 @@
                             '<option value="light"' + (pageTheme === 'light' ? ' selected' : '') + '>Light</option>' +
                         '</select>' +
                     '</div>' +
-                    toggle('spoilerMode', 'Spoiler mode', 'Hide locked badge descriptions to avoid spoilers', prefs.spoilerMode === true || prefs.SpoilerMode === true) +
+                    spoilerRowHtml +
                     '<div class="ab-setting-row">' +
                         '<div class="ab-toggle-info"><div class="ab-toggle-label">Equipped badge slots</div><div class="ab-toggle-desc">Number of badges in your showcase (1-10)</div></div>' +
                         '<input type="number" class="ab-input" data-settings-number="equippedBadgeSlots" min="1" max="10" value="' + slots + '" style="width:70px;text-align:center;">' +
@@ -2024,6 +2094,7 @@
     }
 
     function applyFeatureFlags(cfg) {
+        publicConfigGlobal = cfg || {};
         var privacy = cfg.ForcePrivacyMode || cfg.forcePrivacyMode || false;
 
         // Individual kill switches (ForcePrivacyMode overrides all to hidden)

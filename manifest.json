@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.5.42",
+        "changelog": "Recently unlocked filter + admin-forced settings hide user toggles. New 'Recently unlocked' option in the badge filter dropdown (sorts by UnlockedAt desc, top 10). Force Privacy Mode now ALSO hides the user's privacy toggles + activity feed checkbox (since admin enforces them server-side). New admin setting ForceSpoilerMode — when enabled, spoiler mode applies to all users and their toggle is hidden. Pattern: when admin forces something, the user toggle hides with 'Enforced by admin' note. Individual kill switches also hide corresponding user toggles (e.g., LeaderboardEnabled=false hides HideFromLeaderboard).",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.42/Jellyfin.Plugin.AchievementBadgesv1.5.42.zip",
+        "checksum": "097C0EE921657CD2582AA1711075AF19"
+      },
+      {
         "version": "1.5.41",
         "changelog": "Ultra privacy mode. When ForcePrivacyMode is enabled: Leaderboard, Compare, and Activity tabs are completely HIDDEN (not just emptied), server stats section removed from Stats tab, user dropdowns removed, admin page leaderboard and stats panels hidden. No sign that other users exist anywhere in the UI. Individual kill switches also work independently — disable just Leaderboard and only that tab disappears. If user is on a hidden tab when flags change, auto-switches to My Badges.",
         "targetAbi": "10.11.0.0",
