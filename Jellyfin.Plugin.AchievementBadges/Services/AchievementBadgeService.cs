@@ -1130,7 +1130,9 @@ public class AchievementBadgeService
             var defsById = GetActiveDefinitions()
                 .ToDictionary(d => d.Id, d => d, StringComparer.OrdinalIgnoreCase);
             var isSecret = defsById.TryGetValue(clone.Id, out var def) && def.IsSecret;
-            var spoilerMode = profile.Preferences?.SpoilerMode ?? false;
+            var userSpoilerMode = profile.Preferences?.SpoilerMode ?? false;
+            var adminForceSpoiler = Plugin.Instance?.Configuration?.ForceSpoilerMode ?? false;
+            var spoilerMode = userSpoilerMode || adminForceSpoiler;
 
             if (isSecret && !clone.Unlocked)
             {
@@ -2220,7 +2222,9 @@ public class AchievementBadgeService
         var defsById = GetActiveDefinitions()
             .ToDictionary(d => d.Id, d => d, StringComparer.OrdinalIgnoreCase);
 
-        var spoilerMode = profile.Preferences?.SpoilerMode ?? false;
+        var userSpoilerMode = profile.Preferences?.SpoilerMode ?? false;
+        var adminForceSpoiler = Plugin.Instance?.Configuration?.ForceSpoilerMode ?? false;
+        var spoilerMode = userSpoilerMode || adminForceSpoiler;
         var disabledCategories = Plugin.Instance?.Configuration?.DisabledBadgeCategories;
 
         var result = new List<AchievementBadge>();
