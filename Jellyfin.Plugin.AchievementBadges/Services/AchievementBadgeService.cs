@@ -1125,6 +1125,8 @@ public class AchievementBadgeService
             if (badge is null) return null;
 
             var clone = CloneBadge(badge);
+            // Localize title/description for the user's language.
+            Helpers.BadgeLocalizer.Localize(clone, profile.Preferences?.Language);
 
             // Apply spoiler mode and secret badge filtering (same as GetEnabledBadgeClones)
             var defsById = GetActiveDefinitions()
@@ -2237,6 +2239,7 @@ public class AchievementBadgeService
         var adminForceExtremeSpoiler = Plugin.Instance?.Configuration?.ForceExtremeSpoilerMode ?? false;
         var extremeSpoilerMode = userExtremeSpoiler || adminForceExtremeSpoiler;
         var disabledCategories = Plugin.Instance?.Configuration?.DisabledBadgeCategories;
+        var lang = profile.Preferences?.Language ?? "default";
 
         var result = new List<AchievementBadge>();
         foreach (var b in profile.Badges)
@@ -2250,6 +2253,9 @@ public class AchievementBadgeService
             var isSecret = defsById.TryGetValue(b.Id, out var def) && def.IsSecret;
 
             var clone = CloneBadge(b);
+            // Localize before applying spoiler masking — spoilers take precedence
+            // so "???" shouldn't be localized away.
+            Helpers.BadgeLocalizer.Localize(clone, lang);
 
             if (isSecret && !clone.Unlocked)
             {

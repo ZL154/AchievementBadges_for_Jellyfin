@@ -57,4 +57,9 @@ public class PluginConfiguration : BasePluginConfiguration
     // Stored as a base64-encoded SVG string (no data:-URI prefix). Empty string
     // means "use the default Xbox logo bundled with the plugin".
     public string CustomXboxLogoSvg { get; set; } = "";
+
+    // When true, audit log entries store only the UserId GUID, not UserName.
+    // The admin endpoint returns "[redacted]" for the UserName of any entry
+    // that was stored with redaction on.
+    public bool RedactUsernamesInAuditLog { get; set; } = false;
 }

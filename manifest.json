@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.6.0",
+        "changelog": "Major release. SECURITY: full hardening pass — IDOR fix via UserOwnershipFilter, profile card 404 + GUID validation, custom badge sanitizer, webhook URL validator (SSRF), client-side XSS escaped in shell.js + sidebar.js, completionPercent clamping, middleware buffer cap, rate limiting on user/anonymous endpoints + cooldowns on prestige/recompute, audit log username redaction option, SECURITY.md documenting CSRF mitigation. ADMIN: custom Xbox toast logo upload with XML-parsing SVG sanitizer (XXE-safe, blocks script/iframe/use/event handlers). I18N: 8 languages (en/fr/es/de/it/pt/zh/ja) with ~220 UI keys + admin page translated + first ~50 most-common badges localized (rest fall back to English, community contributions welcome). Translation hot-swaps on language change. Thanks to xdnewlun1 (Techno Cricket, CCDC) for responsible disclosure.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.6.0/Jellyfin.Plugin.AchievementBadgesv1.6.0.zip",
+        "checksum": "776D2C2C1500EAF932A95C10982A6865"
+      },
+      {
         "version": "1.5.45",
         "changelog": "Security hardening release. Enforce per-user authorization on user-scoped API endpoints. Admin-only endpoints unchanged. Validate and sanitize admin-supplied custom badge definitions, webhook URLs, and imported profiles. Escape user-controlled strings in the achievements UI renderers. Return 404 for unknown users on the public profile card endpoint and stop creating empty profiles on anonymous reads. Additional input bounds on playback completion API. Cap response buffering in the injection middleware. Plus: admin can now upload a custom SVG to replace the Xbox logo in toasts. Expanded translations to 8 languages (English, Français, Español, Deutsch, Italiano, Português, 中文, 日本語) with ~220 keys covering most UI. Thanks to xdnewlun1 (Techno Cricket, CCDC) for responsible disclosure.",
         "targetAbi": "10.11.0.0",

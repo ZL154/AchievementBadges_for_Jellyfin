@@ -9,6 +9,7 @@ using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Jellyfin.Plugin.AchievementBadges.Api;
 
@@ -240,6 +241,7 @@ public class AchievementBadgesController : ControllerBase
     }
 
     [HttpPost("users/{userId}/record-completion")]
+    [EnableRateLimiting("user-60-per-min")]
     [ProducesResponseType(typeof(List<AchievementBadge>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     public ActionResult<List<AchievementBadge>> RecordCompletion(
@@ -560,6 +562,7 @@ public class AchievementBadgesController : ControllerBase
     // ---------- Library completion ----------------------------------
 
     [HttpPost("users/{userId}/library-completion/recompute")]
+    [EnableRateLimiting("recompute-cooldown")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult RecomputeLibraryCompletion([FromRoute] string userId)
     {
@@ -766,6 +769,7 @@ public class AchievementBadgesController : ControllerBase
 
     [HttpGet("users/{userId}/profile-card")]
     [AllowAnonymous]
+    [EnableRateLimiting("ip-30-per-min")]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ActionResult GetProfileCard([FromRoute] string userId)
@@ -1003,6 +1007,7 @@ public class AchievementBadgesController : ControllerBase
     // ---------- Prestige + score bank --------------------------------
 
     [HttpPost("users/{userId}/prestige")]
+    [EnableRateLimiting("prestige-cooldown")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult Prestige([FromRoute] string userId)
     {
@@ -1203,7 +1208,8 @@ public class AchievementBadgesController : ControllerBase
             DisabledBadgeCategories = c?.DisabledBadgeCategories ?? new List<string>(),
             WelcomeMessage = c?.WelcomeMessage ?? "",
             DefaultLanguage = c?.DefaultLanguage ?? "en",
-            CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? ""
+            CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? "",
+            RedactUsernamesInAuditLog = c?.RedactUsernamesInAuditLog ?? false
         });
     }
 
@@ -1223,6 +1229,7 @@ public class AchievementBadgesController : ControllerBase
         public string WelcomeMessage { get; set; } = "";
         public string DefaultLanguage { get; set; } = "en";
         public string CustomXboxLogoSvg { get; set; } = "";
+        public bool RedactUsernamesInAuditLog { get; set; } = false;
     }
 
     [HttpPost("admin/feature-config")]
@@ -1256,6 +1263,8 @@ public class AchievementBadgesController : ControllerBase
         // can stuff it into an <img src="data:image/svg+xml;base64,..."> tag.
         config.CustomXboxLogoSvg = SanitizeAndEncodeSvg(request.CustomXboxLogoSvg ?? "");
 
+        config.RedactUsernamesInAuditLog = request.RedactUsernamesInAuditLog;
+
         plugin.UpdateConfiguration(config);
         return Ok(new { Success = true });
     }
@@ -1287,19 +1296,8 @@ public class AchievementBadgesController : ControllerBase
             svg = input;
         }
 
-        // Strip <script>...</script> blocks and any on* event-handler attrs.
-        svg = System.Text.RegularExpressions.Regex.Replace(
-            svg, @"<script[\s\S]*?</script\s*>", "",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        svg = System.Text.RegularExpressions.Regex.Replace(
-            svg, @"\s+on[a-zA-Z]+\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", "",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        // Reject javascript: URIs inside href/xlink:href.
-        svg = System.Text.RegularExpressions.Regex.Replace(
-            svg, @"(href|xlink:href)\s*=\s*(""\s*javascript:[^""]*""|'\s*javascript:[^']*')", "",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-        if (!svg.Contains("<svg", System.StringComparison.OrdinalIgnoreCase))
+        // Validate via the XML-parsing sanitizer (more robust than regex).
+        if (!Helpers.SvgSanitizer.TryValidate(svg, out var _))
         {
             return "";
         }

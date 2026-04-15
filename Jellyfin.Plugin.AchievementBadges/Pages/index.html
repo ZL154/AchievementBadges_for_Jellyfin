@@ -406,7 +406,7 @@ font-size:0.88em;
             <div style="max-width:1500px;margin:0 auto;">
 
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:1em;flex-wrap:wrap;">
-                    <h2 class="sectionTitle" style="margin:0;">Achievements</h2>
+                    <h2 class="sectionTitle" style="margin:0;" data-i18n="admin.page_title">Achievements</h2>
                 </div>
 
                 <div id="abProfileHero" class="abHero">
@@ -426,22 +426,22 @@ font-size:0.88em;
                     </div>
 
                     <div class="abHeroActions">
-                        <button is="emby-button" type="button" class="raised button-submit" id="abMeBtn">
+                        <button is="emby-button" type="button" class="raised button-submit" id="abMeBtn" data-i18n="admin.btn_use_my_account">
                             Use my account
                         </button>
 
-                        <button is="emby-button" type="button" class="raised button-submit" id="abRefreshBtn">
+                        <button is="emby-button" type="button" class="raised button-submit" id="abRefreshBtn" data-i18n="admin.btn_refresh">
                             Refresh
                         </button>
 
-                        <button is="emby-button" type="button" class="raised" id="abSimulateBtn">
+                        <button is="emby-button" type="button" class="raised" id="abSimulateBtn" data-i18n="admin.btn_simulate_playback">
                             Simulate playback
                         </button>
                     </div>
                 </div>
 
                 <details id="abAdvanced">
-                    <summary style="cursor:pointer;">Advanced options</summary>
+                    <summary style="cursor:pointer;" data-i18n="admin.section_advanced">Advanced options</summary>
 
                     <div style="display:flex;gap:0.75em;flex-wrap:wrap;margin-top:1em;align-items:center;">
                         <input is="emby-input"
@@ -450,26 +450,26 @@ font-size:0.88em;
                                type="text"
                                style="min-width:320px;" />
 
-                        <button is="emby-button" type="button" class="raised" id="abLoadBtn">
+                        <button is="emby-button" type="button" class="raised" id="abLoadBtn" data-i18n="admin.btn_load_user">
                             Load this user
                         </button>
 
-                        <button is="emby-button" type="button" class="raised" id="abResetBtn">
+                        <button is="emby-button" type="button" class="raised" id="abResetBtn" data-i18n="admin.btn_reset_badges">
                             Reset badges
                         </button>
 
-                        <button is="emby-button" type="button" class="raised button-submit" id="abBackfillBtn">
+                        <button is="emby-button" type="button" class="raised button-submit" id="abBackfillBtn" data-i18n="admin.btn_scan_watch_history">
                             Scan watch history
                         </button>
 
-                        <button is="emby-button" type="button" class="raised" id="abBackfillAllBtn">
+                        <button is="emby-button" type="button" class="raised" id="abBackfillAllBtn" data-i18n="admin.btn_scan_all_users">
                             Scan all users
                         </button>
                     </div>
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_webhook">
                         Webhook notifications (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -493,7 +493,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_test_toast">
                         Test unlock toast
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -513,7 +513,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_ui_features">
                         UI features (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -531,7 +531,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_visual_badge_editor">
                         Visual badge editor (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -575,7 +575,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_challenge_templates">
                         Challenge templates (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -586,7 +586,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" id="abFeatureControlsSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_feature_controls">
                         Feature Controls (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -650,13 +650,17 @@ font-size:0.88em;
                             </div>
                             <div class="secondaryText" style="font-size:0.85em; margin-top:0.25em;">&lt;script&gt; tags and on* event handlers are stripped server-side before saving.</div>
                         </label>
-                        <button is="emby-button" type="button" class="raised button-submit" id="abFcSaveBtn">Save feature config</button>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
+                            <input type="checkbox" id="abFcRedactUsernamesInAuditLog">
+                            <span data-i18n="admin.redact_usernames_audit">Redact usernames in audit log (store UserId only; admin sees "[redacted]")</span>
+                        </label>
+                        <button is="emby-button" type="button" class="raised button-submit" id="abFcSaveBtn" data-i18n="admin.btn_save_feature_config">Save feature config</button>
                         <div id="abFcStatus" class="secondaryText"></div>
                     </div>
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_audit_log">
                         Audit log (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -666,7 +670,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_inject_progress">
                         Inject progress (admin / debug)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -683,7 +687,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_custom_badges">
                         Custom badges (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -701,7 +705,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_seasonal_challenges">
                         Seasonal challenges (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -720,7 +724,7 @@ font-size:0.88em;
                 </details>
 
                 <details class="abAdminSection" style="margin-top:1em;">
-                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;">
+                    <summary style="cursor:pointer; font-weight:600; padding:0.5em 0;" data-i18n="admin.section_enable_disable_badges">
                         Enable / disable badges (admin)
                     </summary>
                     <div style="margin-top:0.5em;">
@@ -803,6 +807,57 @@ font-size:0.88em;
 </div>
 
 <script>
+// ---------- Admin page i18n loader ----------
+// Fetches translations for the admin's preferred language (best-effort) and
+// applies them to any element carrying a `data-i18n="..."` attribute. The
+// translation files are the same JSON docs the standalone page uses, so admin
+// strings live under the `admin.*` key namespace.
+(function () {
+    function pickLang() {
+        try {
+            var stored = (window.localStorage && localStorage.getItem('achievementBadgesLang')) || '';
+            if (stored) return stored;
+        } catch (e) { /* ignore */ }
+        var nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase().slice(0, 2);
+        var supported = ['en','fr','es','de','it','pt','zh','ja'];
+        return supported.indexOf(nav) >= 0 ? nav : 'en';
+    }
+    function apply(dict) {
+        if (!dict) return;
+        var nodes = document.querySelectorAll('[data-i18n]');
+        for (var i = 0; i < nodes.length; i++) {
+            var key = nodes[i].getAttribute('data-i18n');
+            if (key && dict[key]) {
+                // Preserve trailing "(admin)" hint when present, for clarity.
+                nodes[i].textContent = dict[key];
+            }
+        }
+    }
+    function go() {
+        var lang = pickLang();
+        var url = 'Plugins/AchievementBadges/translations/' + encodeURIComponent(lang);
+        try {
+            var apiClient = window.ApiClient || window.apiClient || null;
+            if (apiClient && typeof apiClient.getUrl === 'function') {
+                url = apiClient.getUrl(url);
+            } else {
+                url = '/' + url;
+            }
+        } catch (e) {
+            url = '/' + url;
+        }
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(apply)
+            .catch(function () { /* silent — admin page still works in English */ });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', go);
+    } else {
+        go();
+    }
+})();
+
 (function () {
     var userIdInput = document.getElementById('abUserId');
     var meBtn = document.getElementById('abMeBtn');
@@ -1700,6 +1755,8 @@ font-size:0.88em;
             if (dlSel) dlSel.value = (c.DefaultLanguage || 'en');
             var xbEl = document.getElementById('abFcCustomXboxLogoSvg');
             if (xbEl) xbEl.value = c.CustomXboxLogoSvg || '';
+            var redactEl = document.getElementById('abFcRedactUsernamesInAuditLog');
+            if (redactEl) redactEl.checked = !!c.RedactUsernamesInAuditLog;
         }).catch(function (e) {
             if (fcStatusEl) fcStatusEl.textContent = 'Failed to load feature config: ' + (e.message || e);
         });
@@ -1753,7 +1810,8 @@ font-size:0.88em;
             DisabledBadgeCategories: categories,
             WelcomeMessage: document.getElementById('abFcWelcomeMessage').value || '',
             DefaultLanguage: (document.getElementById('abFcDefaultLanguage') || {}).value || 'en',
-            CustomXboxLogoSvg: (document.getElementById('abFcCustomXboxLogoSvg') || {}).value || ''
+            CustomXboxLogoSvg: (document.getElementById('abFcCustomXboxLogoSvg') || {}).value || '',
+            RedactUsernamesInAuditLog: !!(document.getElementById('abFcRedactUsernamesInAuditLog') || {}).checked
         }).then(function () {
             if (fcStatusEl) fcStatusEl.textContent = 'Feature config saved.';
         }).catch(function (e) {

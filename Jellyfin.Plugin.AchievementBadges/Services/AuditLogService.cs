@@ -17,6 +17,10 @@ public class AuditLogService
         public string UserName { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
         public string Details { get; set; } = string.Empty;
+        // Internal flag: true if this entry was stored with username
+        // redaction enabled. When reading, UserName is returned as
+        // "[redacted]" so it is never leaked to admins.
+        public bool Redacted { get; set; } = false;
     }
 
     private readonly string _path;
@@ -37,15 +41,19 @@ public class AuditLogService
 
     public void Log(string userId, string userName, string type, string details)
     {
+        var redact = Plugin.Instance?.Configuration?.RedactUsernamesInAuditLog ?? false;
         lock (_lock)
         {
             _entries.Add(new Entry
             {
                 At = DateTimeOffset.UtcNow,
                 UserId = userId ?? string.Empty,
-                UserName = userName ?? string.Empty,
+                // Store empty string when redacting so the username is
+                // never written to disk.
+                UserName = redact ? string.Empty : (userName ?? string.Empty),
                 Type = type ?? string.Empty,
-                Details = details ?? string.Empty
+                Details = details ?? string.Empty,
+                Redacted = redact
             });
 
             if (_entries.Count > MaxEntries)
@@ -61,7 +69,21 @@ public class AuditLogService
     {
         lock (_lock)
         {
-            return _entries.OrderByDescending(e => e.At).Take(limit).ToList();
+            return _entries
+                .OrderByDescending(e => e.At)
+                .Take(limit)
+                .Select(e => e.Redacted
+                    ? new Entry
+                    {
+                        At = e.At,
+                        UserId = e.UserId,
+                        UserName = "[redacted]",
+                        Type = e.Type,
+                        Details = e.Details,
+                        Redacted = true
+                    }
+                    : e)
+                .ToList();
         }
     }
 
