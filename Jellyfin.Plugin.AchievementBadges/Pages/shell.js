@@ -5,6 +5,12 @@
     const HOME_WIDGET_ID = "achievementBadgesHomeWidget";
     const SIDEBAR_ID = "achievementsSidebarEntry";
 
+    function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    }
+
     function rarityClass(rarity) {
         const value = (rarity || "").toLowerCase();
         if (value === "uncommon") return "rarity-uncommon";
@@ -1054,11 +1060,11 @@
                 '<div class="ab-badge-header">' +
                     '<div class="ab-badge-icon">' + iconGlyph(badge.Icon) + '</div>' +
                     '<div style="flex:1;">' +
-                        '<div class="ab-badge-title">' + badge.Title + '</div>' +
-                        '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + badge.Rarity + '</div>' +
+                        '<div class="ab-badge-title">' + escapeHtml(badge.Title) + '</div>' +
+                        '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(badge.Rarity) + '</div>' +
                     '</div>' +
                 '</div>' +
-                '<div class="ab-badge-description">' + subtitle + '</div>';
+                '<div class="ab-badge-description">' + escapeHtml(subtitle) + '</div>';
             return card;
         }
 
@@ -1087,11 +1093,11 @@
                 '<div class="ab-featured-primary-icon">' + iconGlyph(primary.Icon) + '</div>' +
                 '<div>' +
                     '<div class="ab-featured-overline">Signature Badge</div>' +
-                    '<div class="ab-featured-title">' + primary.Title + '</div>' +
-                    '<div class="ab-featured-description">' + primary.Description + '</div>' +
+                    '<div class="ab-featured-title">' + escapeHtml(primary.Title) + '</div>' +
+                    '<div class="ab-featured-description">' + escapeHtml(primary.Description) + '</div>' +
                     '<div class="ab-featured-meta">' +
-                        '<span class="ab-chip ' + rarityClass(primary.Rarity) + '">' + primary.Rarity + '</span>' +
-                        '<span class="ab-chip">' + primary.Category + '</span>' +
+                        '<span class="ab-chip ' + rarityClass(primary.Rarity) + '">' + escapeHtml(primary.Rarity) + '</span>' +
+                        '<span class="ab-chip">' + escapeHtml(primary.Category) + '</span>' +
                         '<span class="ab-chip">Primary</span>' +
                     '</div>' +
                 '</div>';
@@ -1111,8 +1117,8 @@
                 item.innerHTML =
                     '<div class="ab-featured-mini-icon">' + iconGlyph(badge.Icon) + '</div>' +
                     '<div style="flex:1;">' +
-                        '<div style="font-weight:800;">' + badge.Title + '</div>' +
-                        '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.9em;margin-top:0.15em;">' + badge.Rarity + ' • Slot ' + (index + 2) + '</div>' +
+                        '<div style="font-weight:800;">' + escapeHtml(badge.Title) + '</div>' +
+                        '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.9em;margin-top:0.15em;">' + escapeHtml(badge.Rarity) + ' • Slot ' + (index + 2) + '</div>' +
                     '</div>';
 
                 featuredSecondaryGrid.appendChild(item);
@@ -1163,11 +1169,11 @@
                     '<div class="ab-badge-header">' +
                         '<div class="ab-badge-icon">' + iconGlyph(badge.Icon) + '</div>' +
                         '<div style="flex:1;">' +
-                            '<div class="ab-badge-title">' + badge.Title + '</div>' +
-                            '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + badge.Rarity + ' • ' + badge.Category + '</div>' +
+                            '<div class="ab-badge-title">' + escapeHtml(badge.Title) + '</div>' +
+                            '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(badge.Rarity) + ' • ' + escapeHtml(badge.Category) + '</div>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="ab-badge-description">' + badge.Description + '</div>' +
+                    '<div class="ab-badge-description">' + escapeHtml(badge.Description) + '</div>' +
                     '<div class="ab-progress-text"><span>Progress</span><span>' + current + '/' + target + '</span></div>' +
                     '<div class="ab-progress-bar"><div class="ab-progress-fill" style="width:' + progress + '%;"></div></div>' +
                     '<div class="ab-badge-footer">' +
@@ -1192,8 +1198,8 @@
                 card.innerHTML =
                     '<div class="ab-showcase-icon">' + iconGlyph(badge.Icon) + '</div>' +
                     '<div>' +
-                        '<div style="font-weight:800;">' + badge.Title + (index === 0 ? ' ★' : '') + '</div>' +
-                        '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;">' + badge.Rarity + '</div>' +
+                        '<div style="font-weight:800;">' + escapeHtml(badge.Title) + (index === 0 ? ' ★' : '') + '</div>' +
+                        '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;">' + escapeHtml(badge.Rarity) + '</div>' +
                     '</div>';
 
                 showcaseRow.appendChild(card);
@@ -1221,8 +1227,8 @@
                     '<div class="ab-badge-header">' +
                         '<div class="ab-badge-icon">' + iconGlyph(badge.Icon) + '</div>' +
                         '<div style="flex:1;">' +
-                            '<div class="ab-badge-title">' + badge.Title + (index === 0 ? ' ★' : '') + '</div>' +
-                            '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + badge.Rarity + (index === 0 ? ' • Signature' : ' • Equipped') + '</div>' +
+                            '<div class="ab-badge-title">' + escapeHtml(badge.Title) + (index === 0 ? ' ★' : '') + '</div>' +
+                            '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(badge.Rarity) + (index === 0 ? ' • Signature' : ' • Equipped') + '</div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="ab-badge-footer">' +
@@ -1329,11 +1335,11 @@
                     '<div class="ab-badge-header">' +
                         '<div class="ab-badge-icon">' + iconGlyph(badge.Icon) + '</div>' +
                         '<div style="flex:1;">' +
-                            '<div class="ab-badge-title">' + badge.Title + (isEquipped ? ' ★' : '') + '</div>' +
-                            '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + badge.Rarity + ' • ' + badge.Category + (isEquipped ? ' • Equipped' : '') + '</div>' +
+                            '<div class="ab-badge-title">' + escapeHtml(badge.Title) + (isEquipped ? ' ★' : '') + '</div>' +
+                            '<div class="ab-badge-meta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(badge.Rarity) + ' • ' + escapeHtml(badge.Category) + (isEquipped ? ' • Equipped' : '') + '</div>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="ab-badge-description">' + badge.Description + '</div>' +
+                    '<div class="ab-badge-description">' + escapeHtml(badge.Description) + '</div>' +
                     '<div class="ab-progress-text"><span>Progress</span><span>' + current + '/' + target + '</span></div>' +
                     '<div class="ab-progress-bar"><div class="ab-progress-fill" style="width:' + progress + '%;"></div></div>' +
                     '<div class="ab-badge-footer">' +
@@ -1371,8 +1377,8 @@
                 '<div class="ab-toast-icon">' + iconGlyph(badge.Icon) + '</div>' +
                 '<div>' +
                     '<div class="ab-toast-title">Achievement unlocked</div>' +
-                    '<div class="ab-toast-subtitle">' + badge.Title + '</div>' +
-                    '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;margin-top:0.15em;">' + badge.Rarity + '</div>' +
+                    '<div class="ab-toast-subtitle">' + escapeHtml(badge.Title) + '</div>' +
+                    '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;margin-top:0.15em;">' + escapeHtml(badge.Rarity) + '</div>' +
                 '</div>';
 
             toastStack.appendChild(toast);
@@ -1724,8 +1730,8 @@
                 card.innerHTML =
                     '<div class="ab-showcase-icon">' + iconGlyph(badge.Icon) + '</div>' +
                     '<div>' +
-                        '<div style="font-weight:800;">' + badge.Title + (index === 0 ? ' ★' : '') + '</div>' +
-                        '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;">' + badge.Rarity + '</div>' +
+                        '<div style="font-weight:800;">' + escapeHtml(badge.Title) + (index === 0 ? ' ★' : '') + '</div>' +
+                        '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;">' + escapeHtml(badge.Rarity) + '</div>' +
                     '</div>';
 
                 items.appendChild(card);
@@ -1817,7 +1823,7 @@
         const target = badge.TargetValue || 0;
         const progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
 
-        let extra = '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;margin-top:0.15em;">' + badge.Rarity + '</div>';
+        let extra = '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;margin-top:0.15em;">' + escapeHtml(badge.Rarity) + '</div>';
 
         if (showProgress) {
             extra +=
@@ -1829,7 +1835,7 @@
             '<div class="ab-showcase-card">' +
                 '<div class="ab-showcase-icon">' + iconGlyph(badge.Icon) + '</div>' +
                 '<div style="flex:1;">' +
-                    '<div style="font-weight:700;">' + badge.Title + '</div>' +
+                    '<div style="font-weight:700;">' + escapeHtml(badge.Title) + '</div>' +
                     extra +
                 '</div>' +
             '</div>';

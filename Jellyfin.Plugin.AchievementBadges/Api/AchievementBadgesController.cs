@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Jellyfin.Plugin.AchievementBadges.Models;
 using Jellyfin.Plugin.AchievementBadges.Services;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,7 @@ namespace Jellyfin.Plugin.AchievementBadges.Api;
 [ApiController]
 [Authorize]
 [Route("Plugins/AchievementBadges")]
+[ServiceFilter(typeof(UserOwnershipFilter))]
 public class AchievementBadgesController : ControllerBase
 {
     private readonly AchievementBadgeService _badgeService;
@@ -24,6 +26,7 @@ public class AchievementBadgesController : ControllerBase
     private readonly RecommendationService _recommendationService;
     private readonly QuestService _questService;
     private readonly AuditLogService _auditLog;
+    private readonly IUserManager _userManager;
 
     public AchievementBadgesController(
         AchievementBadgeService badgeService,
@@ -33,7 +36,8 @@ public class AchievementBadgesController : ControllerBase
         RecapService recapService,
         RecommendationService recommendationService,
         QuestService questService,
-        AuditLogService auditLog)
+        AuditLogService auditLog,
+        IUserManager userManager)
     {
         _badgeService = badgeService;
         _playbackCompletionService = playbackCompletionService;
@@ -43,6 +47,7 @@ public class AchievementBadgesController : ControllerBase
         _recommendationService = recommendationService;
         _questService = questService;
         _auditLog = auditLog;
+        _userManager = userManager;
     }
 
     [HttpGet("test")]
@@ -245,6 +250,12 @@ public class AchievementBadgesController : ControllerBase
         [FromQuery] bool isEpisode = true,
         [FromQuery] bool isSeriesCompleted = false)
     {
+        if (double.IsNaN(completionPercent) || double.IsInfinity(completionPercent))
+        {
+            return BadRequest(new { Message = "completionPercent must be a finite number." });
+        }
+        completionPercent = Math.Clamp(completionPercent, 0d, 100d);
+
         var success = _playbackCompletionService.RecordCompletion(
             userId,
             itemId,
@@ -756,8 +767,28 @@ public class AchievementBadgesController : ControllerBase
     [HttpGet("users/{userId}/profile-card")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ActionResult GetProfileCard([FromRoute] string userId)
     {
+        // Upfront validation — a malformed or unknown userId would otherwise
+        // allow enumeration of which userIds exist via the profile card.
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            return NotFound();
+        }
+        try
+        {
+            var userExists = _userManager.GetUserById(userGuid);
+            if (userExists is null)
+            {
+                return NotFound();
+            }
+        }
+        catch
+        {
+            return NotFound();
+        }
+
         var content = ResourceReader.ReadEmbeddedText("Jellyfin.Plugin.AchievementBadges.Pages.profile-card.html")
             ?? "<html><body>Profile card template missing.</body></html>";
 
@@ -796,17 +827,17 @@ public class AchievementBadgesController : ControllerBase
             int currentStreak = (int)(streakData.GetType().GetProperty("CurrentStreak")?.GetValue(streakData) ?? 0);
 
             content = content
-                .Replace("{{userId}}", userId)
+                .Replace("{{userId}}", System.Net.WebUtility.HtmlEncode(userId))
                 .Replace("{{score}}", score.ToString())
                 .Replace("{{unlocked}}", unlocked.ToString())
                 .Replace("{{total}}", total.ToString())
                 .Replace("{{percentage}}", percentage.ToString("0.#"))
                 .Replace("{{bestStreak}}", bestStreak.ToString())
                 .Replace("{{currentStreak}}", currentStreak.ToString())
-                .Replace("{{tierName}}", tier.Name)
-                .Replace("{{tierColor}}", tier.Color)
+                .Replace("{{tierName}}", System.Net.WebUtility.HtmlEncode(tier.Name))
+                .Replace("{{tierColor}}", System.Net.WebUtility.HtmlEncode(tier.Color))
                 .Replace("{{progressToNext}}", progress.ToString())
-                .Replace("{{nextTierLabel}}", next is null ? "Max rank" : $"{next.MinScore - score} to {next.Name}")
+                .Replace("{{nextTierLabel}}", System.Net.WebUtility.HtmlEncode(next is null ? "Max rank" : $"{next.MinScore - score} to {next.Name}"))
                 .Replace("{{recapMovies}}", recapMovies.ToString())
                 .Replace("{{recapEpisodes}}", recapEpisodes.ToString())
                 .Replace("{{recapUnlocks}}", recapUnlocks.ToString())
@@ -814,7 +845,7 @@ public class AchievementBadgesController : ControllerBase
         }
         catch (Exception ex)
         {
-            content = content.Replace("{{userId}}", userId ?? string.Empty);
+            content = content.Replace("{{userId}}", System.Net.WebUtility.HtmlEncode(userId ?? string.Empty));
             return Content($"<html><body style='background:#111;color:#fff;font-family:sans-serif;padding:2em;'><h1>Profile card error</h1><p>{System.Net.WebUtility.HtmlEncode(ex.Message)}</p></body></html>", "text/html");
         }
 
@@ -848,7 +879,10 @@ public class AchievementBadgesController : ControllerBase
         var plugin = Plugin.Instance;
         if (plugin is null) return BadRequest();
         var config = plugin.Configuration;
-        config.CustomBadges = (badges ?? new()).Where(b => !string.IsNullOrWhiteSpace(b.Id)).ToList();
+        config.CustomBadges = (badges ?? new())
+            .Where(b => !string.IsNullOrWhiteSpace(b.Id))
+            .Select(AchievementDefinitionSanitizer.Sanitize)
+            .ToList();
         foreach (var b in config.CustomBadges) { b.IsCustom = true; }
         plugin.UpdateConfiguration(config);
         return Ok(new { Count = config.CustomBadges.Count });
@@ -872,7 +906,10 @@ public class AchievementBadgesController : ControllerBase
         var plugin = Plugin.Instance;
         if (plugin is null) return BadRequest();
         var config = plugin.Configuration;
-        config.Challenges = (challenges ?? new()).Where(b => !string.IsNullOrWhiteSpace(b.Id)).ToList();
+        config.Challenges = (challenges ?? new())
+            .Where(b => !string.IsNullOrWhiteSpace(b.Id))
+            .Select(AchievementDefinitionSanitizer.Sanitize)
+            .ToList();
         foreach (var c in config.Challenges) { c.IsChallenge = true; }
         plugin.UpdateConfiguration(config);
         return Ok(new { Count = config.Challenges.Count });
@@ -908,6 +945,12 @@ public class AchievementBadgesController : ControllerBase
     {
         var plugin = Plugin.Instance;
         if (plugin is null) return BadRequest();
+
+        if (request?.WebhookEnabled == true && !WebhookUrlValidator.TryValidate(request.WebhookUrl, out var error))
+        {
+            return BadRequest(new { Message = error });
+        }
+
         var config = plugin.Configuration;
         config.WebhookUrl = request?.WebhookUrl;
         config.WebhookEnabled = request?.WebhookEnabled ?? false;
@@ -1053,6 +1096,13 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult ImportProfile([FromRoute] string userId, [FromBody] UserAchievementProfile profile)
     {
+        if (profile != null && profile.Badges != null)
+        {
+            profile.Badges = profile.Badges
+                .Where(b => b != null && !string.IsNullOrWhiteSpace(b.Id))
+                .Select(AchievementDefinitionSanitizer.Sanitize)
+                .ToList();
+        }
         _badgeService.ImportProfile(userId, profile);
         return Ok(new { Success = true });
     }
@@ -1125,7 +1175,8 @@ public class AchievementBadgesController : ControllerBase
             ForcePrivacyMode = c?.ForcePrivacyMode ?? false,
             ForceSpoilerMode = c?.ForceSpoilerMode ?? false,
             ForceExtremeSpoilerMode = c?.ForceExtremeSpoilerMode ?? false,
-            DefaultLanguage = c?.DefaultLanguage ?? "en"
+            DefaultLanguage = c?.DefaultLanguage ?? "en",
+            CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? ""
         });
     }
 
@@ -1151,7 +1202,8 @@ public class AchievementBadgesController : ControllerBase
             RestrictBadgeVisibility = c?.RestrictBadgeVisibility ?? false,
             DisabledBadgeCategories = c?.DisabledBadgeCategories ?? new List<string>(),
             WelcomeMessage = c?.WelcomeMessage ?? "",
-            DefaultLanguage = c?.DefaultLanguage ?? "en"
+            DefaultLanguage = c?.DefaultLanguage ?? "en",
+            CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? ""
         });
     }
 
@@ -1170,6 +1222,7 @@ public class AchievementBadgesController : ControllerBase
         public List<string> DisabledBadgeCategories { get; set; } = new();
         public string WelcomeMessage { get; set; } = "";
         public string DefaultLanguage { get; set; } = "en";
+        public string CustomXboxLogoSvg { get; set; } = "";
     }
 
     [HttpPost("admin/feature-config")]
@@ -1194,10 +1247,64 @@ public class AchievementBadgesController : ControllerBase
         config.WelcomeMessage = request.WelcomeMessage ?? "";
         // Only accept known language codes; default to "en".
         var lang = (request.DefaultLanguage ?? "en").ToLowerInvariant();
-        if (lang != "en" && lang != "fr" && lang != "es") lang = "en";
+        var allowedLangs = new HashSet<string> { "en", "fr", "es", "de", "it", "pt", "zh", "ja" };
+        if (!allowedLangs.Contains(lang)) lang = "en";
         config.DefaultLanguage = lang;
+
+        // Custom Xbox logo SVG — sanitize before storing. We accept either a
+        // raw SVG string or a base64-encoded one; store base64 so the frontend
+        // can stuff it into an <img src="data:image/svg+xml;base64,..."> tag.
+        config.CustomXboxLogoSvg = SanitizeAndEncodeSvg(request.CustomXboxLogoSvg ?? "");
+
         plugin.UpdateConfiguration(config);
         return Ok(new { Success = true });
+    }
+
+    private static string SanitizeAndEncodeSvg(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return "";
+        // Cap the length to prevent config-file blow-up.
+        if (input.Length > 65536) input = input.Substring(0, 65536);
+
+        string svg;
+        // Try base64 decode first — if it's already base64, we still want to
+        // sanitize the decoded SVG, then re-encode.
+        try
+        {
+            var decoded = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(input));
+            if (decoded.TrimStart().StartsWith("<svg", System.StringComparison.OrdinalIgnoreCase)
+                || decoded.Contains("<svg", System.StringComparison.OrdinalIgnoreCase))
+            {
+                svg = decoded;
+            }
+            else
+            {
+                svg = input;
+            }
+        }
+        catch
+        {
+            svg = input;
+        }
+
+        // Strip <script>...</script> blocks and any on* event-handler attrs.
+        svg = System.Text.RegularExpressions.Regex.Replace(
+            svg, @"<script[\s\S]*?</script\s*>", "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        svg = System.Text.RegularExpressions.Regex.Replace(
+            svg, @"\s+on[a-zA-Z]+\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        // Reject javascript: URIs inside href/xlink:href.
+        svg = System.Text.RegularExpressions.Regex.Replace(
+            svg, @"(href|xlink:href)\s*=\s*(""\s*javascript:[^""]*""|'\s*javascript:[^']*')", "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (!svg.Contains("<svg", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return "";
+        }
+
+        return System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(svg));
     }
 
     // ---------- Challenge templates -----------------------------------

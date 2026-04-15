@@ -1,5 +1,6 @@
 (function(){
     try { console.log('[AchievementBadges] sidebar.js loaded'); } catch(e){}
+    function escapeHtml(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
     var SIDEBAR_ID='ab-sidebar-entry';
     var SHOWCASE_ID='ab-sidebar-showcase';
     var HEADER_ID='ab-header-badges';
@@ -147,7 +148,7 @@
                         var color=rc(b.Rarity);
                         var pill=document.createElement('div');pill.title=b.Title+' ('+b.Rarity+')';
                         pill.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 5px;border-radius:999px;background:'+color+'1a;border:1px solid '+color+';font-size:11px;cursor:default;line-height:1;';
-                        pill.innerHTML='<span class="material-icons" style="font-family:Material Icons;font-size:15px;line-height:1;color:#fff;opacity:0.95;">'+icName(b.Icon)+'</span><span style="color:'+color+';font-weight:700;line-height:1;">'+b.Title+'</span>';
+                        pill.innerHTML='<span class="material-icons" style="font-family:Material Icons;font-size:15px;line-height:1;color:#fff;opacity:0.95;">'+icName(b.Icon)+'</span><span style="color:'+color+';font-weight:700;line-height:1;">'+escapeHtml(b.Title)+'</span>';
                         sc.appendChild(pill);
                     });
                 }

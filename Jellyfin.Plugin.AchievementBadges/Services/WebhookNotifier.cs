@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Jellyfin.Plugin.AchievementBadges.Models;
 using Microsoft.Extensions.Logging;
 
@@ -26,15 +27,28 @@ public class WebhookNotifier
             return;
         }
 
+        // Re-validate the URL immediately before sending to catch DNS rebinding
+        // or cases where admin changed the stored URL out-of-band.
+        if (!WebhookUrlValidator.TryValidate(config.WebhookUrl, out var error))
+        {
+            _logger.LogWarning("[AchievementBadges] Webhook URL failed validation: {Error}", error);
+            return;
+        }
+
         var template = string.IsNullOrWhiteSpace(config.WebhookMessageTemplate)
             ? "{user} unlocked {badge}"
             : config.WebhookMessageTemplate!;
 
+        var safeUser = Sanitize(userName);
+        var safeTitle = Sanitize(badge.Title);
+        var safeRarity = Sanitize(badge.Rarity);
+        var safeDescription = Sanitize(badge.Description);
+
         var content = template
-            .Replace("{user}", userName ?? "Someone", StringComparison.OrdinalIgnoreCase)
-            .Replace("{badge}", badge.Title ?? "a badge", StringComparison.OrdinalIgnoreCase)
-            .Replace("{rarity}", badge.Rarity ?? "Common", StringComparison.OrdinalIgnoreCase)
-            .Replace("{description}", badge.Description ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            .Replace("{user}", string.IsNullOrEmpty(safeUser) ? "Someone" : safeUser, StringComparison.OrdinalIgnoreCase)
+            .Replace("{badge}", string.IsNullOrEmpty(safeTitle) ? "a badge" : safeTitle, StringComparison.OrdinalIgnoreCase)
+            .Replace("{rarity}", string.IsNullOrEmpty(safeRarity) ? "Common" : safeRarity, StringComparison.OrdinalIgnoreCase)
+            .Replace("{description}", safeDescription, StringComparison.OrdinalIgnoreCase);
 
         var url = config.WebhookUrl!;
         object payload;
@@ -68,5 +82,17 @@ public class WebhookNotifier
                 _logger.LogWarning(ex, "[AchievementBadges] Webhook POST failed.");
             }
         });
+    }
+
+    private static string Sanitize(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        var sb = new System.Text.StringBuilder(s.Length);
+        foreach (var c in s)
+        {
+            if (c == '\r' || c == '\n' || c == '\t') sb.Append(' ');
+            else if (!char.IsControl(c)) sb.Append(c);
+        }
+        return sb.ToString();
     }
 }

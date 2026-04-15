@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.5.45",
+        "changelog": "Security hardening release. Enforce per-user authorization on user-scoped API endpoints. Admin-only endpoints unchanged. Validate and sanitize admin-supplied custom badge definitions, webhook URLs, and imported profiles. Escape user-controlled strings in the achievements UI renderers. Return 404 for unknown users on the public profile card endpoint and stop creating empty profiles on anonymous reads. Additional input bounds on playback completion API. Cap response buffering in the injection middleware. Plus: admin can now upload a custom SVG to replace the Xbox logo in toasts. Expanded translations to 8 languages (English, Français, Español, Deutsch, Italiano, Português, 中文, 日本語) with ~220 keys covering most UI. Thanks to xdnewlun1 (Techno Cricket, CCDC) for responsible disclosure.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.5.45/Jellyfin.Plugin.AchievementBadgesv1.5.45.zip",
+        "checksum": "B81424986A546BE401B4D23588BA8D3A"
+      },
+      {
         "version": "1.5.44",
         "changelog": "Multi-language support (English, French, Spanish), profile card back button, CASSETTE/VINYL bug definitively fixed. Root cause of the icon text bug: sidebar.js bypassed the icon allowlist, so equipped badges with invalid icon names rendered raw text in the sidebar showcase pills and header badge dots. Now applies the same Material Icons allowlist as standalone.js. Also fixed 5 badge definitions with invalid icon names (vinyl→album, cassette→music_note, sports→audiotrack, mosque→public, rocket→rocket_launch). Profile card: added a top-left back button with iOS safe-area support (44x44 touch target). i18n: ~50 UI strings translated to en/fr/es, user can pick language in settings, admin sets server default. Badge titles/descriptions not yet translated (future work).",
         "targetAbi": "10.11.0.0",

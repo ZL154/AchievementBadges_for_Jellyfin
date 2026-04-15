@@ -49,6 +49,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public List<string> DisabledBadgeCategories { get; set; } = new();
     public string WelcomeMessage { get; set; } = "";
 
-    // Default UI language when a user hasn't picked one. Supported: "en", "fr", "es".
+    // Default UI language when a user hasn't picked one. Supported:
+    // "en", "fr", "es", "de", "it", "pt", "zh", "ja".
     public string DefaultLanguage { get; set; } = "en";
+
+    // Admin-supplied SVG used to replace the Xbox logo in the toast animation.
+    // Stored as a base64-encoded SVG string (no data:-URI prefix). Empty string
+    // means "use the default Xbox logo bundled with the plugin".
+    public string CustomXboxLogoSvg { get; set; } = "";
 }

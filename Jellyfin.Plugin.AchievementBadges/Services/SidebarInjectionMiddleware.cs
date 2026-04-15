@@ -9,6 +9,8 @@ namespace Jellyfin.Plugin.AchievementBadges.Services;
 
 public class SidebarInjectionMiddleware
 {
+    private const long MaxBufferBytes = 5 * 1024 * 1024;
+
     private readonly RequestDelegate _next;
     private readonly ILogger<SidebarInjectionMiddleware> _logger;
 
@@ -244,6 +246,14 @@ public class SidebarInjectionMiddleware
             context.Response.Body = buffer;
 
             await _next(context);
+
+            if (buffer.Length > MaxBufferBytes)
+            {
+                buffer.Seek(0, SeekOrigin.Begin);
+                context.Response.Body = originalBody;
+                await buffer.CopyToAsync(originalBody);
+                return;
+            }
 
             buffer.Seek(0, SeekOrigin.Begin);
 

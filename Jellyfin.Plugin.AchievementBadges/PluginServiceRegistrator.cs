@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.AchievementBadges.Api;
 using Jellyfin.Plugin.AchievementBadges.Services;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
@@ -10,6 +11,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 {
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
+        serviceCollection.AddScoped<UserOwnershipFilter>();
+
         serviceCollection.AddSingleton<WebhookNotifier>();
         serviceCollection.AddSingleton<AuditLogService>();
         serviceCollection.AddSingleton<AchievementBadgeService>();

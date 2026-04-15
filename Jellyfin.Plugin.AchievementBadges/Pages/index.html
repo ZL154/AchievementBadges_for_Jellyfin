@@ -634,8 +634,21 @@ font-size:0.88em;
                                 <option value="en">English</option>
                                 <option value="fr">Français</option>
                                 <option value="es">Español</option>
+                                <option value="de">Deutsch</option>
+                                <option value="it">Italiano</option>
+                                <option value="pt">Português</option>
+                                <option value="zh">中文</option>
+                                <option value="ja">日本語</option>
                             </select>
                             <div class="secondaryText" style="font-size:0.85em; margin-top:0.25em;">Badge titles/descriptions are not yet localized; only UI chrome is translated.</div>
+                        </label>
+                        <label style="display:block; margin-bottom:0.75em;">Custom toast logo SVG (replaces the Xbox logo in the achievement toast):<br>
+                            <textarea id="abFcCustomXboxLogoSvg" rows="5" placeholder="Paste SVG markup or base64 content. Leave blank to use the default Xbox logo." style="width:100%; padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px; font-family:monospace; font-size:0.82em;"></textarea>
+                            <div style="margin-top:0.4em; display:flex; gap:0.5em; align-items:center;">
+                                <input type="file" id="abFcCustomXboxLogoFile" accept="image/svg+xml,.svg" style="font-size:0.85em;">
+                                <button is="emby-button" type="button" class="raised" id="abFcCustomXboxLogoClear">Reset to default</button>
+                            </div>
+                            <div class="secondaryText" style="font-size:0.85em; margin-top:0.25em;">&lt;script&gt; tags and on* event handlers are stripped server-side before saving.</div>
                         </label>
                         <button is="emby-button" type="button" class="raised button-submit" id="abFcSaveBtn">Save feature config</button>
                         <div id="abFcStatus" class="secondaryText"></div>
@@ -1685,10 +1698,39 @@ font-size:0.88em;
             document.getElementById('abFcWelcomeMessage').value = c.WelcomeMessage || '';
             var dlSel = document.getElementById('abFcDefaultLanguage');
             if (dlSel) dlSel.value = (c.DefaultLanguage || 'en');
+            var xbEl = document.getElementById('abFcCustomXboxLogoSvg');
+            if (xbEl) xbEl.value = c.CustomXboxLogoSvg || '';
         }).catch(function (e) {
             if (fcStatusEl) fcStatusEl.textContent = 'Failed to load feature config: ' + (e.message || e);
         });
     }
+
+    // Wire up the file picker + reset button for the custom Xbox logo.
+    (function () {
+        var fileInput = document.getElementById('abFcCustomXboxLogoFile');
+        var textarea = document.getElementById('abFcCustomXboxLogoSvg');
+        var clearBtn = document.getElementById('abFcCustomXboxLogoClear');
+        if (fileInput && textarea) {
+            fileInput.addEventListener('change', function () {
+                var f = fileInput.files && fileInput.files[0];
+                if (!f) return;
+                if (f.size > 65536) {
+                    alert('SVG is larger than 64KB — please use a smaller file.');
+                    fileInput.value = '';
+                    return;
+                }
+                var reader = new FileReader();
+                reader.onload = function () { textarea.value = String(reader.result || ''); };
+                reader.readAsText(f);
+            });
+        }
+        if (clearBtn && textarea) {
+            clearBtn.addEventListener('click', function () {
+                textarea.value = '';
+                if (fileInput) fileInput.value = '';
+            });
+        }
+    })();
 
     fcSaveBtn.addEventListener('click', function () {
         var catText = document.getElementById('abFcDisabledBadgeCategories').value || '';
@@ -1710,7 +1752,8 @@ font-size:0.88em;
             RestrictBadgeVisibility: document.getElementById('abFcRestrictBadgeVisibility').checked,
             DisabledBadgeCategories: categories,
             WelcomeMessage: document.getElementById('abFcWelcomeMessage').value || '',
-            DefaultLanguage: (document.getElementById('abFcDefaultLanguage') || {}).value || 'en'
+            DefaultLanguage: (document.getElementById('abFcDefaultLanguage') || {}).value || 'en',
+            CustomXboxLogoSvg: (document.getElementById('abFcCustomXboxLogoSvg') || {}).value || ''
         }).then(function () {
             if (fcStatusEl) fcStatusEl.textContent = 'Feature config saved.';
         }).catch(function (e) {

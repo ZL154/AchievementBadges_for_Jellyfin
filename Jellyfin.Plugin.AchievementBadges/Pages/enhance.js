@@ -12,6 +12,13 @@
     var toastQueue = [];
     var visibleToastCount = 0;
     var features = { EnableUnlockToasts: true, EnableHomeWidget: false, EnableItemDetailRibbon: false };
+    // Default Xbox logo (base64 SVG). When the admin configures a custom
+    // toast logo via the plugin config page, this gets replaced at runtime.
+    var DEFAULT_XBOX_LOGO_B64 = 'PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+Cgk8cGF0aCBmaWxsPSIjZmZmIiBkPSJNNC4xMDIgMjEuMDMzQzYuMjExIDIyLjg4MSA4Ljk3NyAyNCAxMiAyNGMzLjAyNiAwIDUuNzg5LTEuMTE5IDcuOTAyLTIuOTY3IDEuODc3LTEuOTEyLTQuMzE2LTguNzA5LTcuOTAyLTExLjQxNy0zLjU4MiAyLjcwOC05Ljc3OSA5LjUwNS03Ljg5OCAxMS40MTd6bTExLjE2LTE0LjQwNmMyLjUgMi45NjEgNy40ODQgMTAuMzEzIDYuMDc2IDEyLjkxMkMyMy4wMDIgMTcuNDggMjQgMTQuODYxIDI0IDEyLjAwNGMwLTMuMzQtMS4zNjUtNi4zNjItMy41Ny04LjUzNiAwIDAtLjAyNy0uMDIyLS4wODItLjA0Mi0uMDYzLS4wMjItLjE1Mi0uMDQ1LS4yODEtLjA0NS0uNTkyIDAtMS45ODUuNDM0LTQuODA1IDMuMjQ2ek0zLjY1NCAzLjQyNmMtLjA1Ny4wMi0uMDgyLjA0MS0uMDg2LjA0MkMxLjM2NSA1LjY0MiAwIDguNjY0IDAgMTIuMDA0YzAgMi44NTQuOTk4IDUuNDczIDIuNjYxIDcuNTMzLTEuNDAxLTIuNjA1IDMuNTc5LTkuOTUxIDYuMDgtMTIuOTEtMi44Mi0yLjgxMy00LjIxNi0zLjI0NS00LjgwNi0zLjI0NS0uMTMxIDAtLjIyMy4wMjEtLjI4MS4wNDZ2LS4wMDJ6TTEyIDMuNTUxUzkuMDU1IDEuODI4IDYuNzU1IDEuNzQ2Yy0uOTAzLS4wMzMtMS40NTQuMjk1LTEuNTIxLjMzOUM3LjM3OS42NDYgOS42NTkgMCAxMS45ODQgMEgxMmMyLjMzNCAwIDQuNjA1LjY0NiA2Ljc2NiAyLjA4NS0uMDY4LS4wNDYtLjYxNS0uMzcyLTEuNTItLjMzOUMxNC45NDYgMS44MjggMTIgMy41NDUgMTIgMy41NDV2LjAwNnoiIC8+Cjwvc3ZnPgo=';
+    var customXboxLogoB64 = '';
+    function xboxLogoSrc() {
+        return 'data:image/svg+xml;base64,' + (customXboxLogoB64 || DEFAULT_XBOX_LOGO_B64);
+    }
 
     function isReducedMotion() {
         try {
@@ -132,7 +139,7 @@
                     '<img class="ab-xb-trophy-2" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+Cjxzdmcgdmlld0JveD0iMCAwIDQ5MyA0OTMiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+Cgk8ZyBmaWxsPSIjZmZmIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg2Mi4wMDAwMDAsIDUuMDAwMDAwKSI+CgkJPHJlY3QgeD0iMTQ0LjkzMTAzNCIgeT0iMzQ0LjcyIiB3aWR0aD0iNzkuODIwNDk1MyIgaGVpZ2h0PSI2NS4xMiIgcng9IjgiPgoJCTwvcmVjdD4KCQk8cmVjdCB4PSIwLjkxMTE2MjE0NyIgeT0iMCIgd2lkdGg9IjM2NS43OTMxMDMiIGhlaWdodD0iMjQuNjQiIHJ4PSIxMi4zMiI+CgkJPC9yZWN0PgoJCTxwYXRoIGQ9Ik0xMy4wMzQ0ODI4LDIzLjY0IEwzNTUuOTY1NTE3LDIzLjY0IEMzNTUuOTY1NTE3LDIzLjY0IDM0Ny40OTA0NjksMjEyLjg5ODAwOCAzMDUuNTkxNjE4LDI3OS4zMDkwMDQgQzI2My42OTI3NjcsMzQ1LjcyIDIyNy4xMzIzNDcsMzQ1LjcyIDIyNy4xMzIzNDcsMzQ1LjcyIEwxNDEuODY3NjUzLDM0NS43MiBDMTQxLjg2NzY1MywzNDUuNzIgMTAwLjU5NTA2OCwzNTIuMDc4MDA1IDYwLjUxNzI0MTEsMjc5LjMwOTAwNCBDMjAuNDM5NDE0MiwyMDYuNTQwMDAyIDEzLjAzNDQ4MjgsMjMuNjQgMTMuMDM0NDgyOCwyMy42NCBaIj4KCQk8L3BhdGg+CgkJPHBhdGggZD0iTTE4NS41ODQxNDksMzc5LjE2IEMyNjcuMzEwMzczLDM3OS4xNiAyNTkuNDQ2MjE4LDQ0NC4yOCAyNTkuNDQ2MjE4LDQ0NC4yOCBMMTExLjcyMjA4LDQ0NC4yOCBDMTExLjcyMjA4LDQ0NC4yOCAxMDMuODU3OTI1LDM3OS4xNiAxODUuNTg0MTQ5LDM3OS4xNiBaIj4KCQk8L3BhdGg+CgkJPHJlY3QgeD0iOTcuNDQ4Mjc1OSIgeT0iNDQzLjI4IiB3aWR0aD0iMTc1Ljg2MjA2OSIgaGVpZ2h0PSIzOC43MiI+CgkJPC9yZWN0PgoJPC9nPgo8L3N2Zz4K"/>' +
                 '</div>' +
                 '<div class="ab-xb-img ab-xb-xbox-img">' +
-                    '<img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+Cgk8cGF0aCBmaWxsPSIjZmZmIiBkPSJNNC4xMDIgMjEuMDMzQzYuMjExIDIyLjg4MSA4Ljk3NyAyNCAxMiAyNGMzLjAyNiAwIDUuNzg5LTEuMTE5IDcuOTAyLTIuOTY3IDEuODc3LTEuOTEyLTQuMzE2LTguNzA5LTcuOTAyLTExLjQxNy0zLjU4MiAyLjcwOC05Ljc3OSA5LjUwNS03Ljg5OCAxMS40MTd6bTExLjE2LTE0LjQwNmMyLjUgMi45NjEgNy40ODQgMTAuMzEzIDYuMDc2IDEyLjkxMkMyMy4wMDIgMTcuNDggMjQgMTQuODYxIDI0IDEyLjAwNGMwLTMuMzQtMS4zNjUtNi4zNjItMy41Ny04LjUzNiAwIDAtLjAyNy0uMDIyLS4wODItLjA0Mi0uMDYzLS4wMjItLjE1Mi0uMDQ1LS4yODEtLjA0NS0uNTkyIDAtMS45ODUuNDM0LTQuODA1IDMuMjQ2ek0zLjY1NCAzLjQyNmMtLjA1Ny4wMi0uMDgyLjA0MS0uMDg2LjA0MkMxLjM2NSA1LjY0MiAwIDguNjY0IDAgMTIuMDA0YzAgMi44NTQuOTk4IDUuNDczIDIuNjYxIDcuNTMzLTEuNDAxLTIuNjA1IDMuNTc5LTkuOTUxIDYuMDgtMTIuOTEtMi44Mi0yLjgxMy00LjIxNi0zLjI0NS00LjgwNi0zLjI0NS0uMTMxIDAtLjIyMy4wMjEtLjI4MS4wNDZ2LS4wMDJ6TTEyIDMuNTUxUzkuMDU1IDEuODI4IDYuNzU1IDEuNzQ2Yy0uOTAzLS4wMzMtMS40NTQuMjk1LTEuNTIxLjMzOUM3LjM3OS42NDYgOS42NTkgMCAxMS45ODQgMEgxMmMyLjMzNCAwIDQuNjA1LjY0NiA2Ljc2NiAyLjA4NS0uMDY4LS4wNDYtLjYxNS0uMzcyLTEuNTItLjMzOUMxNC45NDYgMS44MjggMTIgMy41NDUgMTIgMy41NDV2LjAwNnoiIC8+Cjwvc3ZnPgo="/>' +
+                    '<img src="' + xboxLogoSrc() + '"/>' +
                 '</div>' +
             '</div>' +
             '<div class="ab-xb-banner-outer">' +
@@ -585,6 +592,12 @@
 
         fetchJson('Plugins/AchievementBadges/admin/ui-features').then(function (f) {
             if (f) { features = { EnableUnlockToasts: !!f.EnableUnlockToasts, EnableHomeWidget: !!f.EnableHomeWidget, EnableItemDetailRibbon: !!f.EnableItemDetailRibbon }; }
+        }).then(function () {
+            return fetchJson('Plugins/AchievementBadges/public-config').then(function (pc) {
+                if (pc && typeof pc.CustomXboxLogoSvg === 'string' && pc.CustomXboxLogoSvg.length > 0) {
+                    customXboxLogoB64 = pc.CustomXboxLogoSvg;
+                }
+            }).catch(function () { /* non-fatal */ });
         }).finally(function () {
             pollUnlocks();
             setInterval(pollUnlocks, 8000);

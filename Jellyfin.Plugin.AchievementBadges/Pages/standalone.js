@@ -131,20 +131,64 @@
         });
     }
 
-    function getCurrentUserId() {
+    function getCurrentUserIdImmediate() {
         var api = getApiClient();
         if (api) {
             try {
                 if (typeof api.getCurrentUserId === 'function') {
                     var id = api.getCurrentUserId();
-                    if (id) return Promise.resolve(id);
+                    if (id) return id;
                 }
-                if (api._serverInfo && api._serverInfo.UserId) return Promise.resolve(api._serverInfo.UserId);
+                if (api._serverInfo && api._serverInfo.UserId) return api._serverInfo.UserId;
             } catch (e) {}
         }
-        return fetchJson('Users/Me').then(function (me) {
-            return me && me.Id ? me.Id : '';
-        }).catch(function () { return ''; });
+        return '';
+    }
+
+    // Resolve the current Jellyfin user id with a short retry loop. On a fresh
+    // page load, a back-navigation from another plugin page, or a hash route
+    // change before Jellyfin has fully bootstrapped, window.ApiClient /
+    // getCurrentUserId() may briefly be unavailable. Poll every 200ms for up
+    // to 2 seconds (10 tries). Fall back to Users/Me as a last resort.
+    function getCurrentUserId() {
+        var immediate = getCurrentUserIdImmediate();
+        if (immediate) return Promise.resolve(immediate);
+        return new Promise(function (resolve) {
+            var attempts = 0;
+            var MAX_ATTEMPTS = 10;
+            var INTERVAL_MS = 200;
+            var timer = null;
+            var settled = false;
+            function finish(val) {
+                if (settled) return;
+                settled = true;
+                if (timer) { clearInterval(timer); timer = null; }
+                resolve(val || '');
+            }
+            // If Jellyfin fires a "connect"/"authenticated" event on the document,
+            // short-circuit the polling loop. These are best-effort — we still
+            // fall back to the interval below if no event ever fires.
+            try {
+                var onEvent = function () {
+                    var id = getCurrentUserIdImmediate();
+                    if (id) finish(id);
+                };
+                document.addEventListener('connected', onEvent, { once: true });
+                document.addEventListener('authenticated', onEvent, { once: true });
+            } catch (e) { /* ignore environments without event support */ }
+
+            timer = setInterval(function () {
+                attempts++;
+                var id = getCurrentUserIdImmediate();
+                if (id) { finish(id); return; }
+                if (attempts >= MAX_ATTEMPTS) {
+                    // Last-ditch: ask the server who we are via the auth cookie/token.
+                    fetchJson('Users/Me').then(function (me) {
+                        finish(me && me.Id ? me.Id : '');
+                    }).catch(function () { finish(''); });
+                }
+            }, INTERVAL_MS);
+        });
     }
 
     function injectStyles() {
@@ -1998,6 +2042,11 @@
                             '<option value="en"' + (prefLang === 'en' ? ' selected' : '') + '>' + tr('settings.language_en', 'English') + '</option>' +
                             '<option value="fr"' + (prefLang === 'fr' ? ' selected' : '') + '>' + tr('settings.language_fr', 'Français') + '</option>' +
                             '<option value="es"' + (prefLang === 'es' ? ' selected' : '') + '>' + tr('settings.language_es', 'Español') + '</option>' +
+                            '<option value="de"' + (prefLang === 'de' ? ' selected' : '') + '>' + tr('settings.language_de', 'Deutsch') + '</option>' +
+                            '<option value="it"' + (prefLang === 'it' ? ' selected' : '') + '>' + tr('settings.language_it', 'Italiano') + '</option>' +
+                            '<option value="pt"' + (prefLang === 'pt' ? ' selected' : '') + '>' + tr('settings.language_pt', 'Português') + '</option>' +
+                            '<option value="zh"' + (prefLang === 'zh' ? ' selected' : '') + '>' + tr('settings.language_zh', '中文') + '</option>' +
+                            '<option value="ja"' + (prefLang === 'ja' ? ' selected' : '') + '>' + tr('settings.language_ja', '日本語') + '</option>' +
                         '</select>' +
                     '</div>' +
                     '<div class="ab-setting-row">' +
