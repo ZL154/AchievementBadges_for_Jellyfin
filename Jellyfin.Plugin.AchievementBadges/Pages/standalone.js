@@ -821,7 +821,6 @@
                     '<button type="button" class="ab-tab" id="abSaTabLb" data-i18n="tabs.leaderboard">Leaderboard</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabCompare" data-i18n="tabs.compare">Compare</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabActivity" data-i18n="tabs.activity">Activity</button>' +
-                    '<button type="button" class="ab-tab" id="abSaTabFriends" data-i18n="tabs.friends">Friends</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabWrapped" data-i18n="tabs.wrapped">Wrapped</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabStats" data-i18n="tabs.stats">Stats</button>' +
                     '<button type="button" class="ab-tab" id="abSaTabSettings" data-i18n-title="tabs.settings" title="Settings"><span class="material-icons" style="font-size:1.1em;vertical-align:middle;">settings</span></button>' +
@@ -925,17 +924,6 @@
                         '<div id="abSaActivity" data-i18n="common.loading">Loading...</div>' +
                     '</div>' +
                 '</div>' +
-                '<div id="abSaPanelFriends" class="ab-panel" style="display:none;">' +
-                    '<div class="ab-panel-card">' +
-                        '<h3 style="margin:0 0 0.75em;" data-i18n="friends.title">Friends</h3>' +
-                        '<div class="ab-muted" style="font-size:0.88em;margin-bottom:1em;" data-i18n="friends.help">Follow other users on this server to see their equipped badges, online status, and what they\'re watching.</div>' +
-                        '<div style="display:flex; gap:0.75em; flex-wrap:wrap; margin-bottom:1em;">' +
-                            '<select id="abSaFriendAddSel" class="ab-select" style="flex:1; min-width:220px;"></select>' +
-                            '<button type="button" id="abSaFriendAddBtn" class="ab-btn" data-i18n="friends.add">Add friend</button>' +
-                        '</div>' +
-                        '<div id="abSaFriendsList" data-i18n="common.loading">Loading...</div>' +
-                    '</div>' +
-                '</div>' +
                 '<div id="abSaPanelWrapped" class="ab-panel" style="display:none;">' +
                     '<div class="ab-panel-card">' +
                         '<div style="display:flex; align-items:center; gap:1em; margin-bottom:1em; flex-wrap:wrap;">' +
@@ -980,8 +968,8 @@
     }
 
     function setTab(name) {
-        var panels = { badges: 'abSaPanelBadges', quests: 'abSaPanelQuests', recap: 'abSaPanelRecap', lb: 'abSaPanelLb', compare: 'abSaPanelCompare', activity: 'abSaPanelActivity', friends: 'abSaPanelFriends', wrapped: 'abSaPanelWrapped', stats: 'abSaPanelStats', settings: 'abSaPanelSettings' };
-        var tabs = { badges: 'abSaTabBadges', quests: 'abSaTabQuests', recap: 'abSaTabRecap', lb: 'abSaTabLb', compare: 'abSaTabCompare', activity: 'abSaTabActivity', friends: 'abSaTabFriends', wrapped: 'abSaTabWrapped', stats: 'abSaTabStats', settings: 'abSaTabSettings' };
+        var panels = { badges: 'abSaPanelBadges', quests: 'abSaPanelQuests', recap: 'abSaPanelRecap', lb: 'abSaPanelLb', compare: 'abSaPanelCompare', activity: 'abSaPanelActivity', wrapped: 'abSaPanelWrapped', stats: 'abSaPanelStats', settings: 'abSaPanelSettings' };
+        var tabs = { badges: 'abSaTabBadges', quests: 'abSaTabQuests', recap: 'abSaTabRecap', lb: 'abSaTabLb', compare: 'abSaTabCompare', activity: 'abSaTabActivity', wrapped: 'abSaTabWrapped', stats: 'abSaTabStats', settings: 'abSaTabSettings' };
         for (var k in panels) {
             var p = el(panels[k]); if (p) p.style.display = k === name ? 'block' : 'none';
             var t = el(tabs[k]); if (t) t.classList.toggle('active', k === name);
@@ -991,7 +979,6 @@
         if (name === 'quests') { loadQuests(); }
         if (name === 'compare') { loadCompareUserList(); }
         if (name === 'activity') { loadActivity(); }
-        if (name === 'friends') { loadFriends(); }
         if (name === 'wrapped') { loadWrapped(); }
         if (name === 'lb') { loadCategoryLb('score'); }
         if (name === 'settings') { loadSettingsPanel(); }
@@ -1285,73 +1272,230 @@
             .catch(function () { return []; });
     }
 
-    // Populate the add-friend <select> with server users minus self and
-    // minus users the caller already follows.
-    function populateAddFriendSelect(currentFriendIds) {
-        var sel = el('abSaFriendAddSel');
-        if (!sel) return Promise.resolve();
-        return fetchServerUsers().then(function (users) {
-            var existing = {};
-            (currentFriendIds || []).forEach(function (id) { existing[String(id).toLowerCase().replace(/-/g, '')] = true; });
-            var me = (userId || '').toLowerCase().replace(/-/g, '');
-            sel.innerHTML = '<option value="">' + tr('friends.pick_user', 'Pick a user to follow...') + '</option>';
-            users.forEach(function (u) {
-                var nid = (u.Id || '').toLowerCase().replace(/-/g, '');
-                if (nid === me) return;
-                if (existing[nid]) return;
-                var opt = document.createElement('option');
-                opt.value = u.Id; opt.textContent = u.Name;
-                sel.appendChild(opt);
+    // ========================= Friends drawer ==============================
+    // Xbox-style side drawer that slides in from the right. Triggered by a
+    // floating "people" button anchored bottom-right of the achievements
+    // page. Contains three tabs: Friends, Requests, Find.
+    function ensureFriendsDrawer() {
+        if (document.getElementById('abFriendsBtn')) return;
+
+        // Floating button
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'abFriendsBtn';
+        btn.title = tr('friends.title', 'Friends');
+        btn.style.cssText = 'position:fixed;right:1.2em;bottom:1.2em;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;box-shadow:0 6px 18px rgba(102,126,234,0.45);cursor:pointer;z-index:999999;display:flex;align-items:center;justify-content:center;';
+        btn.innerHTML = '<span class="material-icons" style="font-size:1.7em;">people</span><span id="abFriendsBadge" style="position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#ef4444;color:#fff;font-size:0.72em;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(17,20,28,0.85);"></span>';
+        document.body.appendChild(btn);
+
+        // Backdrop
+        var backdrop = document.createElement('div');
+        backdrop.id = 'abFriendsBackdrop';
+        backdrop.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999998;animation:abFadeIn 0.2s;';
+        document.body.appendChild(backdrop);
+
+        // Drawer
+        var drawer = document.createElement('div');
+        drawer.id = 'abFriendsDrawer';
+        drawer.style.cssText = 'display:none;position:fixed;top:0;right:0;width:min(380px,92vw);height:100vh;background:linear-gradient(180deg,#181b24,#0d1017);border-left:1px solid rgba(255,255,255,0.1);box-shadow:-8px 0 30px rgba(0,0,0,0.5);z-index:999999;flex-direction:column;transform:translateX(100%);transition:transform 0.25s ease;color:#fff;font-family:inherit;';
+        drawer.innerHTML =
+            '<div style="padding:1em 1.2em;display:flex;align-items:center;gap:0.5em;border-bottom:1px solid rgba(255,255,255,0.08);">' +
+                '<span class="material-icons">people</span>' +
+                '<div style="font-weight:800;font-size:1.1em;flex:1;">' + tr('friends.title', 'Friends') + '</div>' +
+                '<button type="button" id="abFriendsClose" style="background:none;border:none;color:#fff;opacity:0.7;cursor:pointer;font-size:1.2em;"><span class="material-icons">close</span></button>' +
+            '</div>' +
+            '<div style="display:flex;padding:0.5em;gap:0.3em;border-bottom:1px solid rgba(255,255,255,0.08);">' +
+                '<button type="button" class="ab-btn" data-ab-fdtab="friends" style="flex:1;">' + tr('friends.tab_friends', 'Friends') + '</button>' +
+                '<button type="button" class="ab-btn" data-ab-fdtab="requests" style="flex:1;">' + tr('friends.tab_requests', 'Requests') + ' <span id="abFriendsIncBadge" style="display:none;margin-left:0.3em;padding:0 6px;border-radius:10px;background:#ef4444;color:#fff;font-size:0.7em;font-weight:800;"></span></button>' +
+                '<button type="button" class="ab-btn" data-ab-fdtab="find" style="flex:1;">' + tr('friends.tab_find', 'Find') + '</button>' +
+            '</div>' +
+            '<div style="flex:1;overflow-y:auto;padding:0.85em;">' +
+                '<div id="abFriendsPaneFriends"></div>' +
+                '<div id="abFriendsPaneRequests" style="display:none;"></div>' +
+                '<div id="abFriendsPaneFind" style="display:none;">' +
+                    '<input type="search" id="abFriendsSearch" class="ab-input" style="width:100%;margin-bottom:0.85em;" placeholder="' + tr('friends.search_placeholder', 'Search users...') + '">' +
+                    '<div id="abFriendsSearchResults"></div>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(drawer);
+
+        function openDrawer() {
+            backdrop.style.display = 'block';
+            drawer.style.display = 'flex';
+            // Force layout so the transform transition runs instead of snapping.
+            void drawer.offsetHeight;
+            drawer.style.transform = 'translateX(0)';
+            loadFriendsDrawer();
+        }
+        function closeDrawer() {
+            drawer.style.transform = 'translateX(100%)';
+            setTimeout(function () { drawer.style.display = 'none'; backdrop.style.display = 'none'; }, 260);
+        }
+        btn.addEventListener('click', openDrawer);
+        backdrop.addEventListener('click', closeDrawer);
+        drawer.querySelector('#abFriendsClose').addEventListener('click', closeDrawer);
+
+        drawer.querySelectorAll('[data-ab-fdtab]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var which = b.getAttribute('data-ab-fdtab');
+                document.getElementById('abFriendsPaneFriends').style.display = which === 'friends' ? '' : 'none';
+                document.getElementById('abFriendsPaneRequests').style.display = which === 'requests' ? '' : 'none';
+                document.getElementById('abFriendsPaneFind').style.display = which === 'find' ? '' : 'none';
+                drawer.querySelectorAll('[data-ab-fdtab]').forEach(function (bb) { bb.classList.toggle('active', bb === b); });
+                if (which === 'find') {
+                    var input = document.getElementById('abFriendsSearch');
+                    if (input) setTimeout(function () { input.focus(); }, 60);
+                }
             });
         });
+
+        // Autocomplete search as you type. Filters the cached server user
+        // list locally — no per-keystroke network request.
+        var searchInput = drawer.querySelector('#abFriendsSearch');
+        var searchTimer = null;
+        searchInput.addEventListener('input', function () {
+            if (searchTimer) clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () { renderFriendsSearch(searchInput.value || ''); }, 150);
+        });
+
+        // Refresh unread count every 30s while the user is on this page.
+        setInterval(refreshFriendsBadge, 30000);
+        refreshFriendsBadge();
     }
 
-    function loadFriends() {
-        var box = el('abSaFriendsList');
-        if (!box) return;
-        box.innerHTML = tr('common.loading', 'Loading...');
-        fetchJson('Plugins/AchievementBadges/users/' + userId + '/friends').then(function (list) {
-            list = list || [];
-            populateAddFriendSelect(list.map(function (f) { return f.UserId; }));
-            if (!list.length) { box.innerHTML = '<div class="ab-muted">' + tr('friends.empty', 'You haven\'t added any friends yet.') + '</div>'; return; }
-            box.innerHTML = list.map(function (f) {
-                var dotColor = f.Online ? '#4ade80' : 'rgba(255,255,255,0.25)';
-                var statusText = f.Online
-                    ? (f.NowPlaying && f.NowPlaying.Name
-                        ? tr('friends.watching_prefix', 'Watching') + ' <strong>' + escapeHtml(
-                            f.NowPlaying.SeriesName
-                                ? (f.NowPlaying.SeriesName + (f.NowPlaying.Name ? ' — ' + f.NowPlaying.Name : ''))
-                                : f.NowPlaying.Name
-                          ) + '</strong>'
-                        : tr('friends.online', 'Online'))
-                    : (f.LastSeen
-                        ? tr('friends.last_seen', 'Last seen') + ' ' + new Date(f.LastSeen).toLocaleString()
-                        : tr('friends.offline', 'Offline'));
-                var mutualBadge = f.Mutual
-                    ? '<span style="margin-left:0.5em;padding:0.15em 0.45em;border-radius:4px;font-size:0.7em;background:rgba(102,126,234,0.2);color:#a3b5f7;border:1px solid rgba(102,126,234,0.35);letter-spacing:1px;">' + tr('friends.mutual', 'MUTUAL') + '</span>'
-                    : '';
-                return '<div class="ab-feed-row" style="align-items:flex-start;">' +
-                    '<div class="ab-feed-icon" style="background:' + (f.Online ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)') + ';border:2px solid ' + dotColor + ';">' +
-                        '<span class="material-icons" style="font-size:1.1em;color:#fff;">person</span>' +
-                    '</div>' +
-                    '<div class="ab-feed-body">' +
-                        '<div class="ab-feed-text"><strong>' + escapeHtml(f.UserName) + '</strong>' + mutualBadge + '</div>' +
-                        '<div class="ab-feed-meta">' + statusText + '</div>' +
-                        (f.Equipped && f.Equipped.length ? '<div style="margin-top:0.4em;">' + renderEquippedDots(f.Equipped, 18) + '</div>' : '') +
-                    '</div>' +
-                    '<button type="button" class="ab-btn" style="background:rgba(244,63,94,0.12);border-color:rgba(244,63,94,0.4);color:#fca5a5;" data-ab-friend-remove="' + escapeHtml(f.UserId) + '">' + tr('friends.remove', 'Remove') + '</button>' +
-                '</div>';
-            }).join('');
-            box.querySelectorAll('[data-ab-friend-remove]').forEach(function (btn) {
+    function refreshFriendsBadge() {
+        fetchJson('Plugins/AchievementBadges/users/' + userId + '/friends')
+            .then(function (data) {
+                var inc = (data && data.Incoming) ? data.Incoming.length : 0;
+                var b = document.getElementById('abFriendsBadge');
+                if (b) { b.textContent = inc > 99 ? '99+' : String(inc); b.style.display = inc > 0 ? 'flex' : 'none'; }
+                var inb = document.getElementById('abFriendsIncBadge');
+                if (inb) { inb.textContent = inc > 99 ? '99+' : String(inc); inb.style.display = inc > 0 ? 'inline-flex' : 'none'; }
+            })
+            .catch(function () {});
+    }
+
+    function loadFriendsDrawer() {
+        var fBox = document.getElementById('abFriendsPaneFriends');
+        var rBox = document.getElementById('abFriendsPaneRequests');
+        if (!fBox || !rBox) return;
+        fBox.innerHTML = '<div class="ab-muted">' + tr('common.loading', 'Loading...') + '</div>';
+        fetchJson('Plugins/AchievementBadges/users/' + userId + '/friends').then(function (data) {
+            data = data || { Friends: [], Incoming: [], Outgoing: [] };
+            var friends = data.Friends || [];
+            var incoming = data.Incoming || [];
+            var outgoing = data.Outgoing || [];
+
+            if (!friends.length) {
+                fBox.innerHTML = '<div class="ab-muted">' + tr('friends.empty', 'You haven\'t added any friends yet.') + '</div>';
+            } else {
+                fBox.innerHTML = friends.map(function (f) {
+                    var dot = f.Online ? '#4ade80' : 'rgba(255,255,255,0.25)';
+                    var status = f.Online
+                        ? (f.NowPlaying && f.NowPlaying.Name
+                            ? tr('friends.watching_prefix', 'Watching') + ' <strong>' + escapeHtml(f.NowPlaying.SeriesName ? (f.NowPlaying.SeriesName + (f.NowPlaying.Name ? ' — ' + f.NowPlaying.Name : '')) : f.NowPlaying.Name) + '</strong>'
+                            : tr('friends.online', 'Online'))
+                        : (f.LastSeen ? tr('friends.last_seen', 'Last seen') + ' ' + new Date(f.LastSeen).toLocaleString() : tr('friends.offline', 'Offline'));
+                    return '<div style="padding:0.75em 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                        '<div style="display:flex;align-items:center;gap:0.6em;">' +
+                            '<div style="width:36px;height:36px;border-radius:999px;background:' + (f.Online ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)') + ';border:2px solid ' + dot + ';display:flex;align-items:center;justify-content:center;"><span class="material-icons" style="font-size:1.05em;">person</span></div>' +
+                            '<div style="flex:1;min-width:0;"><div style="font-weight:700;">' + escapeHtml(f.UserName) + '</div><div class="ab-muted" style="font-size:0.78em;">' + status + '</div></div>' +
+                            '<button type="button" class="ab-btn" data-ab-friend-remove="' + escapeHtml(f.UserId) + '" title="' + tr('friends.remove', 'Remove') + '" style="padding:0.3em 0.6em;background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.35);color:#fca5a5;"><span class="material-icons" style="font-size:1em;">close</span></button>' +
+                        '</div>' +
+                        (f.Equipped && f.Equipped.length ? '<div style="margin-top:0.5em;margin-left:2.7em;">' + renderEquippedDots(f.Equipped, 16) + '</div>' : '') +
+                    '</div>';
+                }).join('');
+            }
+
+            var rHtml = '';
+            if (incoming.length) {
+                rHtml += '<div class="ab-eyebrow" style="margin-bottom:0.5em;">' + tr('friends.incoming', 'Incoming requests') + '</div>';
+                rHtml += incoming.map(function (r) {
+                    return '<div style="display:flex;align-items:center;gap:0.5em;padding:0.6em 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                        '<div style="flex:1;font-weight:600;">' + escapeHtml(r.UserName) + '</div>' +
+                        '<button type="button" class="ab-btn" data-ab-friend-accept="' + escapeHtml(r.UserId) + '" style="padding:0.3em 0.7em;background:rgba(74,222,128,0.15);border-color:rgba(74,222,128,0.4);color:#86efac;">' + tr('friends.accept', 'Accept') + '</button>' +
+                        '<button type="button" class="ab-btn" data-ab-friend-remove="' + escapeHtml(r.UserId) + '" style="padding:0.3em 0.7em;background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.35);color:#fca5a5;">' + tr('friends.decline', 'Decline') + '</button>' +
+                    '</div>';
+                }).join('');
+            }
+            if (outgoing.length) {
+                rHtml += '<div class="ab-eyebrow" style="margin:1em 0 0.5em;">' + tr('friends.outgoing', 'Sent requests') + '</div>';
+                rHtml += outgoing.map(function (r) {
+                    return '<div style="display:flex;align-items:center;gap:0.5em;padding:0.6em 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                        '<div style="flex:1;">' + escapeHtml(r.UserName) + '</div>' +
+                        '<div class="ab-muted" style="font-size:0.78em;">' + tr('friends.pending', 'Pending') + '</div>' +
+                        '<button type="button" class="ab-btn" data-ab-friend-remove="' + escapeHtml(r.UserId) + '" style="padding:0.3em 0.7em;">' + tr('friends.cancel', 'Cancel') + '</button>' +
+                    '</div>';
+                }).join('');
+            }
+            if (!rHtml) rHtml = '<div class="ab-muted">' + tr('friends.no_requests', 'No pending requests.') + '</div>';
+            rBox.innerHTML = rHtml;
+
+            var incBadge = document.getElementById('abFriendsIncBadge');
+            if (incBadge) { incBadge.textContent = incoming.length > 99 ? '99+' : String(incoming.length); incBadge.style.display = incoming.length > 0 ? 'inline-flex' : 'none'; }
+            var btnBadge = document.getElementById('abFriendsBadge');
+            if (btnBadge) { btnBadge.textContent = incoming.length > 99 ? '99+' : String(incoming.length); btnBadge.style.display = incoming.length > 0 ? 'flex' : 'none'; }
+
+            // Wire remove + accept buttons.
+            document.querySelectorAll('[data-ab-friend-accept]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var fid = btn.getAttribute('data-ab-friend-accept');
+                    fetchJson('Plugins/AchievementBadges/users/' + userId + '/friends/' + fid + '/accept', 'POST')
+                        .then(function () { loadFriendsDrawer(); }).catch(function () {});
+                });
+            });
+            document.querySelectorAll('[data-ab-friend-remove]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var fid = btn.getAttribute('data-ab-friend-remove');
                     fetchJson('Plugins/AchievementBadges/users/' + userId + '/friends/' + fid, 'DELETE')
-                        .then(function () { loadFriends(); })
-                        .catch(function () {});
+                        .then(function () { loadFriendsDrawer(); }).catch(function () {});
+                });
+            });
+
+            // Cache friend/request id sets so search can skip them.
+            window.__abFriendIds = {};
+            [friends, incoming, outgoing].forEach(function (arr) {
+                arr.forEach(function (f) { window.__abFriendIds[String(f.UserId || '').toLowerCase().replace(/-/g, '')] = true; });
+            });
+        }).catch(function () {
+            fBox.innerHTML = '<div class="ab-muted">' + tr('friends.load_failed', 'Failed to load friends.') + '</div>';
+        });
+    }
+
+    function renderFriendsSearch(q) {
+        var box = document.getElementById('abFriendsSearchResults');
+        if (!box) return;
+        q = (q || '').trim().toLowerCase();
+        if (!q) { box.innerHTML = '<div class="ab-muted" style="font-size:0.85em;">' + tr('friends.type_to_search', 'Start typing to find users.') + '</div>'; return; }
+        fetchServerUsers().then(function (users) {
+            var me = (userId || '').toLowerCase().replace(/-/g, '');
+            var skip = window.__abFriendIds || {};
+            var matches = users.filter(function (u) {
+                var nid = (u.Id || '').toLowerCase().replace(/-/g, '');
+                if (nid === me) return false;
+                if (skip[nid]) return false;
+                return (u.Name || '').toLowerCase().indexOf(q) !== -1;
+            }).slice(0, 20);
+            if (!matches.length) { box.innerHTML = '<div class="ab-muted" style="font-size:0.85em;">' + tr('friends.no_matches', 'No users match.') + '</div>'; return; }
+            box.innerHTML = matches.map(function (u) {
+                return '<div style="display:flex;align-items:center;gap:0.5em;padding:0.55em 0;border-bottom:1px solid rgba(255,255,255,0.06);">' +
+                    '<div style="flex:1;font-weight:600;">' + escapeHtml(u.Name) + '</div>' +
+                    '<button type="button" class="ab-btn" data-ab-friend-add="' + escapeHtml(u.Id) + '" style="padding:0.3em 0.7em;background:rgba(102,126,234,0.15);border-color:rgba(102,126,234,0.4);color:#a3b5f7;">' + tr('friends.send_request', 'Send request') + '</button>' +
+                '</div>';
+            }).join('');
+            box.querySelectorAll('[data-ab-friend-add]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var fid = btn.getAttribute('data-ab-friend-add');
+                    btn.disabled = true;
+                    fetchJson('Plugins/AchievementBadges/users/' + userId + '/friends/' + fid, 'POST')
+                        .then(function (r) {
+                            btn.textContent = (r && r.Success) ? tr('friends.sent', 'Sent') : tr('friends.failed', 'Failed');
+                            loadFriendsDrawer();
+                        }).catch(function () { btn.textContent = tr('friends.failed', 'Failed'); });
                 });
             });
         }).catch(function () {
-            box.innerHTML = '<div class="ab-muted">' + tr('friends.load_failed', 'Failed to load friends.') + '</div>';
+            box.innerHTML = '<div class="ab-muted">' + tr('friends.search_failed', 'Search failed.') + '</div>';
         });
     }
 
@@ -2280,21 +2424,33 @@
                     var adminLang = (pc.DefaultLanguage || pc.defaultLanguage || 'en').toString().toLowerCase();
                     var eff = (!chosen || chosen === 'default') ? adminLang : chosen;
                     // Keep the local prefs in sync with the user's choice so
-                    // the re-rendered <select> marks the right option (the
-                    // old behaviour passed back stale `prefs` and the box
-                    // still highlighted English).
+                    // the re-rendered <select> marks the right option.
                     prefs.Language = chosen;
                     prefs.language = chosen;
-                    // Wait for the preference save (kicked off at the top
-                    // of this handler) to land on disk — otherwise the
-                    // server still has the old Language stored and
-                    // BadgeLocalizer would localise to the wrong language
-                    // when loadAll re-fetches badges.
+
+                    // Show a non-stuck status while we wait for save +
+                    // translation load to land. Previously, if any of the
+                    // chained promises threw silently, the panel got stuck
+                    // on "Loading settings..."
+                    var box = el('abSaSettingsContent');
+                    if (box) box.innerHTML = tr('settings.loading', 'Loading settings...');
+
+                    // Always re-fetch fresh prefs from the server after save
+                    // so we render with the actually-persisted state, not a
+                    // possibly-stale closure object. Use .always-style flow
+                    // with a safety catch so the panel can't get stuck.
                     Promise.all([loadTranslations(eff), savePromise])
-                        .then(function () {
-                            applyStaticTranslations();
-                            if (typeof loadAll === 'function') loadAll();
-                            renderSettingsPanel(prefs);
+                        .catch(function () {})
+                        .then(function () { applyStaticTranslations(); })
+                        .then(function () { return fetchJson('Plugins/AchievementBadges/users/' + userId + '/preferences').catch(function () { return prefs; }); })
+                        .then(function (fresh) {
+                            try { if (typeof loadAll === 'function') loadAll(); } catch (e) {}
+                            renderSettingsPanel(fresh || prefs);
+                        })
+                        .catch(function () {
+                            // Last-resort: render with what we have so the
+                            // panel never gets stuck on the loading text.
+                            try { renderSettingsPanel(prefs); } catch (e) {}
                         });
                 }
             });
@@ -2737,21 +2893,13 @@
         el('abSaTabLb').addEventListener('click', function () { setTab('lb'); });
         el('abSaTabCompare').addEventListener('click', function () { setTab('compare'); });
         el('abSaTabActivity').addEventListener('click', function () { setTab('activity'); });
-        var friendsTab = el('abSaTabFriends');
-        if (friendsTab) friendsTab.addEventListener('click', function () { setTab('friends'); });
-        var friendsAddBtn = el('abSaFriendAddBtn');
-        if (friendsAddBtn) friendsAddBtn.addEventListener('click', function () {
-            var sel = el('abSaFriendAddSel');
-            var fid = sel && sel.value;
-            if (!fid) return;
-            fetchJson('Plugins/AchievementBadges/users/' + userId + '/friends/' + fid, 'POST')
-                .then(function () { loadFriends(); })
-                .catch(function (e) { alert((e && e.message) || 'Failed to add friend'); });
-        });
         el('abSaTabWrapped').addEventListener('click', function () { setTab('wrapped'); });
         el('abSaTabStats').addEventListener('click', function () { setTab('stats'); loadStats(); });
         el('abSaTabSettings').addEventListener('click', function () { setTab('settings'); });
         setTab('badges');
+
+        // Mount the floating friends button + side drawer. Idempotent.
+        try { ensureFriendsDrawer(); } catch (e) {}
 
         var search = el('abSaSearch');
         if (search) search.addEventListener('input', function () {

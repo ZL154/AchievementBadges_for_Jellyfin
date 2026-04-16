@@ -7,13 +7,14 @@ using MediaBrowser.Controller.Session;
 namespace Jellyfin.Plugin.AchievementBadges.Services;
 
 /// <summary>
-/// One-sided follow model: users add other users as friends and see their
-/// online/offline status, equipped badges, and current now-playing item.
-/// Bi-directional friendship is implicit — if B also adds A, the UI can
-/// show them as a mutual friend.
+/// Bi-directional friendship model with request/accept flow.
+/// - POST users/{A}/friends/{B}           → A requests friendship with B
+/// - POST users/{B}/friends/{A}/accept    → B accepts the request; mutual
+/// - DELETE users/{U}/friends/{O}         → removes from both sides
+///                                          (or declines a pending request)
 ///
-/// Online state + now-playing comes from Jellyfin's ISessionManager, not
-/// from our own profile, so it stays live without polling our JSON.
+/// Online state + now-playing comes from Jellyfin's ISessionManager, not our
+/// own profile store, so it stays live without polling our JSON.
 /// </summary>
 public class FriendsService
 {
@@ -28,17 +29,16 @@ public class FriendsService
         _userManager = userManager;
     }
 
-    public object ListFriends(string userId)
+    public object List(string userId)
     {
         userId = NormalizeId(userId);
         var profile = _badgeService.PeekProfile(userId);
-        if (profile == null) return new List<object>();
+        if (profile == null)
+        {
+            return new { Friends = new List<object>(), Incoming = new List<object>(), Outgoing = new List<object>() };
+        }
 
-        var myFriends = (profile.Friends ?? new List<string>()).Select(NormalizeId).Distinct().ToList();
-        if (myFriends.Count == 0) return new List<object>();
-
-        // Build a map of active sessions keyed by UserId so we can enrich
-        // friend entries with online status + now-playing in a single pass.
+        // One session lookup for everyone — used for Online / NowPlaying.
         var sessionByUser = new Dictionary<string, SessionInfo>(StringComparer.OrdinalIgnoreCase);
         try
         {
@@ -49,93 +49,200 @@ public class FriendsService
                 if (!sessionByUser.ContainsKey(sid)) sessionByUser[sid] = s;
             }
         }
-        catch { /* session manager unavailable — fall through, everyone offline */ }
+        catch { /* live status unavailable; everyone offline */ }
 
-        var rows = new List<FriendRow>();
-        foreach (var fid in myFriends)
-        {
-            var fProfile = _badgeService.PeekProfile(fid);
-            var userName = ResolveUserName(fid);
-            var equipped = GetEquippedPreview(fid, fProfile);
-            var isOnline = sessionByUser.TryGetValue(fid, out var session) && session.IsActive;
-            object? nowPlaying = null;
-            if (isOnline && session?.NowPlayingItem != null)
-            {
-                var item = session.NowPlayingItem;
-                nowPlaying = new
-                {
-                    Id = item.Id.ToString("N"),
-                    Name = item.Name,
-                    Type = item.Type.ToString(),
-                    SeriesName = item.SeriesName,
-                    SeasonName = item.SeasonName
-                };
-            }
-            var lastSeen = session?.LastActivityDate;
-            var mutual = fProfile?.Friends != null && fProfile.Friends.Any(x => NormalizeId(x) == userId);
-            rows.Add(new FriendRow
-            {
-                UserId = fid,
-                UserName = userName,
-                Online = isOnline,
-                LastSeen = lastSeen,
-                Equipped = equipped,
-                NowPlaying = nowPlaying,
-                Mutual = mutual
-            });
-        }
-        return rows
+        var friends = (profile.Friends ?? new List<string>())
+            .Select(NormalizeId).Distinct()
+            .Select(fid => BuildFriendRow(userId, fid, sessionByUser))
             .OrderByDescending(x => x.Online)
             .ThenBy(x => x.UserName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .Cast<object>()
             .ToList();
+
+        var incoming = (profile.FriendRequestsReceived ?? new List<string>())
+            .Select(NormalizeId).Distinct()
+            .Select(fid => new { UserId = fid, UserName = ResolveUserName(fid) })
+            .ToList();
+
+        var outgoing = (profile.FriendRequestsSent ?? new List<string>())
+            .Select(NormalizeId).Distinct()
+            .Select(fid => new { UserId = fid, UserName = ResolveUserName(fid) })
+            .ToList();
+
+        return new
+        {
+            Friends = friends,
+            Incoming = incoming,
+            Outgoing = outgoing
+        };
     }
 
-    private class FriendRow
+    private FriendRow BuildFriendRow(string userId, string fid, Dictionary<string, SessionInfo> sessionByUser)
     {
-        public string UserId { get; set; } = string.Empty;
-        public string UserName { get; set; } = string.Empty;
-        public bool Online { get; set; }
-        public DateTime? LastSeen { get; set; }
-        public List<object> Equipped { get; set; } = new();
-        public object? NowPlaying { get; set; }
-        public bool Mutual { get; set; }
+        var fProfile = _badgeService.PeekProfile(fid);
+        var userName = ResolveUserName(fid);
+        var equipped = _badgeService.GetPublicEquippedPreview(fid);
+        var isOnline = sessionByUser.TryGetValue(fid, out var session) && session.IsActive;
+        object? nowPlaying = null;
+        if (isOnline && session?.NowPlayingItem != null)
+        {
+            var item = session.NowPlayingItem;
+            nowPlaying = new
+            {
+                Id = item.Id.ToString("N"),
+                Name = item.Name,
+                Type = item.Type.ToString(),
+                SeriesName = item.SeriesName,
+                SeasonName = item.SeasonName
+            };
+        }
+        return new FriendRow
+        {
+            UserId = fid,
+            UserName = userName,
+            Online = isOnline,
+            LastSeen = session?.LastActivityDate,
+            Equipped = equipped,
+            NowPlaying = nowPlaying
+        };
     }
 
-    public (bool ok, string message) AddFriend(string userId, string friendUserId)
+    /// <summary>
+    /// Send a friend request from <paramref name="userId"/> to
+    /// <paramref name="targetUserId"/>. If the target already sent us a
+    /// request, this auto-accepts and creates a mutual friendship.
+    /// </summary>
+    public (bool ok, string message) SendRequest(string userId, string targetUserId)
     {
         userId = NormalizeId(userId);
-        friendUserId = NormalizeId(friendUserId);
-        if (userId == friendUserId) return (false, "Can't add yourself.");
-        if (!Guid.TryParse(friendUserId, out var friendGuid)) return (false, "Invalid friend id.");
+        targetUserId = NormalizeId(targetUserId);
+        if (userId == targetUserId) return (false, "Can't add yourself.");
+        if (!Guid.TryParse(targetUserId, out var targetGuid)) return (false, "Invalid user id.");
         try
         {
-            if (_userManager.GetUserById(friendGuid) is null) return (false, "User not found.");
+            if (_userManager.GetUserById(targetGuid) is null) return (false, "User not found.");
         }
         catch
         {
             return (false, "User not found.");
         }
 
-        var profile = _badgeService.GetOrCreateProfileDirect(userId);
-        profile.Friends ??= new List<string>();
-        if (profile.Friends.Any(x => NormalizeId(x) == friendUserId)) return (true, "Already friends.");
-        if (profile.Friends.Count >= 200) return (false, "Friend list is full (200 max).");
-        profile.Friends.Add(friendUserId);
-        _badgeService.SaveProfileDirect(profile);
-        return (true, "Added.");
+        var caller = _badgeService.GetOrCreateProfileDirect(userId);
+        var target = _badgeService.GetOrCreateProfileDirect(targetUserId);
+
+        caller.Friends ??= new List<string>();
+        caller.FriendRequestsSent ??= new List<string>();
+        target.FriendRequestsReceived ??= new List<string>();
+
+        if (caller.Friends.Any(x => NormalizeId(x) == targetUserId)) return (true, "Already friends.");
+
+        // If target has already requested us, auto-accept into mutual.
+        caller.FriendRequestsReceived ??= new List<string>();
+        if (caller.FriendRequestsReceived.Any(x => NormalizeId(x) == targetUserId))
+        {
+            return Accept(userId, targetUserId);
+        }
+
+        if (caller.FriendRequestsSent.Any(x => NormalizeId(x) == targetUserId)) return (true, "Request already sent.");
+        if (caller.FriendRequestsSent.Count >= 200) return (false, "Outgoing request list is full.");
+        if (target.FriendRequestsReceived.Count >= 200) return (false, "Target has too many pending requests.");
+
+        caller.FriendRequestsSent.Add(targetUserId);
+        target.FriendRequestsReceived.Add(userId);
+        _badgeService.SaveProfileDirect(caller);
+        _badgeService.SaveProfileDirect(target);
+        return (true, "Request sent.");
     }
 
-    public (bool ok, string message) RemoveFriend(string userId, string friendUserId)
+    public (bool ok, string message) Accept(string userId, string otherUserId)
     {
         userId = NormalizeId(userId);
-        friendUserId = NormalizeId(friendUserId);
-        var profile = _badgeService.PeekProfile(userId);
-        if (profile == null) return (true, "Not friends.");
-        profile.Friends ??= new List<string>();
-        var before = profile.Friends.Count;
-        profile.Friends = profile.Friends.Where(x => NormalizeId(x) != friendUserId).ToList();
-        if (profile.Friends.Count != before) _badgeService.SaveProfileDirect(profile);
+        otherUserId = NormalizeId(otherUserId);
+        if (userId == otherUserId) return (false, "Invalid.");
+
+        var me = _badgeService.GetOrCreateProfileDirect(userId);
+        var other = _badgeService.GetOrCreateProfileDirect(otherUserId);
+        me.Friends ??= new List<string>();
+        other.Friends ??= new List<string>();
+        me.FriendRequestsReceived ??= new List<string>();
+        me.FriendRequestsSent ??= new List<string>();
+        other.FriendRequestsReceived ??= new List<string>();
+        other.FriendRequestsSent ??= new List<string>();
+
+        // Only accept if a request actually exists from the other side, to
+        // stop a caller from adding themselves to someone else's Friends list
+        // by forging an accept.
+        var hasIncoming = me.FriendRequestsReceived.Any(x => NormalizeId(x) == otherUserId);
+        if (!hasIncoming) return (false, "No pending request from that user.");
+
+        me.FriendRequestsReceived = me.FriendRequestsReceived.Where(x => NormalizeId(x) != otherUserId).ToList();
+        other.FriendRequestsSent = other.FriendRequestsSent.Where(x => NormalizeId(x) != userId).ToList();
+
+        if (!me.Friends.Any(x => NormalizeId(x) == otherUserId)) me.Friends.Add(otherUserId);
+        if (!other.Friends.Any(x => NormalizeId(x) == userId)) other.Friends.Add(userId);
+
+        _badgeService.SaveProfileDirect(me);
+        _badgeService.SaveProfileDirect(other);
+        return (true, "Accepted.");
+    }
+
+    /// <summary>
+    /// Remove friendship AND clear any pending requests in either direction.
+    /// Used for unfriend, decline-incoming, and cancel-outgoing.
+    /// </summary>
+    public (bool ok, string message) Remove(string userId, string otherUserId)
+    {
+        userId = NormalizeId(userId);
+        otherUserId = NormalizeId(otherUserId);
+        var me = _badgeService.PeekProfile(userId);
+        var other = _badgeService.PeekProfile(otherUserId);
+        var changed = false;
+
+        if (me != null)
+        {
+            if (me.Friends != null)
+            {
+                var before = me.Friends.Count;
+                me.Friends = me.Friends.Where(x => NormalizeId(x) != otherUserId).ToList();
+                if (me.Friends.Count != before) changed = true;
+            }
+            if (me.FriendRequestsSent != null)
+            {
+                var before = me.FriendRequestsSent.Count;
+                me.FriendRequestsSent = me.FriendRequestsSent.Where(x => NormalizeId(x) != otherUserId).ToList();
+                if (me.FriendRequestsSent.Count != before) changed = true;
+            }
+            if (me.FriendRequestsReceived != null)
+            {
+                var before = me.FriendRequestsReceived.Count;
+                me.FriendRequestsReceived = me.FriendRequestsReceived.Where(x => NormalizeId(x) != otherUserId).ToList();
+                if (me.FriendRequestsReceived.Count != before) changed = true;
+            }
+            if (changed) _badgeService.SaveProfileDirect(me);
+        }
+
+        if (other != null)
+        {
+            var otherChanged = false;
+            if (other.Friends != null)
+            {
+                var before = other.Friends.Count;
+                other.Friends = other.Friends.Where(x => NormalizeId(x) != userId).ToList();
+                if (other.Friends.Count != before) otherChanged = true;
+            }
+            if (other.FriendRequestsSent != null)
+            {
+                var before = other.FriendRequestsSent.Count;
+                other.FriendRequestsSent = other.FriendRequestsSent.Where(x => NormalizeId(x) != userId).ToList();
+                if (other.FriendRequestsSent.Count != before) otherChanged = true;
+            }
+            if (other.FriendRequestsReceived != null)
+            {
+                var before = other.FriendRequestsReceived.Count;
+                other.FriendRequestsReceived = other.FriendRequestsReceived.Where(x => NormalizeId(x) != userId).ToList();
+                if (other.FriendRequestsReceived.Count != before) otherChanged = true;
+            }
+            if (otherChanged) _badgeService.SaveProfileDirect(other);
+        }
         return (true, "Removed.");
     }
 
@@ -161,11 +268,13 @@ public class FriendsService
         return "Unknown";
     }
 
-    private List<object> GetEquippedPreview(string userId, Models.UserAchievementProfile? profile)
+    private class FriendRow
     {
-        // Share the same privacy logic as the public equipped endpoint —
-        // service already respects HideFromLeaderboard/HideFromCompare/
-        // ShowEquippedShowcase + admin force-hide.
-        return _badgeService.GetPublicEquippedPreview(userId);
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public bool Online { get; set; }
+        public DateTime? LastSeen { get; set; }
+        public List<object> Equipped { get; set; } = new();
+        public object? NowPlaying { get; set; }
     }
 }

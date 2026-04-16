@@ -657,5 +657,22 @@
   "friends.last_seen": "最后上线",
   "friends.watching_prefix": "正在观看",
   "friends.mutual": "互相关注",
-  "friends.load_failed": "加载好友失败。"
+  "friends.load_failed": "加载好友失败。",
+  "friends.tab_friends": "好友",
+  "friends.tab_requests": "请求",
+  "friends.tab_find": "查找",
+  "friends.search_placeholder": "搜索用户……",
+  "friends.type_to_search": "输入以查找用户。",
+  "friends.no_matches": "没有匹配的用户。",
+  "friends.send_request": "发送请求",
+  "friends.incoming": "收到的请求",
+  "friends.outgoing": "发送的请求",
+  "friends.accept": "接受",
+  "friends.decline": "拒绝",
+  "friends.pending": "待处理",
+  "friends.cancel": "取消",
+  "friends.sent": "已发送",
+  "friends.failed": "失败",
+  "friends.no_requests": "没有待处理的请求。",
+  "friends.search_failed": "搜索失败。"
 }

@@ -657,5 +657,22 @@
   "friends.last_seen": "Visto pela última vez",
   "friends.watching_prefix": "A ver",
   "friends.mutual": "MÚTUO",
-  "friends.load_failed": "Falha ao carregar amigos."
+  "friends.load_failed": "Falha ao carregar amigos.",
+  "friends.tab_friends": "Amigos",
+  "friends.tab_requests": "Pedidos",
+  "friends.tab_find": "Procurar",
+  "friends.search_placeholder": "Procurar utilizadores...",
+  "friends.type_to_search": "Comece a digitar para encontrar utilizadores.",
+  "friends.no_matches": "Nenhum utilizador corresponde.",
+  "friends.send_request": "Enviar",
+  "friends.incoming": "Pedidos recebidos",
+  "friends.outgoing": "Pedidos enviados",
+  "friends.accept": "Aceitar",
+  "friends.decline": "Recusar",
+  "friends.pending": "Pendente",
+  "friends.cancel": "Cancelar",
+  "friends.sent": "Enviado",
+  "friends.failed": "Falhou",
+  "friends.no_requests": "Sem pedidos pendentes.",
+  "friends.search_failed": "Pesquisa falhou."
 }

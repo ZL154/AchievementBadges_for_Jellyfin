@@ -657,5 +657,22 @@
   "friends.last_seen": "最終ログイン",
   "friends.watching_prefix": "視聴中",
   "friends.mutual": "相互",
-  "friends.load_failed": "フレンドの読み込みに失敗しました。"
+  "friends.load_failed": "フレンドの読み込みに失敗しました。",
+  "friends.tab_friends": "フレンド",
+  "friends.tab_requests": "リクエスト",
+  "friends.tab_find": "検索",
+  "friends.search_placeholder": "ユーザーを検索...",
+  "friends.type_to_search": "入力してユーザーを検索。",
+  "friends.no_matches": "一致するユーザーはいません。",
+  "friends.send_request": "リクエスト送信",
+  "friends.incoming": "受信リクエスト",
+  "friends.outgoing": "送信リクエスト",
+  "friends.accept": "承認",
+  "friends.decline": "拒否",
+  "friends.pending": "保留中",
+  "friends.cancel": "キャンセル",
+  "friends.sent": "送信済",
+  "friends.failed": "失敗",
+  "friends.no_requests": "保留中のリクエストはありません。",
+  "friends.search_failed": "検索に失敗しました。"
 }

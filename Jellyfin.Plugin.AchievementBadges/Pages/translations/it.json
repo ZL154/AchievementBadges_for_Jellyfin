@@ -657,5 +657,22 @@
   "friends.last_seen": "Ultimo accesso",
   "friends.watching_prefix": "Sta guardando",
   "friends.mutual": "RECIPROCO",
-  "friends.load_failed": "Impossibile caricare gli amici."
+  "friends.load_failed": "Impossibile caricare gli amici.",
+  "friends.tab_friends": "Amici",
+  "friends.tab_requests": "Richieste",
+  "friends.tab_find": "Cerca",
+  "friends.search_placeholder": "Cerca utenti...",
+  "friends.type_to_search": "Digita per trovare utenti.",
+  "friends.no_matches": "Nessun utente corrisponde.",
+  "friends.send_request": "Invia",
+  "friends.incoming": "Richieste in arrivo",
+  "friends.outgoing": "Richieste inviate",
+  "friends.accept": "Accetta",
+  "friends.decline": "Rifiuta",
+  "friends.pending": "In attesa",
+  "friends.cancel": "Annulla",
+  "friends.sent": "Inviato",
+  "friends.failed": "Fallito",
+  "friends.no_requests": "Nessuna richiesta in sospeso.",
+  "friends.search_failed": "Ricerca fallita."
 }

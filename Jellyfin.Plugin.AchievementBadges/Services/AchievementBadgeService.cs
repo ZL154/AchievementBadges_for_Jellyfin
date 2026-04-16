@@ -14,6 +14,10 @@ namespace Jellyfin.Plugin.AchievementBadges.Services;
 public class AchievementBadgeService
 {
     private readonly string _dataFilePath;
+    // Set to true if Load() fails to deserialise the store. While true,
+    // Save() refuses to run so we never overwrite a good-but-unparseable
+    // file with an empty in-memory state (see v1.7.2 data-loss fix).
+    private bool _loadFailed;
     private readonly object _lock = new();
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly ILogger<AchievementBadgeService> _logger;
@@ -2415,19 +2419,50 @@ public class AchievementBadgeService
             return;
         }
 
+        // Deserialise first. If THIS fails, we have an unparseable file on
+        // disk. Quarantine it so the admin can still recover it by hand, and
+        // refuse to Save() for the rest of the process lifetime so we never
+        // overwrite the quarantined file with our empty in-memory state.
+        // This is the fix for the v1.7.1 data-loss regression where ANY
+        // exception in Load() wiped _userProfiles, and the next Save()
+        // stamped {} on disk permanently destroying every user's progress.
+        UserBadgeStore? store = null;
         try
         {
             var json = File.ReadAllText(_dataFilePath);
-            var store = JsonSerializer.Deserialize<UserBadgeStore>(json, _jsonOptions);
-
-            var rawProfiles = store?.UserProfiles ?? new Dictionary<string, UserAchievementProfile>();
+            store = JsonSerializer.Deserialize<UserBadgeStore>(json, _jsonOptions);
+        }
+        catch (Exception ex)
+        {
+            _loadFailed = true;
             _userProfiles = new Dictionary<string, UserAchievementProfile>();
-            var migrated = false;
+            try
+            {
+                var quarantine = _dataFilePath + ".corrupt-" + DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+                File.Copy(_dataFilePath, quarantine, overwrite: false);
+                _logger.LogCritical(ex, "[AchievementBadges] FAILED to parse badges.json. Copied the on-disk file to {Q} for manual recovery. Saves are disabled this session so the original is not overwritten.", quarantine);
+            }
+            catch (Exception copyEx)
+            {
+                _logger.LogCritical(copyEx, "[AchievementBadges] FAILED to parse badges.json AND failed to make a .corrupt quarantine copy. Saves are disabled this session.");
+            }
+            return;
+        }
 
-            foreach (var pair in rawProfiles)
+        var rawProfiles = store?.UserProfiles ?? new Dictionary<string, UserAchievementProfile>();
+        _userProfiles = new Dictionary<string, UserAchievementProfile>();
+        var migrated = false;
+
+        foreach (var pair in rawProfiles)
+        {
+            // Per-profile try: one corrupt profile must NOT poison the whole
+            // load. Previously a single bad entry triggered the outer catch
+            // and every user's progress was lost on the next Save().
+            try
             {
                 var canonicalKey = NormalizeUserId(pair.Key);
                 var profile = pair.Value;
+                if (profile == null) continue;
                 profile.UserId = canonicalKey;
 
                 if (_userProfiles.TryGetValue(canonicalKey, out var existing))
@@ -2445,30 +2480,49 @@ public class AchievementBadgeService
                     migrated = true;
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[AchievementBadges] Skipped corrupt profile entry for key {Key}.", pair.Key);
+            }
+        }
 
-            foreach (var profile in _userProfiles.Values)
+        // SyncDefinitions / EvaluateBadges per profile in its OWN try so a
+        // single broken profile doesn't prevent every other user from being
+        // loaded.
+        foreach (var profile in _userProfiles.Values)
+        {
+            try
             {
                 SyncDefinitions(profile, profile.UserId);
                 EvaluateBadges(profile, profile.UserId);
             }
-
-            if (migrated)
+            catch (Exception ex)
             {
-                _logger.LogInformation("Canonicalized achievement profile user keys.");
-                Save();
+                _logger.LogWarning(ex, "[AchievementBadges] Error evaluating badges for user {User} on load; keeping stored profile as-is.", profile.UserId);
             }
+        }
 
-            _logger.LogInformation("Loaded achievement data for {UserCount} users.", _userProfiles.Count);
-        }
-        catch (Exception ex)
+        if (migrated)
         {
-            _userProfiles = new Dictionary<string, UserAchievementProfile>();
-            _logger.LogError(ex, "Failed to load achievement data, starting with empty store.");
+            _logger.LogInformation("Canonicalized achievement profile user keys.");
+            Save();
         }
+
+        _logger.LogInformation("Loaded achievement data for {UserCount} users.", _userProfiles.Count);
     }
 
     private void Save()
     {
+        // Refuse to save if Load() could not parse the on-disk file — we
+        // would otherwise overwrite the user's real data with our empty
+        // in-memory state. Admin should restore the .corrupt-* quarantine
+        // copy manually (or roll back the plugin version).
+        if (_loadFailed)
+        {
+            _logger.LogWarning("[AchievementBadges] Save() skipped: last Load() failed and the on-disk store is quarantined. Restore the .corrupt-* file manually.");
+            return;
+        }
+
         var store = new UserBadgeStore
         {
             UserProfiles = _userProfiles
@@ -2480,6 +2534,20 @@ public class AchievementBadgeService
         // otherwise wipe every user's unlocked badges.
         var tmp = _dataFilePath + ".tmp";
         File.WriteAllText(tmp, json);
+
+        // Rolling backup — before the atomic replace, copy the current good
+        // file to badges.json.bak. On a future bad in-memory state this gives
+        // the admin a one-step revert (cp badges.json.bak badges.json).
+        try
+        {
+            if (File.Exists(_dataFilePath))
+            {
+                var bak = _dataFilePath + ".bak";
+                File.Copy(_dataFilePath, bak, overwrite: true);
+            }
+        }
+        catch { /* backup is best-effort; don't block the real save */ }
+
         File.Move(tmp, _dataFilePath, overwrite: true);
     }
 

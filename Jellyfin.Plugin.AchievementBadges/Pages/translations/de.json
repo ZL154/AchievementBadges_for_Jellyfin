@@ -657,5 +657,22 @@
   "friends.last_seen": "Zuletzt online",
   "friends.watching_prefix": "Schaut",
   "friends.mutual": "BEIDSEITIG",
-  "friends.load_failed": "Freunde konnten nicht geladen werden."
+  "friends.load_failed": "Freunde konnten nicht geladen werden.",
+  "friends.tab_friends": "Freunde",
+  "friends.tab_requests": "Anfragen",
+  "friends.tab_find": "Suchen",
+  "friends.search_placeholder": "Nutzer suchen...",
+  "friends.type_to_search": "Tippen, um Nutzer zu finden.",
+  "friends.no_matches": "Keine Nutzer gefunden.",
+  "friends.send_request": "Anfrage senden",
+  "friends.incoming": "Eingehende Anfragen",
+  "friends.outgoing": "Gesendete Anfragen",
+  "friends.accept": "Annehmen",
+  "friends.decline": "Ablehnen",
+  "friends.pending": "Ausstehend",
+  "friends.cancel": "Abbrechen",
+  "friends.sent": "Gesendet",
+  "friends.failed": "Fehler",
+  "friends.no_requests": "Keine ausstehenden Anfragen.",
+  "friends.search_failed": "Suche fehlgeschlagen."
 }

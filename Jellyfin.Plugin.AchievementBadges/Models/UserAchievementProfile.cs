@@ -42,10 +42,15 @@ public class UserAchievementProfile
 
     public List<CompareHistoryEntry> CompareHistory { get; set; } = new();
 
-    // One-sided follow list — who this user has added as a friend. Mutual
-    // friendship is implicit (if B is also in A's Friends list). Kept as a
-    // small list of GUID strings so the JSON remains simple.
+    // Accepted friends — mutual. Adding someone = request; accepting writes
+    // to both users' Friends lists. Removing purges from both sides.
     public List<string> Friends { get; set; } = new();
+
+    // Pending outgoing requests: user ids we've sent a request to.
+    public List<string> FriendRequestsSent { get; set; } = new();
+
+    // Pending incoming requests: user ids who want to be our friend.
+    public List<string> FriendRequestsReceived { get; set; } = new();
 
     public UserNotificationPreferences Preferences { get; set; } = new();
 }

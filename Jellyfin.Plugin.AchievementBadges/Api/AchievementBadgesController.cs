@@ -354,15 +354,24 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetFriends([FromRoute] string userId)
     {
-        return Ok(_friendsService.ListFriends(userId));
+        return Ok(_friendsService.List(userId));
     }
 
     [HttpPost("users/{userId}/friends/{friendUserId}")]
     [EnableRateLimiting("user-60-per-min")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult AddFriend([FromRoute] string userId, [FromRoute] string friendUserId)
+    public ActionResult SendFriendRequest([FromRoute] string userId, [FromRoute] string friendUserId)
     {
-        var (ok, message) = _friendsService.AddFriend(userId, friendUserId);
+        var (ok, message) = _friendsService.SendRequest(userId, friendUserId);
+        return Ok(new { Success = ok, Message = message });
+    }
+
+    [HttpPost("users/{userId}/friends/{friendUserId}/accept")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult AcceptFriendRequest([FromRoute] string userId, [FromRoute] string friendUserId)
+    {
+        var (ok, message) = _friendsService.Accept(userId, friendUserId);
         return Ok(new { Success = ok, Message = message });
     }
 
@@ -371,7 +380,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult RemoveFriend([FromRoute] string userId, [FromRoute] string friendUserId)
     {
-        var (ok, message) = _friendsService.RemoveFriend(userId, friendUserId);
+        var (ok, message) = _friendsService.Remove(userId, friendUserId);
         return Ok(new { Success = ok, Message = message });
     }
 

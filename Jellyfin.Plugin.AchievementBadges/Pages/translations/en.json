@@ -657,5 +657,22 @@
   "friends.last_seen": "Last seen",
   "friends.watching_prefix": "Watching",
   "friends.mutual": "MUTUAL",
-  "friends.load_failed": "Failed to load friends."
+  "friends.load_failed": "Failed to load friends.",
+  "friends.tab_friends": "Friends",
+  "friends.tab_requests": "Requests",
+  "friends.tab_find": "Find",
+  "friends.search_placeholder": "Search users...",
+  "friends.type_to_search": "Start typing to find users.",
+  "friends.no_matches": "No users match.",
+  "friends.send_request": "Send request",
+  "friends.incoming": "Incoming requests",
+  "friends.outgoing": "Sent requests",
+  "friends.accept": "Accept",
+  "friends.decline": "Decline",
+  "friends.pending": "Pending",
+  "friends.cancel": "Cancel",
+  "friends.sent": "Sent",
+  "friends.failed": "Failed",
+  "friends.no_requests": "No pending requests.",
+  "friends.search_failed": "Search failed."
 }
