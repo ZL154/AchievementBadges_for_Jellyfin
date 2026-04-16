@@ -859,6 +859,14 @@ font-size:0.88em;
 // strings live under the `admin.*` key namespace. Also exposes a global
 // window.abAdminTr(key, fallback) helper used by the dynamic status/error
 // messages further down.
+//
+// The FETCH URL is derived from window.location.pathname, not ApiClient.
+// Reason: admin pages are served at `<base>/web/ConfigurationPage?...` —
+// relative paths would resolve against `/web/...` and hit `/web/Plugins/...`
+// (404). `/Plugins/...` absolute paths break on reverse-proxy subpath setups
+// (`/jellyfin/...`). ApiClient is sometimes late/unavailable in admin iframes.
+// Parsing location.pathname to find the `/web/` segment gives us the server
+// root that works on both vanilla and reverse-proxy installs.
 (function () {
     var _abAdminDict = {};
     function pickLang() {
@@ -903,6 +911,12 @@ font-size:0.88em;
             var tk = tNodes[t].getAttribute('data-i18n-title');
             if (tk && dict[tk]) tNodes[t].setAttribute('title', dict[tk]);
         }
+        // Now that the translation dict has landed, re-fetch any server-rendered
+        // badge lists so they come back in the new language too (the catalog
+        // /admin/badge-catalog accepts ?lang=; we pass the freshly-resolved
+        // language through localStorage). Without this the admin grid stays
+        // English until the user reloads the page manually.
+        try { if (typeof window.abReloadAdminBadges === 'function') window.abReloadAdminBadges(); } catch (e) {}
     }
     // Public helper for dynamic JS strings. Falls back to the provided
     // English text so the page still works before the dict has loaded.
@@ -912,16 +926,39 @@ font-size:0.88em;
         }
         return fallback != null ? fallback : key;
     };
+    // Resolve the plugin API base URL from the current document location,
+    // independent of ApiClient. Works on vanilla `/web/...` installs AND
+    // reverse-proxy `/jellyfin/web/...` subpath installs.
+    function resolvePluginBase() {
+        try {
+            var p = window.location.pathname || '';
+            var idx = p.lastIndexOf('/web/');
+            if (idx >= 0) return p.substring(0, idx + 1);
+            // Modern Jellyfin sometimes uses /# routing without /web/ segment.
+            // Try stripping any trailing filename/route.
+            var slash = p.lastIndexOf('/');
+            if (slash > 0) return p.substring(0, slash + 1);
+        } catch (e) {}
+        return '/';
+    }
+
     function loadForLang(lang, absUrl, authHeaders) {
         var path = 'Plugins/AchievementBadges/translations/' + encodeURIComponent(lang);
         var url;
         if (typeof absUrl === 'function') {
             url = absUrl(path);
         } else {
+            // Primary: apiClient if present (handles server base correctly).
             try {
                 var apiClient = window.ApiClient || window.apiClient || null;
-                url = (apiClient && typeof apiClient.getUrl === 'function') ? apiClient.getUrl(path) : ('/' + path);
-            } catch (e) { url = '/' + path; }
+                if (apiClient && typeof apiClient.getUrl === 'function') {
+                    url = apiClient.getUrl(path);
+                } else {
+                    // Fallback: derive server root from location.pathname so
+                    // reverse-proxy subpaths work even without ApiClient.
+                    url = resolvePluginBase() + path;
+                }
+            } catch (e) { url = resolvePluginBase() + path; }
         }
         var headers = typeof authHeaders === 'function' ? authHeaders() : {};
         return fetch(url, { headers: headers, credentials: 'same-origin' })
@@ -946,12 +983,19 @@ font-size:0.88em;
         });
     }
 
-    // Resolve the admin's language by asking the server for their
-    // achievement-badges preference (so the admin page matches whatever
-    // language the user picked in the achievements settings panel).
-    // Falls back to localStorage 'achievementBadgesLang', then navigator.language,
-    // then English.
+    // Resolve the admin's language. Fires THREE progressively-authoritative
+    // loads so the page always ends up translated, even if ApiClient or the
+    // server round-trips fail:
+    //   1. Unconditional: loadForLang(pickLang()) — uses localStorage first,
+    //      navigator.language second, English last. URL resolved via our
+    //      pathname-based resolvePluginBase() so reverse-proxy subpaths
+    //      work even without ApiClient.
+    //   2. Once ApiClient mounts: public-config for the admin-level default.
+    //   3. If we have a userId: user's own preference (wins over 1 and 2).
     function resolveAndLoad() {
+        // 1) Unconditional first paint. No dependency on ApiClient.
+        try { loadForLang(pickLang()).catch(function () {}); } catch (e) {}
+
         waitForApiClient(5000).then(function (apiClient) {
             var adminLang = 'en';
             var userId = '';
@@ -963,8 +1007,9 @@ font-size:0.88em;
 
             function absUrl(p) {
                 try {
-                    return (apiClient && typeof apiClient.getUrl === 'function') ? apiClient.getUrl(p) : ('/' + p);
-                } catch (e) { return '/' + p; }
+                    if (apiClient && typeof apiClient.getUrl === 'function') return apiClient.getUrl(p);
+                } catch (e) {}
+                return resolvePluginBase() + p;
             }
             function authHeaders() {
                 var h = {};
@@ -976,13 +1021,6 @@ font-size:0.88em;
                 } catch (e) {}
                 return h;
             }
-
-            // Seed from localStorage immediately so the admin at least sees
-            // their last-known language while we confirm server-side.
-            try {
-                var stored = (window.localStorage && localStorage.getItem('achievementBadgesLang')) || '';
-                if (stored) loadForLang(stored, absUrl, authHeaders).catch(function () {});
-            } catch (e) {}
 
             return fetch(absUrl('Plugins/AchievementBadges/public-config'), { headers: authHeaders(), credentials: 'same-origin' })
                 .then(function (r) { return r.ok ? r.json() : null; })
@@ -1002,8 +1040,9 @@ font-size:0.88em;
                     return loadForLang(effective, absUrl, authHeaders);
                 });
         }).catch(function () {
-            // Absolute last-resort: use localStorage/navigator directly.
-            try { loadForLang(pickLang()).catch(function () {}); } catch (e) {}
+            // ApiClient timed out — (1) above already fired an optimistic
+            // pickLang() load so the page is probably translated from
+            // localStorage/navigator anyway. No-op.
         });
     }
 
@@ -1712,6 +1751,12 @@ font-size:0.88em;
     }
 
     catalogReloadBtn.addEventListener('click', loadCatalog);
+    // Exposed to the admin-page translator so it can re-invoke the catalog
+    // fetch AFTER it resolves the user's language from the server. The
+    // initial page-load call fires before localStorage is populated, so
+    // without this second call the grid stays English for a French /
+    // Portuguese / etc. admin.
+    window.abReloadAdminBadges = loadCatalog;
     catalogEnableAllBtn.addEventListener('click', function () {
         bulkSet([]);
     });

@@ -674,5 +674,9 @@
   "friends.sent": "已发送",
   "friends.failed": "失败",
   "friends.no_requests": "没有待处理的请求。",
-  "friends.search_failed": "搜索失败。"
+  "friends.search_failed": "搜索失败。",
+  "settings.appear_offline": "对好友显示为离线",
+  "settings.appear_offline_desc": "即使你正在使用 Jellyfin,好友也始终将你视为离线",
+  "settings.hide_now_playing": "隐藏正在观看的内容",
+  "settings.hide_now_playing_desc": "好友仍然能看到你在线,但看不到你正在观看的剧集或单集"
 }

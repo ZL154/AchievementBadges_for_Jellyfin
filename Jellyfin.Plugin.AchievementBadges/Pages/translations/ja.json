@@ -674,5 +674,9 @@
   "friends.sent": "送信済",
   "friends.failed": "失敗",
   "friends.no_requests": "保留中のリクエストはありません。",
-  "friends.search_failed": "検索に失敗しました。"
+  "friends.search_failed": "検索に失敗しました。",
+  "settings.appear_offline": "フレンドに対してオフラインに表示",
+  "settings.appear_offline_desc": "Jellyfinを使用中でも、フレンドには常にオフラインとして表示されます",
+  "settings.hide_now_playing": "視聴中の作品を非表示",
+  "settings.hide_now_playing_desc": "フレンドにはオンラインとして表示されますが、視聴中のシリーズやエピソードは非表示になります"
 }

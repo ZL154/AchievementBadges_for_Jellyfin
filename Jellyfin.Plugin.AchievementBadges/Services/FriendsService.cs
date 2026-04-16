@@ -81,9 +81,26 @@ public class FriendsService
         var fProfile = _badgeService.PeekProfile(fid);
         var userName = ResolveUserName(fid);
         var equipped = _badgeService.GetPublicEquippedPreview(fid);
-        var isOnline = sessionByUser.TryGetValue(fid, out var session) && session.IsActive;
+        sessionByUser.TryGetValue(fid, out var session);
+        // Relaxed online check: Jellyfin's `SessionInfo.IsActive` is tied to
+        // active playback controllers, so an idle-logged-in user flips to
+        // inactive quickly — which meant friends never showed as "Online"
+        // unless they were actively playing. Now we ALSO treat a session
+        // seen within the last ~15 min as online (via LastActivityDate)
+        // so "just browsing Jellyfin" counts.
+        var recentlyActive = session != null &&
+                             (DateTime.UtcNow - session.LastActivityDate.ToUniversalTime()).TotalMinutes < 15;
+        var isOnline = session != null && (session.IsActive || recentlyActive);
+
+        // Respect the target's friend-visibility prefs — AppearOffline makes
+        // them look offline, HideNowPlaying keeps them online but hides
+        // what they're watching.
+        var appearOffline = fProfile?.Preferences?.AppearOffline == true;
+        var hideNowPlaying = fProfile?.Preferences?.HideNowPlaying == true;
+        if (appearOffline) isOnline = false;
+
         object? nowPlaying = null;
-        if (isOnline && session?.NowPlayingItem != null)
+        if (isOnline && !hideNowPlaying && session?.NowPlayingItem != null)
         {
             var item = session.NowPlayingItem;
             nowPlaying = new
@@ -100,7 +117,8 @@ public class FriendsService
             UserId = fid,
             UserName = userName,
             Online = isOnline,
-            LastSeen = session?.LastActivityDate,
+            // When the user appears offline, don't leak a LastSeen date either.
+            LastSeen = appearOffline ? null : session?.LastActivityDate,
             Equipped = equipped,
             NowPlaying = nowPlaying
         };

@@ -2127,6 +2127,9 @@
                         maybeToggle(hideCompareToggle, 'hideFromCompare', tr('settings.hide_from_compare', 'Hide from compare profiles'), tr('settings.hide_from_compare_desc', 'Prevent others from comparing with you'), prefs.hideFromCompare === true || prefs.HideFromCompare === true) +
                         maybeToggle(hideActivityToggle, 'hideFromActivityFeed', tr('settings.hide_from_activity', 'Hide from activity feed'), tr('settings.hide_from_activity_desc', 'Prevent your unlocks from appearing in the server feed'), prefs.appearInActivityFeed === false || prefs.AppearInActivityFeed === false) +
                         maybeToggle(hidePrestigeToggle, 'hideFromPrestigeBoard', tr('settings.hide_from_prestige', 'Hide from prestige board'), tr('settings.hide_from_prestige_desc', 'Remove yourself from the prestige leaderboard'), prefs.hideFromPrestigeBoard === true || prefs.HideFromPrestigeBoard === true) +
+                        // Friends-specific privacy toggles (v1.7.9+)
+                        toggle('appearOffline', tr('settings.appear_offline', 'Appear offline to friends'), tr('settings.appear_offline_desc', 'Your friends will always see you as offline, even while you\'re browsing Jellyfin'), prefs.appearOffline === true || prefs.AppearOffline === true) +
+                        toggle('hideNowPlaying', tr('settings.hide_now_playing', 'Hide what I\'m watching'), tr('settings.hide_now_playing_desc', 'Friends can still see you as online, but not the series or episode you\'re watching'), prefs.hideNowPlaying === true || prefs.HideNowPlaying === true) +
                     '</div>' +
                 '</div>';
         }

@@ -356,7 +356,7 @@
                 '.ab-fd-body{flex:1;overflow-y:auto;padding:0.8em;}' +
                 '.ab-fd-row{display:flex;align-items:center;gap:0.7em;padding:0.7em 0.55em;border-radius:12px;transition:background 0.15s;margin-bottom:0.2em;}' +
                 '.ab-fd-row:hover{background:rgba(255,255,255,0.04);}' +
-                '.ab-fd-avatar{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:0.9em;position:relative;background:linear-gradient(135deg,#334155,#1e293b);color:#cbd5e1;}' +
+                '.ab-fd-avatar{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:0.9em;position:relative;background:linear-gradient(135deg,#334155,#1e293b);color:#cbd5e1;background-size:cover;background-position:center;}' +
                 '.ab-fd-avatar.online{background:linear-gradient(135deg,rgba(74,222,128,0.3),rgba(34,197,94,0.18));color:#bbf7d0;box-shadow:inset 0 0 0 2px #4ade80;}' +
                 '.ab-fd-avatar::after{content:"";position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:999px;background:rgba(255,255,255,0.22);border:2px solid #0d1017;}' +
                 '.ab-fd-avatar.online::after{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.8);}' +
@@ -501,6 +501,27 @@
         return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
     }
 
+    // Build an avatar style string: Jellyfin primary image URL if we have
+    // a user id, otherwise empty (the avatar div falls back to the gradient +
+    // initials). Uses apiClient.getUserImageUrl when present so reverse-proxy
+    // subpaths work; otherwise a best-effort /Users/{id}/Images/Primary.
+    function avatarStyle(userId){
+        if (!userId) return '';
+        try {
+            var api = getApi();
+            var url = null;
+            if (api && typeof api.getUserImageUrl === 'function') {
+                url = api.getUserImageUrl(userId, { type: 'Primary', maxHeight: 80, quality: 90 });
+            } else if (api && typeof api.getUrl === 'function') {
+                url = api.getUrl('Users/' + userId + '/Images/Primary?maxHeight=80&quality=90');
+            }
+            if (url) {
+                return 'background-image:url(\'' + url.replace(/'/g, '%27') + '\');';
+            }
+        } catch(e) {}
+        return '';
+    }
+
     function refreshFriendsBadge(){
         var uid = getUserId(); if (!uid) return;
         fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+'/friends'), { headers: authHeaders(), credentials: 'include' })
@@ -537,8 +558,10 @@
                                 ? tr('friends.watching_prefix', 'Watching') + ' <strong>' + escapeHtml(f.NowPlaying.SeriesName ? (f.NowPlaying.SeriesName + (f.NowPlaying.Name ? ' — ' + f.NowPlaying.Name : '')) : f.NowPlaying.Name) + '</strong>'
                                 : tr('friends.online', 'Online'))
                             : (f.LastSeen ? tr('friends.last_seen', 'Last seen') + ' ' + new Date(f.LastSeen).toLocaleString() : tr('friends.offline', 'Offline'));
+                        var av = avatarStyle(f.UserId);
+                        var initialsHtml = av ? '' : escapeHtml(initials(f.UserName));
                         return '<div class="ab-fd-row">' +
-                            '<div class="ab-fd-avatar'+(f.Online?' online':'')+'">' + escapeHtml(initials(f.UserName)) + '</div>' +
+                            '<div class="ab-fd-avatar'+(f.Online?' online':'')+'" style="' + av + '">' + initialsHtml + '</div>' +
                             '<div class="ab-fd-info">' +
                                 '<div class="ab-fd-name">' + escapeHtml(f.UserName) + '</div>' +
                                 '<div class="ab-fd-status'+(f.Online?' online':'')+'">' + status + '</div>' +
@@ -550,15 +573,19 @@
                 }
 
                 var rHtml = '';
+                // Compact request rows — icon-only accept/decline buttons so
+                // the row doesn't visually bloat with two full-text buttons.
                 if (incoming.length){
                     rHtml += '<div class="ab-fd-section">' + tr('friends.incoming', 'Incoming requests') + '</div>';
                     rHtml += incoming.map(function(r){
+                        var av = avatarStyle(r.UserId);
+                        var initialsHtml = av ? '' : escapeHtml(initials(r.UserName));
                         return '<div class="ab-fd-row">' +
-                            '<div class="ab-fd-avatar">' + escapeHtml(initials(r.UserName)) + '</div>' +
+                            '<div class="ab-fd-avatar" style="' + av + '">' + initialsHtml + '</div>' +
                             '<div class="ab-fd-info"><div class="ab-fd-name">' + escapeHtml(r.UserName) + '</div><div class="ab-fd-status">' + tr('friends.wants_to_be_friends', 'Wants to be friends') + '</div></div>' +
                             '<div class="ab-fd-actions">' +
-                                '<button type="button" class="ab-fd-act accept" data-ab-friend-accept="' + escapeHtml(r.UserId) + '"><span class="material-icons">check</span>' + tr('friends.accept', 'Accept') + '</button>' +
-                                '<button type="button" class="ab-fd-act decline" data-ab-friend-remove="' + escapeHtml(r.UserId) + '"><span class="material-icons">close</span></button>' +
+                                '<button type="button" class="ab-fd-act accept" data-ab-friend-accept="' + escapeHtml(r.UserId) + '" title="'+tr('friends.accept','Accept')+'"><span class="material-icons">check</span></button>' +
+                                '<button type="button" class="ab-fd-act decline" data-ab-friend-remove="' + escapeHtml(r.UserId) + '" title="'+tr('friends.decline','Decline')+'"><span class="material-icons">close</span></button>' +
                             '</div>' +
                         '</div>';
                     }).join('');
@@ -566,10 +593,12 @@
                 if (outgoing.length){
                     rHtml += '<div class="ab-fd-section">' + tr('friends.outgoing', 'Sent requests') + '</div>';
                     rHtml += outgoing.map(function(r){
+                        var av = avatarStyle(r.UserId);
+                        var initialsHtml = av ? '' : escapeHtml(initials(r.UserName));
                         return '<div class="ab-fd-row">' +
-                            '<div class="ab-fd-avatar">' + escapeHtml(initials(r.UserName)) + '</div>' +
+                            '<div class="ab-fd-avatar" style="' + av + '">' + initialsHtml + '</div>' +
                             '<div class="ab-fd-info"><div class="ab-fd-name">' + escapeHtml(r.UserName) + '</div><div class="ab-fd-status">' + tr('friends.pending', 'Pending') + '</div></div>' +
-                            '<div class="ab-fd-actions"><button type="button" class="ab-fd-act" data-ab-friend-remove="' + escapeHtml(r.UserId) + '">' + tr('friends.cancel', 'Cancel') + '</button></div>' +
+                            '<div class="ab-fd-actions"><button type="button" class="ab-fd-act" data-ab-friend-remove="' + escapeHtml(r.UserId) + '" title="'+tr('friends.cancel','Cancel')+'"><span class="material-icons">close</span></button></div>' +
                         '</div>';
                     }).join('');
                 }
@@ -632,10 +661,12 @@
             }).slice(0, 20);
             if (!matches.length) { box.innerHTML = '<div class="ab-fd-empty"><span class="material-icons">person_search</span><div>' + tr('friends.no_matches', 'No users match.') + '</div></div>'; return; }
             box.innerHTML = matches.map(function(u){
+                var av = avatarStyle(u.Id);
+                var initialsHtml = av ? '' : escapeHtml(initials(u.Name));
                 return '<div class="ab-fd-row">' +
-                    '<div class="ab-fd-avatar">' + escapeHtml(initials(u.Name)) + '</div>' +
+                    '<div class="ab-fd-avatar" style="' + av + '">' + initialsHtml + '</div>' +
                     '<div class="ab-fd-info"><div class="ab-fd-name">' + escapeHtml(u.Name) + '</div></div>' +
-                    '<div class="ab-fd-actions"><button type="button" class="ab-fd-act accept" data-ab-friend-add="' + escapeHtml(u.Id) + '"><span class="material-icons">person_add</span>' + tr('friends.send_request', 'Send request') + '</button></div>' +
+                    '<div class="ab-fd-actions"><button type="button" class="ab-fd-act accept" data-ab-friend-add="' + escapeHtml(u.Id) + '" title="'+tr('friends.send_request','Send request')+'"><span class="material-icons">person_add</span></button></div>' +
                 '</div>';
             }).join('');
             box.querySelectorAll('[data-ab-friend-add]').forEach(function(btn){

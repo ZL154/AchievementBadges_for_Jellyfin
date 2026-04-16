@@ -77,6 +77,16 @@ public class UserNotificationPreferences
     [JsonPropertyName("AppearInActivityFeed")]
     public bool AppearInActivityFeed { get; set; } = true;
 
+    // Friend-visibility prefs: AppearOffline makes the user's Online flag
+    // always false in the friends drawer (they can still use everything
+    // else). HideNowPlaying keeps Online=true but strips the NowPlaying
+    // payload so friends only see "Online" instead of the series/episode.
+    [JsonPropertyName("AppearOffline")]
+    public bool AppearOffline { get; set; } = false;
+
+    [JsonPropertyName("HideNowPlaying")]
+    public bool HideNowPlaying { get; set; } = false;
+
     [JsonPropertyName("EnableCoWatchBonus")]
     public bool EnableCoWatchBonus { get; set; } = true;
 

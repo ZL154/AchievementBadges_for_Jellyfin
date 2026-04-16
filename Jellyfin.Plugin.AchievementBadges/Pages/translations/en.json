@@ -674,5 +674,9 @@
   "friends.sent": "Sent",
   "friends.failed": "Failed",
   "friends.no_requests": "No pending requests.",
-  "friends.search_failed": "Search failed."
+  "friends.search_failed": "Search failed.",
+  "settings.appear_offline": "Appear offline to friends",
+  "settings.appear_offline_desc": "Your friends will always see you as offline, even while you're browsing Jellyfin",
+  "settings.hide_now_playing": "Hide what I'm watching",
+  "settings.hide_now_playing_desc": "Friends can still see you as online, but not the series or episode you're watching"
 }

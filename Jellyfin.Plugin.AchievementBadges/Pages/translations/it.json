@@ -674,5 +674,9 @@
   "friends.sent": "Inviato",
   "friends.failed": "Fallito",
   "friends.no_requests": "Nessuna richiesta in sospeso.",
-  "friends.search_failed": "Ricerca fallita."
+  "friends.search_failed": "Ricerca fallita.",
+  "settings.appear_offline": "Appari offline agli amici",
+  "settings.appear_offline_desc": "I tuoi amici ti vedranno sempre offline, anche quando stai usando Jellyfin",
+  "settings.hide_now_playing": "Nascondi cosa sto guardando",
+  "settings.hide_now_playing_desc": "Gli amici ti vedono ancora online, ma non la serie o l'episodio"
 }

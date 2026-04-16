@@ -674,5 +674,9 @@
   "friends.sent": "Envoyé",
   "friends.failed": "Échec",
   "friends.no_requests": "Aucune demande en attente.",
-  "friends.search_failed": "Recherche échouée."
+  "friends.search_failed": "Recherche échouée.",
+  "settings.appear_offline": "Apparaître hors ligne aux amis",
+  "settings.appear_offline_desc": "Vos amis vous verront toujours hors ligne, même lorsque vous utilisez Jellyfin",
+  "settings.hide_now_playing": "Cacher ce que je regarde",
+  "settings.hide_now_playing_desc": "Vos amis vous voient toujours en ligne, mais pas la série ou l'épisode regardé"
 }
