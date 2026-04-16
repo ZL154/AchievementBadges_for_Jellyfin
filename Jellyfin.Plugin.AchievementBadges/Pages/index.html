@@ -654,6 +654,10 @@ font-size:0.88em;
                             <input type="checkbox" id="abFcRedactUsernamesInAuditLog">
                             <span data-i18n="admin.redact_usernames_audit">Redact usernames in audit log (store UserId only; admin sees "[redacted]")</span>
                         </label>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
+                            <input type="checkbox" id="abFcForceHideEquippedShowcase">
+                            <span data-i18n="admin.force_hide_equipped_showcase">Force-hide equipped badge showcase (sidebar strip, header dots, profile-card equipped slots) for all users</span>
+                        </label>
                         <button is="emby-button" type="button" class="raised button-submit" id="abFcSaveBtn" data-i18n="admin.btn_save_feature_config">Save feature config</button>
                         <div id="abFcStatus" class="secondaryText"></div>
                     </div>
@@ -1757,6 +1761,8 @@ font-size:0.88em;
             if (xbEl) xbEl.value = c.CustomXboxLogoSvg || '';
             var redactEl = document.getElementById('abFcRedactUsernamesInAuditLog');
             if (redactEl) redactEl.checked = !!c.RedactUsernamesInAuditLog;
+            var hideShowcaseEl = document.getElementById('abFcForceHideEquippedShowcase');
+            if (hideShowcaseEl) hideShowcaseEl.checked = !!c.ForceHideEquippedShowcase;
         }).catch(function (e) {
             if (fcStatusEl) fcStatusEl.textContent = 'Failed to load feature config: ' + (e.message || e);
         });
@@ -1811,9 +1817,18 @@ font-size:0.88em;
             WelcomeMessage: document.getElementById('abFcWelcomeMessage').value || '',
             DefaultLanguage: (document.getElementById('abFcDefaultLanguage') || {}).value || 'en',
             CustomXboxLogoSvg: (document.getElementById('abFcCustomXboxLogoSvg') || {}).value || '',
-            RedactUsernamesInAuditLog: !!(document.getElementById('abFcRedactUsernamesInAuditLog') || {}).checked
-        }).then(function () {
-            if (fcStatusEl) fcStatusEl.textContent = 'Feature config saved.';
+            RedactUsernamesInAuditLog: !!(document.getElementById('abFcRedactUsernamesInAuditLog') || {}).checked,
+            ForceHideEquippedShowcase: !!(document.getElementById('abFcForceHideEquippedShowcase') || {}).checked
+        }).then(function (res) {
+            if (fcStatusEl) {
+                var msg = 'Feature config saved.';
+                if (res && res.SvgWarning) msg += ' ' + res.SvgWarning;
+                fcStatusEl.textContent = msg;
+            }
+            // After save, re-load so the textarea reflects the stored base64
+            // (important: if the user pasted raw SVG, the textarea now shows
+            // the re-encoded form, matching what the toast will actually use).
+            loadFeatureConfig();
         }).catch(function (e) {
             if (fcStatusEl) fcStatusEl.textContent = 'Save failed: ' + (e.message || e);
         });

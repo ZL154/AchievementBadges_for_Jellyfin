@@ -62,4 +62,9 @@ public class PluginConfiguration : BasePluginConfiguration
     // The admin endpoint returns "[redacted]" for the UserName of any entry
     // that was stored with redaction on.
     public bool RedactUsernamesInAuditLog { get; set; } = false;
+
+    // Admin force-override for the equipped-badge showcase UI (sidebar strip,
+    // header dots, profile-card equipped slots). When true, these elements are
+    // hidden for all users regardless of per-user preferences. Default false.
+    public bool ForceHideEquippedShowcase { get; set; } = false;
 }

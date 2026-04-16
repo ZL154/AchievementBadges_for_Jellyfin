@@ -110,6 +110,12 @@ public class UserNotificationPreferences
     // DefaultLanguage; otherwise one of "en", "fr", "es".
     [JsonPropertyName("Language")]
     public string Language { get; set; } = "default";
+
+    // When false, hide the equipped-badge showcase UI (sidebar strip, header
+    // badge dots, and the equipped slots section on the achievements page
+    // profile card). Default true.
+    [JsonPropertyName("ShowEquippedShowcase")]
+    public bool ShowEquippedShowcase { get; set; } = true;
 }
 
 public class QuestState

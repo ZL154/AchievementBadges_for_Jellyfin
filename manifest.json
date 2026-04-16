@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.6.1",
+        "changelog": "Critical auth + logo fixes + showcase toggle + security audit. FIXED: 401 error on achievements page refresh / back from shareable card — auth header fetch now waits up to 2s for ApiClient to populate, retries once on 401 transient races. FIXED: Xbox logo upload silently failing — base64 detection now checks for < character before attempting decode, warnings surfaced in UI. NEW: Disable equipped badges showcase — per-user toggle in settings + admin server-wide override. Hides the sidebar showcase strip, header badge dots, and equipped slots section. Achievements sidebar link stays visible. SECURITY: 4 additional issues fixed from internal audit — exception leak in profile card endpoint, unbounded limit/weeks query params, SaveUserPreferences allowlist validation, PinBadge id validation + 50-entry cap. NO critical issues found beyond the ones already fixed in v1.6.0.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.6.1/Jellyfin.Plugin.AchievementBadgesv1.6.1.zip",
+        "checksum": "237F8ADBE915134CE0CF45AA2957A50C"
+      },
+      {
         "version": "1.6.0",
         "changelog": "Major release. SECURITY: full hardening pass — IDOR fix via UserOwnershipFilter, profile card 404 + GUID validation, custom badge sanitizer, webhook URL validator (SSRF), client-side XSS escaped in shell.js + sidebar.js, completionPercent clamping, middleware buffer cap, rate limiting on user/anonymous endpoints + cooldowns on prestige/recompute, audit log username redaction option, SECURITY.md documenting CSRF mitigation. ADMIN: custom Xbox toast logo upload with XML-parsing SVG sanitizer (XXE-safe, blocks script/iframe/use/event handlers). I18N: 8 languages (en/fr/es/de/it/pt/zh/ja) with ~220 UI keys + admin page translated + first ~50 most-common badges localized (rest fall back to English, community contributions welcome). Translation hot-swaps on language change. Thanks to xdnewlun1 (Techno Cricket, CCDC) for responsible disclosure.",
         "targetAbi": "10.11.0.0",

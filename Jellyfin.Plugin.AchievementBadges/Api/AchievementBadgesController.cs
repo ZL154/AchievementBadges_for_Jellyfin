@@ -189,15 +189,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(typeof(List<AchievementBadge>), StatusCodes.Status200OK)]
     public ActionResult<List<AchievementBadge>> GetRecentUnlocks([FromRoute] string userId, [FromQuery] int limit = 8)
     {
-        if (limit < 1)
-        {
-            limit = 1;
-        }
-
-        if (limit > 50)
-        {
-            limit = 50;
-        }
+        limit = Math.Clamp(limit, 1, 50);
 
         var badges = _badgeService.GetBadgesForUser(userId)
             .Where(b => b.Unlocked && b.UnlockedAt.HasValue)
@@ -212,15 +204,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(typeof(List<AchievementBadge>), StatusCodes.Status200OK)]
     public ActionResult<List<AchievementBadge>> GetNextBadges([FromRoute] string userId, [FromQuery] int limit = 5)
     {
-        if (limit < 1)
-        {
-            limit = 1;
-        }
-
-        if (limit > 20)
-        {
-            limit = 20;
-        }
+        limit = Math.Clamp(limit, 1, 20);
 
         var badges = _badgeService.GetBadgesForUser(userId)
             .Where(b => !b.Unlocked && b.TargetValue > 0)
@@ -393,6 +377,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetLeaderboard([FromQuery] int limit = 10)
     {
+        limit = Math.Clamp(limit, 1, 200);
         var leaderboard = _badgeService.GetLeaderboard(limit);
         return Ok(leaderboard);
     }
@@ -617,6 +602,26 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult SaveUserPreferences([FromRoute] string userId, [FromBody] UserNotificationPreferences prefs)
     {
+        if (prefs is null) return BadRequest(new { Message = "Preferences payload required." });
+
+        // Normalise and bound any free-form string / int fields so a crafted
+        // payload can't bloat the on-disk profile with megabytes of attacker-
+        // supplied data. (The ASP.NET request body limit still caps total
+        // size, but these are the fields we actually round-trip into JSON.)
+        var allowedLangs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "default", "en", "fr", "es", "de", "it", "pt", "zh", "ja" };
+        prefs.Language = string.IsNullOrWhiteSpace(prefs.Language) || !allowedLangs.Contains(prefs.Language)
+            ? "default" : prefs.Language.ToLowerInvariant();
+
+        var allowedThemes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "default", "dark", "light" };
+        prefs.AchievementPageTheme = string.IsNullOrWhiteSpace(prefs.AchievementPageTheme) || !allowedThemes.Contains(prefs.AchievementPageTheme)
+            ? "default" : prefs.AchievementPageTheme.ToLowerInvariant();
+
+        var allowedRarities = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "all", "rare", "epic", "legendary" };
+        prefs.MinimumToastRarity = string.IsNullOrWhiteSpace(prefs.MinimumToastRarity) || !allowedRarities.Contains(prefs.MinimumToastRarity)
+            ? "all" : prefs.MinimumToastRarity.ToLowerInvariant();
+
+        prefs.EquippedBadgeSlots = Math.Clamp(prefs.EquippedBadgeSlots, 1, 10);
+
         _badgeService.SaveUserPreferences(userId, prefs);
         return Ok(new { Success = true });
     }
@@ -640,6 +645,9 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetStreakCalendar([FromRoute] string userId, [FromQuery] int weeks = 53)
     {
+        // Bound 'weeks' — callers request a rolling week window; allowing
+        // arbitrarily large values invites quadratic calendar-build work.
+        weeks = Math.Clamp(weeks, 1, 520);
         return Ok(_badgeService.GetStreakCalendar(userId, weeks));
     }
 
@@ -647,6 +655,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetBadgeEtas([FromRoute] string userId, [FromQuery] int limit = 50)
     {
+        limit = Math.Clamp(limit, 1, 500);
         return Ok(_badgeService.GetBadgeEtas(userId, limit));
     }
 
@@ -675,6 +684,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetPrestigeLeaderboard([FromQuery] int limit = 10)
     {
+        limit = Math.Clamp(limit, 1, 200);
         return Ok(_badgeService.GetPrestigeLeaderboard(limit));
     }
 
@@ -847,10 +857,15 @@ public class AchievementBadgesController : ControllerBase
                 .Replace("{{recapUnlocks}}", recapUnlocks.ToString())
                 .Replace("{{equippedHtml}}", equippedHtml);
         }
-        catch (Exception ex)
+        catch
         {
-            content = content.Replace("{{userId}}", System.Net.WebUtility.HtmlEncode(userId ?? string.Empty));
-            return Content($"<html><body style='background:#111;color:#fff;font-family:sans-serif;padding:2em;'><h1>Profile card error</h1><p>{System.Net.WebUtility.HtmlEncode(ex.Message)}</p></body></html>", "text/html");
+            // Don't leak internal exception messages to anonymous callers —
+            // a malformed profile, missing dependency, or any other server-
+            // side error becomes a generic "try again later" page.
+            return Content(
+                "<html><body style='background:#111;color:#fff;font-family:sans-serif;padding:2em;'>" +
+                "<h1>Profile card unavailable</h1><p>This profile could not be rendered right now.</p></body></html>",
+                "text/html");
         }
 
         return Content(content, "text/html");
@@ -1181,7 +1196,8 @@ public class AchievementBadgesController : ControllerBase
             ForceSpoilerMode = c?.ForceSpoilerMode ?? false,
             ForceExtremeSpoilerMode = c?.ForceExtremeSpoilerMode ?? false,
             DefaultLanguage = c?.DefaultLanguage ?? "en",
-            CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? ""
+            CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? "",
+            ForceHideEquippedShowcase = c?.ForceHideEquippedShowcase ?? false
         });
     }
 
@@ -1209,7 +1225,8 @@ public class AchievementBadgesController : ControllerBase
             WelcomeMessage = c?.WelcomeMessage ?? "",
             DefaultLanguage = c?.DefaultLanguage ?? "en",
             CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? "",
-            RedactUsernamesInAuditLog = c?.RedactUsernamesInAuditLog ?? false
+            RedactUsernamesInAuditLog = c?.RedactUsernamesInAuditLog ?? false,
+            ForceHideEquippedShowcase = c?.ForceHideEquippedShowcase ?? false
         });
     }
 
@@ -1230,6 +1247,7 @@ public class AchievementBadgesController : ControllerBase
         public string DefaultLanguage { get; set; } = "en";
         public string CustomXboxLogoSvg { get; set; } = "";
         public bool RedactUsernamesInAuditLog { get; set; } = false;
+        public bool ForceHideEquippedShowcase { get; set; } = false;
     }
 
     [HttpPost("admin/feature-config")]
@@ -1264,36 +1282,57 @@ public class AchievementBadgesController : ControllerBase
         config.CustomXboxLogoSvg = SanitizeAndEncodeSvg(request.CustomXboxLogoSvg ?? "");
 
         config.RedactUsernamesInAuditLog = request.RedactUsernamesInAuditLog;
+        config.ForceHideEquippedShowcase = request.ForceHideEquippedShowcase;
+
+        // Track whether the admin provided SVG content that was rejected as
+        // invalid so we can surface a warning in the response.
+        var rawSvg = request.CustomXboxLogoSvg ?? "";
+        var svgWarning = "";
+        if (!string.IsNullOrWhiteSpace(rawSvg) && string.IsNullOrEmpty(config.CustomXboxLogoSvg))
+        {
+            svgWarning = "The uploaded Xbox logo SVG was rejected (invalid markup, disallowed elements, or over 100 KB). The default logo is still being used.";
+        }
 
         plugin.UpdateConfiguration(config);
-        return Ok(new { Success = true });
+        return Ok(new { Success = true, SvgWarning = svgWarning });
     }
 
     private static string SanitizeAndEncodeSvg(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return "";
+        var trimmed = input.Trim();
         // Cap the length to prevent config-file blow-up.
-        if (input.Length > 65536) input = input.Substring(0, 65536);
+        if (trimmed.Length > 131072) trimmed = trimmed.Substring(0, 131072);
 
         string svg;
-        // Try base64 decode first — if it's already base64, we still want to
-        // sanitize the decoded SVG, then re-encode.
-        try
+        // If the input contains an '<' character it is almost certainly raw
+        // SVG/XML markup (base64 never contains '<'). Short-circuit the base64
+        // branch so we don't accidentally get partial decodes of SVGs that
+        // happen to start with base64-legal chars.
+        if (trimmed.Contains('<'))
         {
-            var decoded = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(input));
-            if (decoded.TrimStart().StartsWith("<svg", System.StringComparison.OrdinalIgnoreCase)
-                || decoded.Contains("<svg", System.StringComparison.OrdinalIgnoreCase))
-            {
-                svg = decoded;
-            }
-            else
-            {
-                svg = input;
-            }
+            svg = trimmed;
         }
-        catch
+        else
         {
-            svg = input;
+            // Try base64 decode — if it's already base64, we still want to
+            // sanitize the decoded SVG, then re-encode.
+            try
+            {
+                var decoded = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(trimmed));
+                if (decoded.Contains("<svg", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    svg = decoded;
+                }
+                else
+                {
+                    svg = trimmed;
+                }
+            }
+            catch
+            {
+                svg = trimmed;
+            }
         }
 
         // Validate via the XML-parsing sanitizer (more robust than regex).

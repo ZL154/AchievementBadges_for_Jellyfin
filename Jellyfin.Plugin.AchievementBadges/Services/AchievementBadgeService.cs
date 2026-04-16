@@ -705,11 +705,34 @@ public class AchievementBadgeService
     public object PinBadge(string userId, string badgeId, bool pinned)
     {
         userId = NormalizeUserId(userId);
+        // Reject obviously bogus badge ids. A legitimate id fits in ~80 chars
+        // and contains only safe chars (letters / digits / dash / underscore).
+        if (string.IsNullOrWhiteSpace(badgeId) || badgeId.Length > 128)
+        {
+            return new { Success = false, Message = "Invalid badge id." };
+        }
+        foreach (var ch in badgeId)
+        {
+            if (!char.IsLetterOrDigit(ch) && ch != '-' && ch != '_')
+            {
+                return new { Success = false, Message = "Invalid badge id." };
+            }
+        }
         lock (_lock)
         {
             var profile = GetOrCreateProfile(userId);
             if (pinned)
             {
+                // Only allow pinning badges that actually exist on the user's
+                // profile — prevents attackers from bloating the pinned list
+                // with arbitrary strings.
+                var exists = profile.Badges.Any(b => string.Equals(b.Id, badgeId, StringComparison.OrdinalIgnoreCase));
+                if (!exists) return new { Success = false, Message = "Badge not found." };
+                // Cap total pinned entries to bound profile size.
+                if (profile.PinnedBadgeIds.Count >= 50)
+                {
+                    return new { Success = false, Message = "Pin limit reached (50)." };
+                }
                 if (!profile.PinnedBadgeIds.Any(id => id.Equals(badgeId, StringComparison.OrdinalIgnoreCase)))
                 {
                     profile.PinnedBadgeIds.Add(badgeId);

@@ -56,6 +56,33 @@
             .then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
     }
 
+    // Cached flag: should we show the equipped-badge showcase UI at all?
+    // Resolved from (a) admin force-hide config and (b) per-user preference.
+    // Starts as null; once resolved becomes true/false. While null we
+    // tentatively allow injection so the UI appears quickly, and hide after
+    // if the config says otherwise.
+    var _showcaseEnabled = null;
+    function resolveShowcaseEnabled(){
+        if (_showcaseEnabled !== null) return Promise.resolve(_showcaseEnabled);
+        var pubPromise = fetch(buildUrl('Plugins/AchievementBadges/public-config'), { headers: authHeaders(), credentials: 'include' })
+            .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+        var prefPromise = (function(){
+            var uid = getUserId(); if (!uid) return Promise.resolve(null);
+            return fetch(buildUrl('Plugins/AchievementBadges/users/' + uid + '/preferences'), { headers: authHeaders(), credentials: 'include' })
+                .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+        })();
+        return Promise.all([pubPromise, prefPromise]).then(function(results){
+            var pub = results[0], prefs = results[1];
+            if (pub && pub.ForceHideEquippedShowcase) { _showcaseEnabled = false; return false; }
+            if (prefs && prefs.ShowEquippedShowcase === false) { _showcaseEnabled = false; return false; }
+            _showcaseEnabled = true; return true;
+        });
+    }
+    function removeShowcaseDom(){
+        var sc = document.getElementById(SHOWCASE_ID); if (sc && sc.parentNode) sc.parentNode.removeChild(sc);
+        var hdr = document.getElementById(HEADER_ID); if (hdr && hdr.parentNode) hdr.parentNode.removeChild(hdr);
+    }
+
     function injectSidebar(){
         try {
             if(document.getElementById(SIDEBAR_ID)){ return; }
@@ -111,11 +138,16 @@
                 parent.insertBefore(a, anchorItem);
             }
 
-            var showcase = document.createElement('div');
-            showcase.id = SHOWCASE_ID;
-            showcase.style.cssText = 'display:flex;gap:4px;padding:2px 12px 8px 42px;flex-wrap:wrap;';
-            if(a.nextSibling){ parent.insertBefore(showcase, a.nextSibling); }
-            else { parent.appendChild(showcase); }
+            // Only add the equipped-showcase strip if enabled (admin override +
+            // per-user pref). If still resolving, tentatively skip — the strip
+            // gets added later on the next inject pass if allowed.
+            if (_showcaseEnabled !== false) {
+                var showcase = document.createElement('div');
+                showcase.id = SHOWCASE_ID;
+                showcase.style.cssText = 'display:flex;gap:4px;padding:2px 12px 8px 42px;flex-wrap:wrap;';
+                if(a.nextSibling){ parent.insertBefore(showcase, a.nextSibling); }
+                else { parent.appendChild(showcase); }
+            }
 
             refreshShowcases();
         } catch(e) { console.error('[AchievementBadges] injectSidebar error:', e); }
@@ -123,6 +155,7 @@
 
     function injectHeader(){
         try {
+            if (_showcaseEnabled === false) return; // admin or user disabled
             if(document.getElementById(HEADER_ID)){ return; }
             var headerRight=document.querySelector('.headerRight')||document.querySelector('.skinHeader .headerButton:last-child');
             if(!headerRight){ return; }
@@ -170,8 +203,13 @@
     }
 
     function tryInject(){
-        injectSidebar();
-        injectHeader();
+        // Resolve showcase flag on first pass; if disabled, ensure any
+        // previously-injected showcase DOM is cleaned up.
+        resolveShowcaseEnabled().then(function (enabled) {
+            if (!enabled) removeShowcaseDom();
+            injectSidebar();
+            injectHeader();
+        });
     }
 
     function start(){
