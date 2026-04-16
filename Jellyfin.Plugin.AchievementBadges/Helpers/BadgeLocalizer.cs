@@ -79,4 +79,41 @@ public static class BadgeLocalizer
         if (!string.IsNullOrWhiteSpace(entry.title)) badge.Title = entry.title!;
         if (!string.IsNullOrWhiteSpace(entry.description)) badge.Description = entry.description!;
     }
+
+    /// <summary>
+    /// Same as <see cref="Localize"/> but operates on raw
+    /// <see cref="AchievementDefinition"/>s — used by admin endpoints that
+    /// ship catalog data directly (e.g. /admin/badge-catalog, the custom
+    /// badge editor, challenge templates) so admins see localised titles
+    /// instead of English when they've picked another language.
+    /// </summary>
+    public static void Localize(AchievementDefinition def, string? lang)
+    {
+        if (def == null) return;
+        var l = NormalizeLang(lang);
+        if (l == "en") return;
+        var dict = LoadFor(l);
+        if (dict == null) return;
+        if (!dict.TryGetValue(def.Id, out var entry) || entry == null) return;
+        if (!string.IsNullOrWhiteSpace(entry.title)) def.Title = entry.title!;
+        if (!string.IsNullOrWhiteSpace(entry.description)) def.Description = entry.description!;
+    }
+
+    /// <summary>
+    /// Looks up localised title/description for a given badge id. Returns
+    /// null for either field when a translation isn't available, letting the
+    /// caller fall back to whatever English text they already have.
+    /// </summary>
+    public static (string? title, string? description) Lookup(string id, string? lang)
+    {
+        var l = NormalizeLang(lang);
+        if (l == "en") return (null, null);
+        var dict = LoadFor(l);
+        if (dict == null) return (null, null);
+        if (!dict.TryGetValue(id, out var entry) || entry == null) return (null, null);
+        return (
+            string.IsNullOrWhiteSpace(entry.title) ? null : entry.title,
+            string.IsNullOrWhiteSpace(entry.description) ? null : entry.description
+        );
+    }
 }

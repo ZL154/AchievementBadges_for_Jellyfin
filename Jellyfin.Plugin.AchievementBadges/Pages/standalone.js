@@ -1120,6 +1120,10 @@
     var pinnedIdsGlobal = {};
     var equippedTitleId = null;
     var badgeEtaMap = {};
+    // Server-wide rarity percentages { badgeId: pct }. Populated by loadAll
+    // from /badges/rarity-stats so every badge card can show how scarce it
+    // is across this server's user base.
+    var rarityPctMap = {};
     var publicConfigGlobal = {};
     var currentSearch = '';
     var currentFilter = 'all';
@@ -1914,6 +1918,17 @@
                 var etaTpl = eta.DaysRemaining === 1 ? tr('badge.eta_days', 'ETA ~{n} day') : tr('badge.eta_days_plural', 'ETA ~{n} days');
                 etaHtml = '<div class="ab-eta"><span class="material-icons">schedule</span> ' + etaTpl.replace('{n}', eta.DaysRemaining) + '</div>';
             }
+            // Server-wide rarity chip: % of users on this server who have
+            // unlocked this badge. Coloured green > 50%, amber 10-50%, red < 10%.
+            var rarityHtml = '';
+            if (rarityPctMap && rarityPctMap[b.Id] != null) {
+                var pctR = rarityPctMap[b.Id];
+                var chipColor = pctR >= 50 ? '#4ade80' : (pctR >= 10 ? '#fbbf24' : '#f43f5e');
+                rarityHtml = '<div class="ab-rarity-chip" title="' + tr('badge.rarity_tooltip', '% of users on this server who have unlocked this') + '" ' +
+                    'style="display:inline-flex;align-items:center;gap:0.3em;margin-top:0.4em;padding:0.25em 0.6em;border-radius:999px;background:' + chipColor + '1f;border:1px solid ' + chipColor + ';font-size:0.74em;font-weight:700;color:' + chipColor + ';">' +
+                    '<span class="material-icons" style="font-size:0.9em;">groups</span>' + pctR + '%' +
+                    '</div>';
+            }
             c.innerHTML =
                 '<div class="ab-card-h">' +
                     '<div class="ab-card-icon">' + icon(b.Icon) + '</div>' +
@@ -1926,6 +1941,7 @@
                 '<div class="ab-desc">' + escapeHtml(b.Description) + '</div>' +
                 '<div class="ab-prog-text"><span>' + tr('badge.progress', 'Progress') + '</span><span>' + cur + '/' + tar + '</span></div>' +
                 '<div class="ab-prog-bar"><div class="ab-prog-fill" style="width:' + pct + '%;"></div></div>' +
+                rarityHtml +
                 etaHtml +
                 '<div class="ab-footer">' +
                     '<div class="' + (b.Unlocked ? 'ab-unlocked' : 'ab-locked') + '">' + (b.Unlocked ? tr('badge.unlocked_state', 'Unlocked') : tr('badge.locked_state', 'Locked')) + '</div>' +
@@ -2497,6 +2513,19 @@
         // fire login ping (safe even if it fails)
         fetchJson('Plugins/AchievementBadges/users/' + userId + '/login-ping', 'POST').catch(function () {});
 
+        // Fetch server-wide rarity stats in parallel. Not gated on the main
+        // Promise.all — if it fails or is slow the rest of the UI still
+        // renders, rarityPctMap just stays empty and badge cards omit the
+        // rarity chip.
+        fetchJson('Plugins/AchievementBadges/badges/rarity-stats').then(function (map) {
+            if (map && typeof map === 'object') {
+                rarityPctMap = map;
+                // Re-apply the current filter so already-rendered cards pick
+                // up the rarity chip on the next filter pass (cheap).
+                try { applyFilter(); } catch (e) {}
+            }
+        }).catch(function () {});
+
         // Resolve effective language: user preference wins ("default" means
         // fall back to admin-configured DefaultLanguage from public-config).
         // We kick this off early but don't block other requests on it.
@@ -2528,12 +2557,17 @@
         }).catch(function () {});
 
         return Promise.all([
-            fetchJson('Plugins/AchievementBadges/users/' + userId),
-            fetchJson('Plugins/AchievementBadges/users/' + userId + '/summary'),
-            fetchJson('Plugins/AchievementBadges/users/' + userId + '/equipped'),
-            fetchJson('Plugins/AchievementBadges/leaderboard?limit=10'),
-            fetchJson('Plugins/AchievementBadges/server/stats'),
-            fetchJson('Plugins/AchievementBadges/users/' + userId + '/rank'),
+            // Every fetch now has its own .catch so a single 401/429/500 on
+            // one endpoint can never leave the UI stuck on "Loading..."
+            // (previously a rate-limit on /users/{id} would reject the whole
+            // Promise.all and the hero subtitle / stats / equipped sections
+            // would never render).
+            fetchJson('Plugins/AchievementBadges/users/' + userId).catch(function () { return []; }),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/summary').catch(function () { return null; }),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/equipped').catch(function () { return []; }),
+            fetchJson('Plugins/AchievementBadges/leaderboard?limit=10').catch(function () { return []; }),
+            fetchJson('Plugins/AchievementBadges/server/stats').catch(function () { return null; }),
+            fetchJson('Plugins/AchievementBadges/users/' + userId + '/rank').catch(function () { return null; }),
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/title').catch(function () { return null; }),
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/bank').catch(function () { return null; }),
             fetchJson('Plugins/AchievementBadges/users/' + userId + '/badge-eta').catch(function () { return null; }),

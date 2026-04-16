@@ -1852,6 +1852,41 @@ public class AchievementBadgeService
         }
     }
 
+    /// <summary>
+    /// For each enabled badge id, returns the percentage of users on this
+    /// server who have unlocked it. Cached for 5 minutes so the per-badge-
+    /// card render on the achievements page doesn't re-scan every profile
+    /// on every fetch.
+    /// </summary>
+    private Dictionary<string, double>? _rarityCache;
+    private DateTimeOffset _rarityCachedAt = DateTimeOffset.MinValue;
+    public Dictionary<string, double> GetBadgeRarityPercentages()
+    {
+        lock (_lock)
+        {
+            if (_rarityCache != null && (DateTimeOffset.UtcNow - _rarityCachedAt).TotalMinutes < 5)
+            {
+                return _rarityCache;
+            }
+            var totalUsers = Math.Max(1, _userProfiles.Count);
+            var result = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var def in GetActiveDefinitions())
+            {
+                if (!IsBadgeEnabled(def.Id)) continue;
+                var unlockCount = 0;
+                foreach (var p in _userProfiles.Values)
+                {
+                    var b = p.Badges.FirstOrDefault(x => x.Id.Equals(def.Id, StringComparison.OrdinalIgnoreCase));
+                    if (b != null && b.Unlocked) unlockCount++;
+                }
+                result[def.Id] = Math.Round(100.0 * unlockCount / totalUsers, 1);
+            }
+            _rarityCache = result;
+            _rarityCachedAt = DateTimeOffset.UtcNow;
+            return result;
+        }
+    }
+
     public object GetServerStats()
     {
         lock (_lock)

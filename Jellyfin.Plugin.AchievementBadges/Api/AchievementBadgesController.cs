@@ -454,6 +454,15 @@ public class AchievementBadgesController : ControllerBase
         return Ok(leaderboard);
     }
 
+    [HttpGet("badges/rarity-stats")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetBadgeRarityStats()
+    {
+        // Cached 5 minutes by the service so this is cheap to call on
+        // every achievements-page load.
+        return Ok(_badgeService.GetBadgeRarityPercentages());
+    }
+
     [HttpGet("server/stats")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetServerStats()
@@ -483,27 +492,36 @@ public class AchievementBadgesController : ControllerBase
     [HttpGet("admin/badge-catalog")]
     [Authorize(Policy = "RequiresElevation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult GetBadgeCatalog()
+    public ActionResult GetBadgeCatalog([FromQuery] string? lang = null)
     {
         var config = Plugin.Instance?.Configuration;
         var disabled = new HashSet<string>(
             config?.DisabledBadgeIds ?? new List<string>(),
             StringComparer.OrdinalIgnoreCase);
 
+        // Admin user's language — projected into the badge title/description
+        // so the "Enable / disable badges" grid doesn't stay English for a
+        // French admin. Client passes it via ?lang=fr (from the admin page's
+        // localStorage 'achievementBadgesLang' key set by the standalone
+        // language picker).
         var catalog = AchievementDefinitions.All
             .GroupBy(d => d.Category)
             .Select(g => new
             {
                 Category = g.Key,
-                Badges = g.Select(d => new
+                Badges = g.Select(d =>
                 {
-                    d.Id,
-                    d.Title,
-                    d.Description,
-                    d.Icon,
-                    d.Rarity,
-                    d.TargetValue,
-                    Disabled = disabled.Contains(d.Id)
+                    var (localTitle, localDesc) = Helpers.BadgeLocalizer.Lookup(d.Id, lang);
+                    return new
+                    {
+                        d.Id,
+                        Title = localTitle ?? d.Title,
+                        Description = localDesc ?? d.Description,
+                        d.Icon,
+                        d.Rarity,
+                        d.TargetValue,
+                        Disabled = disabled.Contains(d.Id)
+                    };
                 }).ToList()
             })
             .ToList();

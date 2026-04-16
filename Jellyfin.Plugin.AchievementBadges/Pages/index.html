@@ -1650,9 +1650,14 @@ font-size:0.88em;
         });
     }
 
+    function _currentLang() {
+        try { return (localStorage && localStorage.getItem('achievementBadgesLang')) || ''; } catch (e) { return ''; }
+    }
     function loadCatalog() {
         setCatalogStatus(tr('admin.msg.loading_catalog', 'Loading catalog...'));
-        fetchJson('Plugins/AchievementBadges/admin/badge-catalog').then(function (res) {
+        var lang = _currentLang();
+        var q = lang ? ('?lang=' + encodeURIComponent(lang)) : '';
+        fetchJson('Plugins/AchievementBadges/admin/badge-catalog' + q).then(function (res) {
             setCatalogStatus('');
             renderCatalog((res && res.Catalog) || []);
         }).catch(function (err) {
