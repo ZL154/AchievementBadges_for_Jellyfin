@@ -295,6 +295,27 @@
             '#' + ROOT_ID + ' .ab-lb-bar{height:5px;border-radius:3px;background:rgba(255,255,255,0.06);overflow:hidden;}' +
             '#' + ROOT_ID + ' .ab-lb-fill{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:3px;}' +
             '#' + ROOT_ID + ' .ab-lb-value{font-weight:700;font-size:0.88em;color:#c7d2ff;white-space:nowrap;}' +
+            // Mobile overrides — leaderboard podium + rows were clipping
+            // out of the tab container on narrow screens because each
+            // podium column maxed out at 170px × 3 (~510px) plus gaps.
+            // Shrink everything to fit phone widths.
+            '@media (max-width: 640px){' +
+                '#' + ROOT_ID + ' .ab-lb-podium{gap:0.35em;padding:1em 0.25em 0.35em;}' +
+                '#' + ROOT_ID + ' .ab-lb-podium-col{max-width:none;min-width:0;}' +
+                '#' + ROOT_ID + ' .ab-lb-podium-medal{font-size:1.4em;}' +
+                '#' + ROOT_ID + ' .ab-lb-podium-name{font-size:0.8em;}' +
+                '#' + ROOT_ID + ' .ab-lb-podium-val{font-size:0.72em;}' +
+                '#' + ROOT_ID + ' .ab-lb-podium-bar{font-size:0.65em;padding-top:0.3em;}' +
+                '#' + ROOT_ID + ' .ab-lb-row-new{gap:0.5em;padding:0.5em 0.6em;}' +
+                '#' + ROOT_ID + ' .ab-lb-rank{width:auto;min-width:1.8em;font-size:0.82em;flex-shrink:0;}' +
+                '#' + ROOT_ID + ' .ab-lb-name{font-size:0.85em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+                '#' + ROOT_ID + ' .ab-lb-value{font-size:0.78em;flex-shrink:0;}' +
+                // Equipped-dot chips — lose padding + smaller dots so they
+                // don\'t overflow row width on phones.
+                '#' + ROOT_ID + ' .ab-lb-equipped{gap:2px !important;}' +
+                // Old simple ab-lb-row used on the Stats-tab mini LB.
+                '#' + ROOT_ID + ' .ab-lb-row{flex-wrap:wrap;gap:0.25em 0.6em;font-size:0.85em;}' +
+            '}' +
             // Recap hero
             '#' + ROOT_ID + ' .ab-recap-hero{display:flex;align-items:center;gap:1.5em;padding:1.25em;border-radius:14px;background:linear-gradient(135deg,rgba(102,126,234,0.08),rgba(118,75,162,0.08));border:1px solid rgba(102,126,234,0.2);margin-bottom:1.5em;flex-wrap:wrap;}' +
             '#' + ROOT_ID + ' .ab-recap-big{flex:0 0 auto;text-align:center;}' +
@@ -394,21 +415,37 @@
             // Hero streak chip
             '#' + ROOT_ID + ' .ab-hero-streak{display:inline-flex;align-items:center;gap:0.4em;padding:0.3em 0.75em;border-radius:999px;background:rgba(255,87,34,0.15);border:1px solid rgba(255,87,34,0.4);font-size:0.85em;font-weight:700;color:#ffab91;margin-top:0.4em;}' +
             // Grid-based heatmap (proper square cells)
-            // Heatmap + streak calendar share a calendar-grid layout.
-            // Wrapped in a horizontally scrollable container on narrow
-            // viewports so cells never get crushed below a legible size.
-            '#' + ROOT_ID + ' .ab-cal-wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:0.5em;margin:0 -0.5em;padding-left:0.5em;padding-right:0.5em;}' +
-            '#' + ROOT_ID + ' .ab-cal-grid{display:grid;grid-template-columns:auto 1fr;column-gap:0.5em;row-gap:0.25em;align-items:start;}' +
-            '#' + ROOT_ID + ' .ab-cal-daylabels{display:grid;grid-template-rows:repeat(7,14px);grid-template-columns:auto;gap:3px;padding-top:18px;font-size:0.65em;color:rgba(255,255,255,0.5);font-weight:600;line-height:14px;}' +
-            '#' + ROOT_ID + ' .ab-cal-monthlabels{display:grid;grid-auto-flow:column;grid-auto-columns:14px;gap:3px;height:16px;font-size:0.65em;color:rgba(255,255,255,0.5);font-weight:600;line-height:16px;align-items:center;}' +
-            '#' + ROOT_ID + ' .ab-cal-month{grid-column:span var(--span,4);}' +
-            '#' + ROOT_ID + ' .ab-heat,#' + ROOT_ID + ' .ab-streak-grid{display:grid;grid-template-rows:repeat(7,14px);grid-auto-columns:14px;grid-auto-flow:column;gap:3px;}' +
-            '#' + ROOT_ID + ' .ab-heat-cell,#' + ROOT_ID + ' .ab-streak-cell{width:14px;height:14px;border-radius:3px;transition:transform 0.1s;cursor:pointer;}' +
-            '#' + ROOT_ID + ' .ab-heat-cell:hover,#' + ROOT_ID + ' .ab-streak-cell:hover{transform:scale(1.35);z-index:2;position:relative;}' +
-            '@media (max-width: 640px){#' + ROOT_ID + ' .ab-heat,#' + ROOT_ID + ' .ab-streak-grid{grid-template-rows:repeat(7,12px);grid-auto-columns:12px;gap:2px;}#' + ROOT_ID + ' .ab-heat-cell,#' + ROOT_ID + ' .ab-streak-cell{width:12px;height:12px;}#' + ROOT_ID + ' .ab-cal-daylabels{grid-template-rows:repeat(7,12px);gap:2px;line-height:12px;padding-top:16px;}#' + ROOT_ID + ' .ab-cal-monthlabels{grid-auto-columns:12px;gap:2px;}}' +
-            '#' + ROOT_ID + ' .ab-cal-legend{display:flex;align-items:center;gap:0.5em;font-size:0.72em;color:rgba(255,255,255,0.6);margin-top:0.5em;flex-wrap:wrap;}' +
-            '#' + ROOT_ID + ' .ab-cal-legend-scale{display:flex;gap:2px;}' +
-            '#' + ROOT_ID + ' .ab-cal-legend-cell{width:12px;height:12px;border-radius:2px;}' +
+            // Heatmap + streak calendar.
+            // DESKTOP (> 640px): full-width grid that stretches each cell
+            //   via `aspect-ratio:1` so cells scale with container width.
+            //   This is the look people said was "perfect on pc" — we hide
+            //   the day/month labels + legend + horizontal-scroll wrapper
+            //   chrome because the full-width grid doesn't need them.
+            // MOBILE (<= 640px): fixed-size cells in a horizontally-scrollable
+            //   container, with day-of-week + month labels + legend, so the
+            //   cells stay readable at phone widths instead of crushing to
+            //   ~4px squares.
+            '#' + ROOT_ID + ' .ab-cal-wrap{}' +
+            '#' + ROOT_ID + ' .ab-cal-grid{display:grid;grid-template-columns:1fr;}' +
+            '#' + ROOT_ID + ' .ab-cal-daylabels,#' + ROOT_ID + ' .ab-cal-monthlabels,#' + ROOT_ID + ' .ab-cal-legend{display:none;}' +
+            '#' + ROOT_ID + ' .ab-heat,#' + ROOT_ID + ' .ab-streak-grid{display:grid;grid-auto-rows:1fr;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;width:100%;}' +
+            '#' + ROOT_ID + ' .ab-heat-cell,#' + ROOT_ID + ' .ab-streak-cell{aspect-ratio:1;border-radius:3px;transition:transform 0.1s;}' +
+            '#' + ROOT_ID + ' .ab-heat-cell:hover,#' + ROOT_ID + ' .ab-streak-cell:hover{transform:scale(1.3);z-index:2;position:relative;}' +
+            // Mobile-only overrides. `!important` beats the inline
+            // `grid-template-columns:repeat(N,1fr)` that the renderer
+            // still emits for desktop.
+            '@media (max-width: 640px){' +
+                '#' + ROOT_ID + ' .ab-cal-wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:0.5em;margin:0 -0.5em;padding-left:0.5em;padding-right:0.5em;}' +
+                '#' + ROOT_ID + ' .ab-cal-grid{grid-template-columns:auto 1fr;column-gap:0.5em;row-gap:0.25em;align-items:start;}' +
+                '#' + ROOT_ID + ' .ab-cal-daylabels{display:grid !important;grid-template-rows:repeat(7,12px);gap:2px;padding-top:16px;font-size:0.65em;color:rgba(255,255,255,0.5);font-weight:600;line-height:12px;}' +
+                '#' + ROOT_ID + ' .ab-cal-monthlabels{display:grid !important;grid-auto-flow:column;grid-auto-columns:12px;gap:2px;height:14px;font-size:0.62em;color:rgba(255,255,255,0.5);font-weight:600;line-height:14px;align-items:center;}' +
+                '#' + ROOT_ID + ' .ab-cal-month{grid-column:span var(--span,4);}' +
+                '#' + ROOT_ID + ' .ab-heat,#' + ROOT_ID + ' .ab-streak-grid{grid-template-rows:repeat(7,12px) !important;grid-auto-columns:12px !important;grid-template-columns:none !important;width:auto !important;gap:2px !important;}' +
+                '#' + ROOT_ID + ' .ab-heat-cell,#' + ROOT_ID + ' .ab-streak-cell{width:12px;height:12px;aspect-ratio:auto !important;}' +
+                '#' + ROOT_ID + ' .ab-cal-legend{display:flex !important;align-items:center;gap:0.5em;font-size:0.72em;color:rgba(255,255,255,0.6);margin-top:0.5em;flex-wrap:wrap;}' +
+                '#' + ROOT_ID + ' .ab-cal-legend-scale{display:flex;gap:2px;}' +
+                '#' + ROOT_ID + ' .ab-cal-legend-cell{width:12px;height:12px;border-radius:2px;}' +
+            '}' +
             // Grid-based streak calendar
             '#' + ROOT_ID + ' .ab-streak-grid{display:grid;grid-auto-rows:1fr;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;width:100%;}' +
             '#' + ROOT_ID + ' .ab-streak-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,0.04);transition:transform 0.1s;}' +
@@ -522,7 +559,11 @@
             '#' + ROOT_ID + ' .ab-goal-card.ab-r-mythic-border{border-color:rgba(244,63,94,0.65);}' +
             '#' + ROOT_ID + ' .ab-lb-row{display:flex;justify-content:space-between;gap:1em;padding:0.75em 0;border-bottom:1px solid rgba(255,255,255,0.08);}' +
             '#' + ROOT_ID + ' .ab-lb-row:last-child{border-bottom:none;}' +
-            '#' + ROOT_ID + ' .ab-panel-card{padding:1.1em;border-radius:14px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.03);}' +
+            '#' + ROOT_ID + ' .ab-panel-card{padding:1.1em;border-radius:14px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.03);overflow:hidden;}' +
+            '#' + ROOT_ID + ' .ab-panel{min-width:0;}' +
+            '#' + ROOT_ID + ' .ab-panel-card > *{min-width:0;}' +
+            // Tighter padding on phones so content has maximum width.
+            '@media (max-width: 640px){#' + ROOT_ID + ' .ab-panel-card{padding:0.75em;border-radius:10px;}}' +
             '#' + ROOT_ID + ' .ab-muted{opacity:0.7;}' +
             '#' + ROOT_ID + ' .ab-error{margin-top:1em;padding:1em;border:1px solid rgba(248,113,113,0.45);border-radius:12px;background:rgba(248,113,113,0.08);color:#fca5a5;}' +
             '#' + ROOT_ID + ' .ab-eyebrow{font-size:0.88em;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#9fb3c8;margin-bottom:0.7em;}' +
@@ -1675,17 +1716,20 @@
                 '</div>' +
             '</div>';
 
+        // Desktop: inline grid-template-columns for full-width stretching.
+        // Mobile CSS overrides with fixed-size cells.
+        var desktopCols = Math.ceil((leading + cells.length) / 7);
         return streakHeader +
             '<div class="ab-cal-wrap">' +
                 '<div class="ab-cal-grid">' +
                     renderDayLabels() +
                     '<div>' +
                         renderMonthLabels(cells, leading) +
-                        '<div class="ab-streak-grid">' + cellsHtml + '</div>' +
+                        '<div class="ab-streak-grid" style="grid-template-columns:repeat(' + desktopCols + ',1fr);">' + cellsHtml + '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="ab-muted" style="font-size:0.75em; margin-top:0.5em;">' + tr('stats.streak.each_cell', 'Each cell is one day · swipe to scroll on mobile') + '</div>';
+            '<div class="ab-muted" style="font-size:0.75em; margin-top:0.5em;">' + tr('stats.streak.each_cell', 'Each cell is one day in the past year') + '</div>';
     }
 
     function renderWatchClock(clock) {
@@ -1900,17 +1944,21 @@
             return '<div class="ab-heat-cell' + emptyClass + '" style="background:' + colorFor(c.count) + ';" title="' + tooltip + '"></div>';
         }).join('');
 
+        // For desktop, emit grid-template-columns inline so cells stretch to
+        // fill the container width (the "perfect on pc" old look). Mobile
+        // CSS overrides this with !important to get fixed-size cells.
+        var desktopCols = Math.ceil((leading + cells.length) / 7);
         return '<div class="ab-cal-wrap">' +
                  '<div class="ab-cal-grid">' +
                      renderDayLabels() +
                      '<div>' +
                          renderMonthLabels(cells, leading) +
-                         '<div class="ab-heat">' + cellsHtml + '</div>' +
+                         '<div class="ab-heat" style="grid-template-columns:repeat(' + desktopCols + ',1fr);">' + cellsHtml + '</div>' +
                      '</div>' +
                  '</div>' +
                '</div>' +
                renderHeatLegend(max) +
-               '<div class="ab-muted" style="font-size:0.75em; margin-top:0.5em;">' + tr('stats.heatmap.hint', 'Last {days} days · tap a cell for details').replace('{days}', days) + '</div>';
+               '<div class="ab-muted" style="font-size:0.75em; margin-top:0.5em;">' + tr('stats.heatmap.hint', 'Last {days} days · hover a cell for details').replace('{days}', days) + '</div>';
     }
 
     function renderHistogram(summary) {
