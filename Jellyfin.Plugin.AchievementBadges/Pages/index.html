@@ -875,6 +875,11 @@ font-size:0.88em;
         _abAdminDict = dict;
         var nodes = document.querySelectorAll('[data-i18n]');
         for (var i = 0; i < nodes.length; i++) {
+            // Same hazard as the standalone page: setting textContent on a
+            // container with child elements nukes them. Skip populated
+            // containers so rendered admin panels (custom badges list,
+            // catalog, audit log etc.) stay populated after translation.
+            if (nodes[i].children && nodes[i].children.length > 0) continue;
             var key = nodes[i].getAttribute('data-i18n');
             if (key && dict[key]) {
                 nodes[i].textContent = dict[key];
@@ -924,52 +929,72 @@ font-size:0.88em;
             .then(apply);
     }
 
+    // Wait up to ~2.5s for Jellyfin's ApiClient to mount, which can be
+    // late on admin pages loaded via iframe. Resolves with the ApiClient
+    // (or null if timed out).
+    function waitForApiClient(timeoutMs) {
+        return new Promise(function (resolve) {
+            var started = Date.now();
+            function tick() {
+                var api = window.ApiClient || window.apiClient || null;
+                var uid = '';
+                try { if (api && typeof api.getCurrentUserId === 'function') uid = api.getCurrentUserId() || ''; } catch (e) {}
+                if (api && uid) { resolve(api); return; }
+                if (Date.now() - started > (timeoutMs || 2500)) { resolve(api); return; }
+                setTimeout(tick, 100);
+            }
+            tick();
+        });
+    }
+
     // Resolve the admin's language by asking the server for their achievement-
     // badges preference first (so the admin page follows the same language the
     // user picked in the achievements settings panel). Falls back to local
     // storage / navigator / English if we can't read prefs.
     function resolveAndLoad() {
-        var apiClient = window.ApiClient || window.apiClient || null;
-        var adminLang = 'en';
-        var userId = '';
-        try {
-            if (apiClient && typeof apiClient.getCurrentUserId === 'function') {
-                userId = apiClient.getCurrentUserId() || '';
-            }
-        } catch (e) { userId = ''; }
+        // Quick-render with whatever we can get from localStorage so the
+        // admin sees SOMETHING in their language immediately, then upgrade
+        // to the server-authoritative language once ApiClient mounts.
+        try { loadForLang(pickLang()).catch(function () {}); } catch (e) {}
 
-        // Fetch public-config first for the admin-level DefaultLanguage.
-        var pubUrl = 'Plugins/AchievementBadges/public-config';
-        try {
-            pubUrl = (apiClient && typeof apiClient.getUrl === 'function') ? apiClient.getUrl(pubUrl) : ('/' + pubUrl);
-        } catch (e) { pubUrl = '/' + pubUrl; }
-        fetch(pubUrl, { credentials: 'same-origin' })
-            .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (cfg) {
-                if (cfg && (cfg.DefaultLanguage || cfg.defaultLanguage)) {
-                    adminLang = (cfg.DefaultLanguage || cfg.defaultLanguage).toLowerCase();
+        waitForApiClient(2500).then(function (apiClient) {
+            var adminLang = 'en';
+            var userId = '';
+            try {
+                if (apiClient && typeof apiClient.getCurrentUserId === 'function') {
+                    userId = apiClient.getCurrentUserId() || '';
                 }
-                if (!userId) return null;
-                var prefsUrl = 'Plugins/AchievementBadges/users/' + userId + '/preferences';
-                try {
-                    prefsUrl = (apiClient && typeof apiClient.getUrl === 'function') ? apiClient.getUrl(prefsUrl) : ('/' + prefsUrl);
-                } catch (e) { prefsUrl = '/' + prefsUrl; }
-                return fetch(prefsUrl, { credentials: 'same-origin' })
-                    .then(function (r) { return r.ok ? r.json() : null; });
-            })
-            .then(function (prefs) {
-                var userLang = (prefs && (prefs.Language || prefs.language) || '').toLowerCase();
-                var effective = (!userLang || userLang === 'default') ? adminLang : userLang;
-                if (!effective) effective = pickLang();
-                // Remember so the next page load picks it up before the server
-                // round-trip (snappier first paint).
-                try { if (window.localStorage) localStorage.setItem('achievementBadgesLang', effective); } catch (e) {}
-                return loadForLang(effective);
-            })
-            .catch(function () {
-                // Fallback chain: localStorage → navigator → English.
-                return loadForLang(pickLang()).catch(function () {});
-            });
+            } catch (e) { userId = ''; }
+
+            var pubUrl = 'Plugins/AchievementBadges/public-config';
+            try {
+                pubUrl = (apiClient && typeof apiClient.getUrl === 'function') ? apiClient.getUrl(pubUrl) : ('/' + pubUrl);
+            } catch (e) { pubUrl = '/' + pubUrl; }
+            return fetch(pubUrl, { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (cfg) {
+                    if (cfg && (cfg.DefaultLanguage || cfg.defaultLanguage)) {
+                        adminLang = (cfg.DefaultLanguage || cfg.defaultLanguage).toLowerCase();
+                    }
+                    if (!userId) return null;
+                    var prefsUrl = 'Plugins/AchievementBadges/users/' + userId + '/preferences';
+                    try {
+                        prefsUrl = (apiClient && typeof apiClient.getUrl === 'function') ? apiClient.getUrl(prefsUrl) : ('/' + prefsUrl);
+                    } catch (e) { prefsUrl = '/' + prefsUrl; }
+                    return fetch(prefsUrl, { credentials: 'same-origin' })
+                        .then(function (r) { return r.ok ? r.json() : null; });
+                })
+                .then(function (prefs) {
+                    var userLang = (prefs && (prefs.Language || prefs.language) || '').toLowerCase();
+                    var effective = (!userLang || userLang === 'default') ? adminLang : userLang;
+                    if (!effective) effective = pickLang();
+                    try { if (window.localStorage) localStorage.setItem('achievementBadgesLang', effective); } catch (e) {}
+                    return loadForLang(effective);
+                });
+        }).catch(function () {
+            // Server round-trip failed — the localStorage/navigator pass we
+            // kicked off above is the best we can do. No-op.
+        });
     }
 
     if (document.readyState === 'loading') {

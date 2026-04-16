@@ -446,6 +446,53 @@
         // Poll the unread badge every 30s.
         refreshFriendsBadge();
         setInterval(refreshFriendsBadge, 30000);
+
+        // Hide the floating button on /dashboard (admin config pages — the
+        // page layout gets cramped + Jellyfin already has its own floating
+        // controls there) and during media playback (video player should
+        // own the screen). Restore as soon as we leave either state.
+        function shouldHideFriendsBtn(){
+            try {
+                var hash = (window.location.hash || '').toLowerCase();
+                // Admin / config panels live under #!/dashboard, #!/plugins,
+                // #!/users, #!/settings, and #!/mypreferences on Jellyfin.
+                if (hash.indexOf('/dashboard') >= 0) return true;
+                if (hash.indexOf('/plugins') >= 0) return true;
+                // Playback: look for a visible <video> OR the Jellyfin
+                // nowplayingbar / videoOsd elements.
+                var vids = document.getElementsByTagName('video');
+                for (var i = 0; i < vids.length; i++) {
+                    var v = vids[i];
+                    if (!v) continue;
+                    if (v.offsetParent === null) continue; // hidden
+                    if (!v.paused && !v.ended && v.readyState > 2) return true;
+                    // Still show button if video is paused on a non-playback
+                    // page — e.g. a trailer preview on the details page.
+                }
+                // Jellyfin adds class "videoPlayer" or "noHeaderRight" to
+                // body during fullscreen playback.
+                if (document.body && document.body.classList) {
+                    if (document.body.classList.contains('playingVideo')) return true;
+                    if (document.body.classList.contains('transparentDocument')) return true;
+                }
+                return false;
+            } catch(e) { return false; }
+        }
+        function syncFriendsBtnVisibility(){
+            var btnEl = document.getElementById('abFriendsBtn');
+            if (!btnEl) return;
+            var hide = shouldHideFriendsBtn();
+            btnEl.style.display = hide ? 'none' : 'flex';
+            // Also close the drawer if it happens to be open when we enter
+            // a hide-state (e.g. user clicked Play while drawer was open).
+            if (hide && _friendsOpen) {
+                try { close(); } catch(e) {}
+            }
+        }
+        // Run on hash change + every 500ms for playback state changes.
+        try { window.addEventListener('hashchange', syncFriendsBtnVisibility); } catch(e) {}
+        setInterval(syncFriendsBtnVisibility, 500);
+        syncFriendsBtnVisibility();
     }
 
     function initials(name){

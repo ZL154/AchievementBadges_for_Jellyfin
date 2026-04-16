@@ -2410,43 +2410,110 @@ public class AchievementBadgeService
         return streak;
     }
 
-    private void Load()
-    {
-        if (!File.Exists(_dataFilePath))
-        {
-            _userProfiles = new Dictionary<string, UserAchievementProfile>();
-            _logger.LogInformation("No badge data file found, starting with empty store.");
-            return;
-        }
+    // Additional safety-net file paths. Kept next to badges.json.
+    // - .bak: rolling backup written before every Save. Last-known-good.
+    // - .recovery: where we dump in-session state when the primary file is
+    //   quarantined, so the user's play-session progress isn't lost
+    //   forever on the next restart.
+    private string BakPath => _dataFilePath + ".bak";
+    private string RecoveryPath => _dataFilePath + ".recovery";
 
-        // Deserialise first. If THIS fails, we have an unparseable file on
-        // disk. Quarantine it so the admin can still recover it by hand, and
-        // refuse to Save() for the rest of the process lifetime so we never
-        // overwrite the quarantined file with our empty in-memory state.
-        // This is the fix for the v1.7.1 data-loss regression where ANY
-        // exception in Load() wiped _userProfiles, and the next Save()
-        // stamped {} on disk permanently destroying every user's progress.
-        UserBadgeStore? store = null;
+    // Summary of what Load() did this process, surfaced via the /test
+    // endpoint so the admin can see recovery activity.
+    public static string LastLoadSummary = "not loaded yet";
+
+    private bool TryParseStore(string path, out UserBadgeStore? store, out string? error)
+    {
+        store = null;
+        error = null;
         try
         {
-            var json = File.ReadAllText(_dataFilePath);
+            if (!File.Exists(path)) { error = "missing"; return false; }
+            var json = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json)) { error = "empty"; return false; }
             store = JsonSerializer.Deserialize<UserBadgeStore>(json, _jsonOptions);
+            return store != null;
         }
         catch (Exception ex)
         {
-            _loadFailed = true;
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private void Load()
+    {
+        if (!File.Exists(_dataFilePath) && !File.Exists(BakPath) && !File.Exists(RecoveryPath))
+        {
             _userProfiles = new Dictionary<string, UserAchievementProfile>();
-            try
-            {
-                var quarantine = _dataFilePath + ".corrupt-" + DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
-                File.Copy(_dataFilePath, quarantine, overwrite: false);
-                _logger.LogCritical(ex, "[AchievementBadges] FAILED to parse badges.json. Copied the on-disk file to {Q} for manual recovery. Saves are disabled this session so the original is not overwritten.", quarantine);
-            }
-            catch (Exception copyEx)
-            {
-                _logger.LogCritical(copyEx, "[AchievementBadges] FAILED to parse badges.json AND failed to make a .corrupt quarantine copy. Saves are disabled this session.");
-            }
+            LastLoadSummary = "Fresh install — no badges.json on disk.";
+            _logger.LogInformation("[AchievementBadges] {Summary}", LastLoadSummary);
             return;
+        }
+
+        // Recovery chain — try primary, then .bak, then .recovery. Only
+        // after all three fail do we quarantine and give up. This replaces
+        // the v1.7.2 quarantine-or-die logic that left users with no way
+        // back from a single corrupt primary file.
+        UserBadgeStore? store;
+        string? primaryErr;
+        string? bakErr = null;
+        string? recErr = null;
+        var loadedFromFallback = false;
+        string loadedFrom = "primary";
+
+        if (!TryParseStore(_dataFilePath, out store, out primaryErr))
+        {
+            _logger.LogWarning("[AchievementBadges] Primary badges.json unreadable ({Err}). Trying .bak...", primaryErr);
+            if (TryParseStore(BakPath, out store, out bakErr))
+            {
+                loadedFromFallback = true;
+                loadedFrom = ".bak";
+                _logger.LogWarning("[AchievementBadges] Recovered from badges.json.bak. Will re-promote to primary on first successful Save.");
+            }
+            else
+            {
+                _logger.LogWarning("[AchievementBadges] .bak also unreadable ({Err}). Trying .recovery...", bakErr);
+                if (TryParseStore(RecoveryPath, out store, out recErr))
+                {
+                    loadedFromFallback = true;
+                    loadedFrom = ".recovery";
+                    _logger.LogWarning("[AchievementBadges] Recovered from badges.json.recovery. Will re-promote to primary on first successful Save.");
+                }
+                else
+                {
+                    // All three failed. Quarantine primary + set _loadFailed.
+                    _loadFailed = true;
+                    _userProfiles = new Dictionary<string, UserAchievementProfile>();
+                    try
+                    {
+                        if (File.Exists(_dataFilePath))
+                        {
+                            var quarantine = _dataFilePath + ".corrupt-" + DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+                            File.Copy(_dataFilePath, quarantine, overwrite: false);
+                            LastLoadSummary = "ALL 3 files unreadable. Quarantined primary to " + Path.GetFileName(quarantine) + ". Primary=" + primaryErr + " bak=" + bakErr + " recovery=" + recErr + ". SAVES DISABLED — restart after restoring a .corrupt-* or .bak file.";
+                        }
+                        else
+                        {
+                            LastLoadSummary = "Primary missing, .bak=" + bakErr + ", .recovery=" + recErr + ". SAVES DISABLED this session.";
+                        }
+                        _logger.LogCritical("[AchievementBadges] {Summary}", LastLoadSummary);
+                    }
+                    catch (Exception copyEx)
+                    {
+                        LastLoadSummary = "All recovery attempts failed + quarantine copy failed: " + copyEx.Message;
+                        _logger.LogCritical(copyEx, "[AchievementBadges] {Summary}", LastLoadSummary);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // If we only loaded from a fallback, capture that in the summary
+        // so the admin sees it surfaced via /test or logs.
+        if (loadedFromFallback)
+        {
+            LastLoadSummary = "Primary badges.json unreadable (" + primaryErr + "); successfully loaded from " + loadedFrom + ".";
         }
 
         var rawProfiles = store?.UserProfiles ?? new Dictionary<string, UserAchievementProfile>();
@@ -2513,22 +2580,35 @@ public class AchievementBadgeService
 
     private void Save()
     {
-        // Refuse to save if Load() could not parse the on-disk file — we
-        // would otherwise overwrite the user's real data with our empty
-        // in-memory state. Admin should restore the .corrupt-* quarantine
-        // copy manually (or roll back the plugin version).
-        if (_loadFailed)
-        {
-            _logger.LogWarning("[AchievementBadges] Save() skipped: last Load() failed and the on-disk store is quarantined. Restore the .corrupt-* file manually.");
-            return;
-        }
-
         var store = new UserBadgeStore
         {
             UserProfiles = _userProfiles
         };
-
         var json = JsonSerializer.Serialize(store, _jsonOptions);
+
+        // When Load() quarantined the primary file, we no longer refuse to
+        // save — that meant a user playing during the session never had
+        // their progress persisted, so "restart Jellyfin" felt like another
+        // reset. Instead, write in-session state to `.recovery` next to
+        // the primary. On next startup Load() will try primary, then .bak,
+        // then .recovery (see TryParseStore chain), so session progress
+        // survives. Primary is NEVER touched while _loadFailed so the
+        // quarantined-or-corrupt original is preserved for manual recovery.
+        if (_loadFailed)
+        {
+            try
+            {
+                var tmpR = RecoveryPath + ".tmp";
+                File.WriteAllText(tmpR, json);
+                File.Move(tmpR, RecoveryPath, overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[AchievementBadges] Failed to write recovery file during _loadFailed session.");
+            }
+            return;
+        }
+
         // Atomic write: serialize to .tmp then rename. Prevents JSON corruption
         // if the process is killed / machine loses power mid-write, which would
         // otherwise wipe every user's unlocked badges.
