@@ -437,17 +437,20 @@
 
     function ensureFriendsDrawer(){
         if (_friendsMounted) return;
-        // Gate on admin master switch. If the admin has disabled friends,
-        // don't mount at all. We re-check every 15s via the periodic
-        // resolver — so a FLIP by the admin mounts the UI within 15s
-        // without the user having to reload.
+        // If a button already exists in the DOM (e.g. sidebar.js was
+        // loaded twice due to the upgrade cache-bust serving both
+        // versions in-flight), mark mounted and bail so we don't stack
+        // a second button on top.
+        if (document.getElementById('abFriendsBtn')) { _friendsMounted = true; return; }
+        // Reserve the slot synchronously so a second ensureFriendsDrawer
+        // call during the config fetch can't race in and spawn a duplicate.
+        _friendsMounted = true;
         resolveFriendsConfig().then(function(cfg){
-            if (!cfg.enabled) return; // feature off; leave DOM untouched
+            if (!cfg.enabled) { _friendsMounted = false; return; }
             _friendsSimpleMode = cfg.simple;
-            _friendsMounted = true;
             _actuallyMount();
             applyCorner(cfg.corner);
-        });
+        }).catch(function(){ _friendsMounted = false; });
     }
 
     // Track the admin's FriendsEnabled verdict separately from the page-
@@ -467,6 +470,7 @@
                 return;
             }
             if (!_friendsMounted) {
+                if (document.getElementById('abFriendsBtn')) { _friendsMounted = true; return; }
                 _friendsSimpleMode = cfg.simple;
                 _friendsMounted = true;
                 _actuallyMount();
@@ -508,7 +512,28 @@
         }
     }
 
+    // Stamp our build id on every DOM node we create, so a newer version
+    // loaded alongside an older cached copy can detect and clean up the
+    // stale artifacts before mounting fresh.
+    var AB_SIDEBAR_VER = '1.7.13';
+    function _destroyStaleFriendsDom(){
+        ['abFriendsBtn', 'abFriendsDrawer', 'abFriendsBackdrop'].forEach(function(id){
+            var n = document.getElementById(id);
+            if (n && n.dataset && n.dataset.abVer !== AB_SIDEBAR_VER && n.parentNode) {
+                n.parentNode.removeChild(n);
+            }
+        });
+    }
     function _actuallyMount(){
+        // Remove any stale older-version button/drawer/backdrop so we
+        // don't end up with two buttons when the browser has both the
+        // pre-upgrade and post-upgrade sidebar.js loaded in the same
+        // document (e.g. cached index.html pointing at the old URL plus
+        // the newly injected tag with the ?v= cache-buster).
+        _destroyStaleFriendsDom();
+        // If OUR version is already mounted, nothing to do.
+        var existingBtn = document.getElementById('abFriendsBtn');
+        if (existingBtn && existingBtn.dataset.abVer === AB_SIDEBAR_VER) return;
 
         // One-time stylesheet.
         if (!document.getElementById('ab-friends-styles')) {
@@ -566,16 +591,19 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.id = 'abFriendsBtn';
+        btn.dataset.abVer = AB_SIDEBAR_VER;
         btn.title = tr('friends.title', 'Friends');
         btn.innerHTML = '<span class="material-icons">groups</span><span id="abFriendsBadge"></span>';
         document.body.appendChild(btn);
 
         var backdrop = document.createElement('div');
         backdrop.id = 'abFriendsBackdrop';
+        backdrop.dataset.abVer = AB_SIDEBAR_VER;
         document.body.appendChild(backdrop);
 
         var drawer = document.createElement('div');
         drawer.id = 'abFriendsDrawer';
+        drawer.dataset.abVer = AB_SIDEBAR_VER;
         drawer.innerHTML =
             '<div class="ab-fd-header">' +
                 '<span class="ab-fd-ico"><span class="material-icons" style="font-size:1em;">groups</span></span>' +
