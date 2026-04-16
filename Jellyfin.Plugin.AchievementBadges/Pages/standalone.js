@@ -83,13 +83,20 @@
         if (!rootEl) return;
         rootEl.querySelectorAll('[data-i18n]').forEach(function (node) {
             // Skip containers that already have child elements — setting
-            // textContent would nuke them. Most dynamic panels (abSaLb,
-            // abSaActivity, abSaSettingsContent, etc.) start with a "Loading..."
-            // placeholder marked data-i18n="common.loading" but get populated
-            // with HTML later. Without this guard, every subsequent language
-            // change resets them BACK to "Loading..." and wipes the real UI.
+            // textContent would nuke them. Protects abSaLb, abSaActivity,
+            // abSaSettingsContent, etc. once populated.
             if (node.children && node.children.length > 0) return;
             var k = node.getAttribute('data-i18n');
+            // Leaf text containers that later get OVERWRITTEN by loadAll /
+            // other renderers carry the "common.loading" placeholder and
+            // no children — applyStaticTranslations would happily re-set
+            // them back to "Loading..." every time loadAll's inner
+            // translation pass fires, clobbering the real content. Skip
+            // the loading placeholder specifically: once the real content
+            // lands it stays; if we're still genuinely loading, the
+            // element already shows "Loading..." in English which is
+            // visible for <1 s anyway.
+            if (k === 'common.loading') return;
             var v = tr(k, null);
             if (v != null) node.textContent = v;
         });

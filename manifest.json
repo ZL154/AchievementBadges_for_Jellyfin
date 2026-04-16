@@ -9,6 +9,13 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.7.7",
+        "changelog": "REAL fix for hero 'Loading...' stuck: applyStaticTranslations was called AFTER loadAll had populated abSaSub (and other text-only data-i18n placeholders) — and because the element had no child elements, my v1.7.5 'skip populated containers' guard didn't cover it. So every translation pass re-set textContent back to the literal 'Loading...' string. Now the translator explicitly skips data-i18n='common.loading' keys so they're never clobbered post-render. Subtitle / stats / rank-bar labels now actually stay populated. ADMIN PAGE category + rarity labels now localised via client-side lookup of the existing rarity.* and category.* i18n keys — the enable/disable grid's section headings and per-badge rarity chips stop being English for French/etc. admins (badge.Title/Description were already passed through ?lang= server-side since v1.7.6; now the client-side labels match). README updated with the Friends drawer, rarity-% chip, data-loss recovery chain, and credit to @frenchyx24 for the hand-translated French.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.7.7/Jellyfin.Plugin.AchievementBadgesv1.7.7.zip",
+        "checksum": "D7B91E43825CFA0FDAAAFE82B7D38E9E"
+      },
+      {
         "version": "1.7.6",
         "changelog": "Hero 'Loading...' stuck fix + admin badge translations + rarity % chip. FIXED hero subtitle stuck on 'Loading...': loadAll's Promise.all had 6 non-guarded fetches (users/{id}, summary, equipped, leaderboard, server-stats, rank). Any single rate-limit or 5xx would reject the whole Promise.all and the .then callback — which is the ONLY thing that populates the hero subtitle, stats boxes, and a dozen other panels — never ran. Now every fetch has its own .catch returning a safe default so the UI always finishes rendering. ADMIN BADGE TRANSLATIONS: /admin/badge-catalog now accepts ?lang= and runs every definition through BadgeLocalizer.Lookup so the enable/disable-badges grid shows French titles for French admins, etc. Admin page passes the localStorage 'achievementBadgesLang' key automatically. NEW rarity percentage chip: every badge card now shows the % of users on your server who've unlocked that badge (groups icon + number). Colour-coded green >=50%, amber 10-50%, red <10%. Fed by a new /badges/rarity-stats endpoint with a 5-minute server-side cache so it doesn't burn cycles on every page load.",
         "targetAbi": "10.11.0.0",

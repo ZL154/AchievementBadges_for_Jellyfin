@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/Jellyfin-10.11%2B-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
   <img src="https://img.shields.io/badge/Type-Plugin-E50914?style=for-the-badge&labelColor=000000&color=E50914" />
   <img src="https://img.shields.io/badge/System-Achievements-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
-  <img src="https://img.shields.io/badge/Version-1.7.1-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
+  <img src="https://img.shields.io/badge/Version-1.7.7-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
   <img src="https://img.shields.io/badge/License-MIT-0b0b0b?style=for-the-badge&labelColor=000000&color=2b2b2b" />
 </p>
 
@@ -23,7 +23,7 @@
 
 A full progression, gamification and achievement system for Jellyfin that rewards users based on real viewing activity. Think Xbox Gamerscore meets Letterboxd, built natively into your media server.
 
-> **Status:** Active development — v1.7.1 adds a Friends tab (online status, now-playing, equipped badges), admin quest customization, public equipped-badge previews on leaderboards/compare, genuinely comprehensive translations (all 171 badges + 659 UI keys × 8 languages including localised categories and rarities), a full security audit pass (compare-endpoint IDOR, stored XSS in admin UI, privacy tightening, webhook SSRF, rate limits), and fixes for the language-dropdown-stays-on-English bug + the equipped-showcase toggle actually hiding sidebar pills.
+> **Status:** Active development — v1.7.7 adds the **Friends drawer** (global floating button, bi-directional requests, live online/offline + now-watching from `ISessionManager`), **admin quest customization**, **public equipped-badge previews** on leaderboards + compare, **rarity percentage chip** on every badge card (% of your server's users who've unlocked it), hand-translated **French by [@frenchyx24](https://github.com/frenchyx24)** (all 171 badges), full **security audit** pass (compare-endpoint IDOR, stored XSS, privacy tightening, webhook SSRF, rate limits), and a **3-layer data-loss recovery chain** (primary → .bak → .recovery) so progress survives even catastrophic JSON corruption.
 
 ---
 
@@ -87,13 +87,29 @@ Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin
 - Completing quests pays into the score bank
 - **Admin quest customization** (new in v1.7.0) — add / edit / remove daily + weekly quests from the admin page, replace built-in quests by Id, or disable built-ins your server can't satisfy
 
-### 👥 Friends (new in v1.7.1)
-- One-sided follow model — follow other users on your Jellyfin server
-- See **online / offline** status pulled live from Jellyfin's session manager
-- See each friend's **equipped badges** (respects their privacy prefs)
-- See what they're **watching right now** (series name + episode)
-- **Mutual** indicator when you both follow each other
-- Dedicated Friends tab on the achievements page
+### 👥 Friends (new in v1.7.x)
+- **Bi-directional** friendship with a proper **request / accept** flow — nobody follows you silently
+- **Global floating button** anchored bottom-left on every Jellyfin page — not just the achievements tab. Auto-hides on `/dashboard` + `/plugins` pages and during media playback; reappears as soon as you leave either state
+- **Xbox-guide-style side drawer** with three sub-tabs: Friends / Requests / Find
+- **Online / offline** status pulled live from Jellyfin's `ISessionManager`
+- **Now playing** display — see the series + episode title each online friend is watching
+- Each friend's **equipped badges** shown next to their row (respects their privacy prefs)
+- **Type-to-search** user picker in the Find tab (not a giant dropdown of every server user)
+- **Red unread badge** on the floating button + Requests tab when someone has sent you a friend request
+- **Mutual** indicator on friend rows; **Auto-accept** kicks in if the target has already sent a request to you
+
+### 🏅 Rarity percentage chip (new in v1.7.6)
+- Every badge card on the achievements page shows a coloured chip with the **% of users on your server** who have unlocked that badge
+- **Green ≥ 50%** (common on this server), **amber 10–50%** (uncommon), **red < 10%** (rare / flex-worthy)
+- Fed by a `/badges/rarity-stats` endpoint with a 5-minute server-side cache so it doesn't re-scan every profile on every page load
+- Scarcity signal lets users see "nobody else on this server has this badge" at a glance
+
+### 💾 Data-loss recovery chain (v1.7.5+)
+- `Load()` walks **primary `badges.json` → `.bak` → `.recovery`** before giving up. A flaky primary file with a clean backup recovers silently
+- `.bak` is rotated on every successful save
+- `.recovery` captures in-session state when the primary is quarantined, so restart never feels like a fresh reset
+- `LastLoadSummary` exposed via the `/test` endpoint so admins can see recovery activity
+- Unparseable primary files are quarantined to `badges.json.corrupt-<timestamp>` (not deleted) for manual recovery
 
 ### 📊 Stats & visualization
 - **Recap tab** — weekly / monthly / yearly breakdowns with top genres, directors, actors

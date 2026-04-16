@@ -1270,7 +1270,7 @@ font-size:0.88em;
                 '<div class="abShowcaseIcon">' + iconGlyph(badge.Icon) + '</div>' +
                 '<div>' +
                     '<div style="font-weight:700;">' + escapeHtml(badge.Title) + '</div>' +
-                    '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;">' + escapeHtml(badge.Rarity) + '</div>' +
+                    '<div class="' + rarityClass(badge.Rarity) + '" style="font-size:0.88em;">' + escapeHtml(_trRarity(badge.Rarity)) + '</div>' +
                 '</div>';
             showcaseRow.appendChild(card);
         });
@@ -1292,7 +1292,7 @@ font-size:0.88em;
                     '<div class="abBadgeIcon">' + iconGlyph(badge.Icon) + '</div>' +
                     '<div style="flex:1;">' +
                         '<div class="abBadgeTitle">' + escapeHtml(badge.Title) + '</div>' +
-                        '<div class="abBadgeMeta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(badge.Rarity) + '</div>' +
+                        '<div class="abBadgeMeta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(_trRarity(badge.Rarity)) + '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="abBadgeFooter">' +
@@ -1338,7 +1338,7 @@ font-size:0.88em;
                     '<div class="abBadgeIcon">' + iconGlyph(badge.Icon) + '</div>' +
                     '<div style="flex:1;">' +
                         '<div class="abBadgeTitle">' + escapeHtml(badge.Title) + '</div>' +
-                        '<div class="abBadgeMeta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(badge.Rarity) + ' &bull; ' + escapeHtml(badge.Category) + '</div>' +
+                        '<div class="abBadgeMeta ' + rarityClass(badge.Rarity) + '">' + escapeHtml(_trRarity(badge.Rarity)) + ' &bull; ' + escapeHtml(_trCategory(badge.Category)) + '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="abBadgeDescription">' + escapeHtml(badge.Description) + '</div>' +
@@ -1581,6 +1581,19 @@ font-size:0.88em;
         return '#9aa5b1';
     }
 
+    function _trCategory(cat) {
+        if (!cat) return '';
+        var k = 'category.' + cat;
+        var v = tr(k, null);
+        return v || cat;
+    }
+    function _trRarity(r) {
+        if (!r) return '';
+        var k = 'rarity.' + String(r).toLowerCase();
+        var v = tr(k, null);
+        return v || r;
+    }
+
     function renderCatalog(catalog) {
         catalogContainer.innerHTML = '';
         if (!catalog || !catalog.length) {
@@ -1594,7 +1607,7 @@ font-size:0.88em;
             section.style.marginBottom = '1.5em';
 
             var heading = document.createElement('h4');
-            heading.textContent = group.Category;
+            heading.textContent = _trCategory(group.Category);
             heading.style.margin = '0.5em 0';
             section.appendChild(heading);
 
@@ -1625,7 +1638,7 @@ font-size:0.88em;
 
                 var title = document.createElement('div');
                 title.style.fontWeight = '600';
-                title.innerHTML = escapeHtml(badge.Title) + ' <span style="color:' + rarityColor(badge.Rarity) + '; font-size:0.8em; font-weight:400;">' + escapeHtml(badge.Rarity || '') + '</span>';
+                title.innerHTML = escapeHtml(badge.Title) + ' <span style="color:' + rarityColor(badge.Rarity) + '; font-size:0.8em; font-weight:400;">' + escapeHtml(_trRarity(badge.Rarity || '')) + '</span>';
 
                 var desc = document.createElement('div');
                 desc.className = 'secondaryText';
