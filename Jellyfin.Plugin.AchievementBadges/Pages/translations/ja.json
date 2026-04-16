@@ -678,5 +678,14 @@
   "settings.appear_offline": "フレンドに対してオフラインに表示",
   "settings.appear_offline_desc": "Jellyfinを使用中でも、フレンドには常にオフラインとして表示されます",
   "settings.hide_now_playing": "視聴中の作品を非表示",
-  "settings.hide_now_playing_desc": "フレンドにはオンラインとして表示されますが、視聴中のシリーズやエピソードは非表示になります"
+  "settings.hide_now_playing_desc": "フレンドにはオンラインとして表示されますが、視聴中のシリーズやエピソードは非表示になります",
+  "settings.friends_corner": "フレンドボタンの位置",
+  "settings.friends_corner_desc": "フレンドのフローティングボタンの表示コーナー",
+  "settings.corner_bottom_left": "左下",
+  "settings.corner_bottom_right": "右下",
+  "settings.corner_top_left": "左上",
+  "settings.corner_top_right": "右上",
+  "friends.simple_empty": "このサーバーに他のユーザーはいません。",
+  "admin.fc.friends_enabled": "フレンド機能を有効化(フローティングボタン+ドロワー)",
+  "admin.fc.friends_simple": "シンプルフレンドモード:リクエスト/承認フローの代わりに全サーバーユーザーを表示"
 }

@@ -678,5 +678,14 @@
   "settings.appear_offline": "Aparecer sin conexión para amigos",
   "settings.appear_offline_desc": "Tus amigos siempre te verán sin conexión, incluso mientras usas Jellyfin",
   "settings.hide_now_playing": "Ocultar lo que estoy viendo",
-  "settings.hide_now_playing_desc": "Los amigos aún te verán en línea, pero no la serie o episodio que ves"
+  "settings.hide_now_playing_desc": "Los amigos aún te verán en línea, pero no la serie o episodio que ves",
+  "settings.friends_corner": "Posición del botón Amigos",
+  "settings.friends_corner_desc": "En qué esquina aparece el botón flotante de Amigos",
+  "settings.corner_bottom_left": "Abajo-izquierda",
+  "settings.corner_bottom_right": "Abajo-derecha",
+  "settings.corner_top_left": "Arriba-izquierda",
+  "settings.corner_top_right": "Arriba-derecha",
+  "friends.simple_empty": "No hay otros usuarios en este servidor.",
+  "admin.fc.friends_enabled": "Función de Amigos habilitada (botón flotante + panel)",
+  "admin.fc.friends_simple": "Modo Amigos simple: mostrar todos los usuarios del servidor en lugar del flujo solicitud/aceptación"
 }

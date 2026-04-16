@@ -678,5 +678,14 @@
   "settings.appear_offline": "对好友显示为离线",
   "settings.appear_offline_desc": "即使你正在使用 Jellyfin,好友也始终将你视为离线",
   "settings.hide_now_playing": "隐藏正在观看的内容",
-  "settings.hide_now_playing_desc": "好友仍然能看到你在线,但看不到你正在观看的剧集或单集"
+  "settings.hide_now_playing_desc": "好友仍然能看到你在线,但看不到你正在观看的剧集或单集",
+  "settings.friends_corner": "好友按钮位置",
+  "settings.friends_corner_desc": "好友悬浮按钮显示在哪个角落",
+  "settings.corner_bottom_left": "左下",
+  "settings.corner_bottom_right": "右下",
+  "settings.corner_top_left": "左上",
+  "settings.corner_top_right": "右上",
+  "friends.simple_empty": "此服务器没有其他用户。",
+  "admin.fc.friends_enabled": "启用好友功能(悬浮按钮+抽屉)",
+  "admin.fc.friends_simple": "简单好友模式:显示所有服务器用户,跳过请求/接受流程"
 }

@@ -678,5 +678,14 @@
   "settings.appear_offline": "Appari offline agli amici",
   "settings.appear_offline_desc": "I tuoi amici ti vedranno sempre offline, anche quando stai usando Jellyfin",
   "settings.hide_now_playing": "Nascondi cosa sto guardando",
-  "settings.hide_now_playing_desc": "Gli amici ti vedono ancora online, ma non la serie o l'episodio"
+  "settings.hide_now_playing_desc": "Gli amici ti vedono ancora online, ma non la serie o l'episodio",
+  "settings.friends_corner": "Posizione del pulsante Amici",
+  "settings.friends_corner_desc": "In quale angolo appare il pulsante flottante Amici",
+  "settings.corner_bottom_left": "In basso a sinistra",
+  "settings.corner_bottom_right": "In basso a destra",
+  "settings.corner_top_left": "In alto a sinistra",
+  "settings.corner_top_right": "In alto a destra",
+  "friends.simple_empty": "Nessun altro utente su questo server.",
+  "admin.fc.friends_enabled": "Funzione Amici abilitata (pulsante flottante + pannello)",
+  "admin.fc.friends_simple": "Modalità Amici semplice: mostra tutti gli utenti del server invece del flusso richiesta/accetta"
 }

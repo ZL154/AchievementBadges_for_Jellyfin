@@ -678,5 +678,14 @@
   "settings.appear_offline": "Appear offline to friends",
   "settings.appear_offline_desc": "Your friends will always see you as offline, even while you're browsing Jellyfin",
   "settings.hide_now_playing": "Hide what I'm watching",
-  "settings.hide_now_playing_desc": "Friends can still see you as online, but not the series or episode you're watching"
+  "settings.hide_now_playing_desc": "Friends can still see you as online, but not the series or episode you're watching",
+  "settings.friends_corner": "Friends button position",
+  "settings.friends_corner_desc": "Which corner the floating friends button lives in",
+  "settings.corner_bottom_left": "Bottom-left",
+  "settings.corner_bottom_right": "Bottom-right",
+  "settings.corner_top_left": "Top-left",
+  "settings.corner_top_right": "Top-right",
+  "friends.simple_empty": "No other users on this server.",
+  "admin.fc.friends_enabled": "Friends feature enabled (floating button + drawer)",
+  "admin.fc.friends_simple": "Simple friends mode: show every server user instead of request/accept flow"
 }

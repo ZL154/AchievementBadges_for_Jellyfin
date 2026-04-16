@@ -87,6 +87,11 @@ public class UserNotificationPreferences
     [JsonPropertyName("HideNowPlaying")]
     public bool HideNowPlaying { get; set; } = false;
 
+    // Corner for the global friends button: "bottom-left" (default),
+    // "bottom-right", "top-left", "top-right". Anything else → bottom-left.
+    [JsonPropertyName("FriendsButtonCorner")]
+    public string FriendsButtonCorner { get; set; } = "bottom-left";
+
     [JsonPropertyName("EnableCoWatchBonus")]
     public bool EnableCoWatchBonus { get; set; } = true;
 

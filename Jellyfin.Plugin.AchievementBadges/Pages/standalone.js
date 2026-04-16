@@ -2088,6 +2088,7 @@
         var pageTheme = prefs.achievementPageTheme || prefs.AchievementPageTheme || 'default';
         var slots = prefs.equippedBadgeSlots || prefs.EquippedBadgeSlots || 5;
         var prefLang = (prefs.language || prefs.Language || 'default').toString().toLowerCase();
+        var prefCorner = (prefs.friendsButtonCorner || prefs.FriendsButtonCorner || 'bottom-left').toString().toLowerCase();
 
         // Admin-forced feature flags (from public-config). When an admin has forced a behavior
         // globally, the corresponding user toggle is moot and hidden.
@@ -2203,6 +2204,16 @@
                         '<div class="ab-toggle-info"><div class="ab-toggle-label">' + tr('settings.equipped_slots', 'Equipped badge slots') + '</div><div class="ab-toggle-desc">' + tr('settings.equipped_slots_desc', 'Number of badges in your showcase (1-10)') + '</div></div>' +
                         '<input type="number" class="ab-input" data-settings-number="equippedBadgeSlots" min="1" max="10" value="' + slots + '" style="width:70px;text-align:center;">' +
                     '</div>' +
+                    // Corner picker for the global friends button (v1.7.11+).
+                    '<div class="ab-setting-row">' +
+                        '<div class="ab-toggle-info"><div class="ab-toggle-label">' + tr('settings.friends_corner', 'Friends button position') + '</div><div class="ab-toggle-desc">' + tr('settings.friends_corner_desc', 'Which corner the floating friends button lives in') + '</div></div>' +
+                        '<select class="ab-select" data-settings-select="friendsButtonCorner">' +
+                            '<option value="bottom-left"' + (prefCorner === 'bottom-left' ? ' selected' : '') + '>' + tr('settings.corner_bottom_left', 'Bottom-left') + '</option>' +
+                            '<option value="bottom-right"' + (prefCorner === 'bottom-right' ? ' selected' : '') + '>' + tr('settings.corner_bottom_right', 'Bottom-right') + '</option>' +
+                            '<option value="top-left"' + (prefCorner === 'top-left' ? ' selected' : '') + '>' + tr('settings.corner_top_left', 'Top-left') + '</option>' +
+                            '<option value="top-right"' + (prefCorner === 'top-right' ? ' selected' : '') + '>' + tr('settings.corner_top_right', 'Top-right') + '</option>' +
+                        '</select>' +
+                    '</div>' +
                     toggle('autoEquipNewUnlocks', tr('settings.auto_equip', 'Auto-equip new unlocks'), tr('settings.auto_equip_desc', 'Automatically equip newly unlocked badges'), prefs.autoEquipNewUnlocks === true || prefs.AutoEquipNewUnlocks === true) +
                     toggle('enablePushNotifications', tr('settings.push_notifications', 'Push notifications'), tr('settings.push_notifications_desc', 'Receive push notifications for achievements'), prefs.enablePushNotifications === true || prefs.EnablePushNotifications === true) +
                     ((pc.ForceHideEquippedShowcase || pc.forceHideEquippedShowcase)
@@ -2229,6 +2240,13 @@
                 var savePromise = saveSettingsPrefs(box) || Promise.resolve();
                 if (sel.getAttribute('data-settings-select') === 'achievementPageTheme') {
                     applyPageTheme(sel.value);
+                }
+                if (sel.getAttribute('data-settings-select') === 'friendsButtonCorner') {
+                    // Broadcast to sidebar.js so the floating button moves
+                    // immediately without waiting for the periodic poll.
+                    try {
+                        window.dispatchEvent(new CustomEvent('ab:friends-corner-changed', { detail: { corner: sel.value } }));
+                    } catch (e) {}
                 }
                 if (sel.getAttribute('data-settings-select') === 'language') {
                     // Resolve the chosen language now (honor "default" -> admin).

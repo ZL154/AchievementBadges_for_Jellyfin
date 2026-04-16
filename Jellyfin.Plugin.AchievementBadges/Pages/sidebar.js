@@ -301,6 +301,15 @@
     // Listen for live preference changes broadcast from the achievements
     // page. When the user toggles ShowEquippedShowcase we want the sidebar
     // pills and header dots to update immediately without a hard refresh.
+    // Live-apply corner changes from the standalone settings panel.
+    try {
+        window.addEventListener('ab:friends-corner-changed', function (ev) {
+            if (ev && ev.detail && typeof ev.detail.corner === 'string') {
+                applyCorner(ev.detail.corner);
+            }
+        });
+    } catch (e) {}
+
     try {
         window.addEventListener('ab:showcase-pref-changed', function (ev) {
             // If the event includes the new value, use it directly instead
@@ -320,16 +329,25 @@
         });
     } catch (e) {}
 
-    // Periodic re-resolve so ADMIN-side changes to ForceHideEquippedShowcase
-    // (which the admin user can't broadcast to OTHER users' tabs) get
-    // picked up automatically within ~60s. Also covers the case where the
-    // admin themself toggles it without broadcasting.
-    setInterval(function(){
+    // Re-resolve the showcase flag on every meaningful navigation event +
+    // a frequent timer, so an ADMIN toggling ForceHideEquippedShowcase
+    // propagates to every open client within ~15s (admin can't broadcast
+    // to other users' tabs cross-origin). Resetting _showcaseEnabled to
+    // null forces resolveShowcaseEnabled to re-fetch public-config + prefs
+    // from the server.
+    function forceResolveShowcase(){
         _showcaseEnabled = null;
         resolveShowcaseEnabled().then(function(enabled){
             if (!enabled) removeShowcaseDom();
         });
-    }, 60000);
+    }
+    setInterval(forceResolveShowcase, 15000);
+    try {
+        window.addEventListener('hashchange', forceResolveShowcase);
+        document.addEventListener('visibilitychange', function(){
+            if (document.visibilityState === 'visible') forceResolveShowcase();
+        });
+    } catch(e) {}
 
     // ====================== Friends drawer ==============================
     // Global floating button + Xbox-guide-style side drawer. Lives in
@@ -352,9 +370,96 @@
     var _friendsMounted = false;
     var _friendsOpen = false;
     var _friendsCachedUsers = null;
+    var _friendsSimpleMode = false;
+    var _friendsCornerApplied = null;
+    // Before mounting, check the admin master switch + user's corner pref.
+    // If the admin has turned the friends feature off entirely, we simply
+    // don't render the floating button. Periodic re-resolve catches admin
+    // flips within ~15s without requiring a refresh.
+    function resolveFriendsConfig(){
+        var uid = getUserId();
+        var pub = fetch(buildUrl('Plugins/AchievementBadges/public-config'), { headers: authHeaders(), credentials: 'include' })
+            .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+        var pref = uid ? fetch(buildUrl('Plugins/AchievementBadges/users/' + uid + '/preferences'), { headers: authHeaders(), credentials: 'include' })
+            .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }) : Promise.resolve(null);
+        return Promise.all([pub, pref]).then(function(results){
+            var p = results[0] || {};
+            var pr = results[1] || {};
+            return {
+                enabled: p.FriendsEnabled !== false,
+                simple: !!(p.FriendsSimpleMode || p.friendsSimpleMode),
+                corner: (pr.FriendsButtonCorner || pr.friendsButtonCorner || 'bottom-left').toLowerCase()
+            };
+        });
+    }
+
+    function applyCorner(corner){
+        var btn = document.getElementById('abFriendsBtn');
+        var drawer = document.getElementById('abFriendsDrawer');
+        if (!btn) return;
+        btn.style.left = 'auto'; btn.style.right = 'auto';
+        btn.style.top = 'auto'; btn.style.bottom = 'auto';
+        var slideFromLeft = corner.indexOf('left') >= 0;
+        if (corner === 'top-left') { btn.style.left = '1em'; btn.style.top = '1.2em'; btn.style.bottom = 'auto'; }
+        else if (corner === 'top-right') { btn.style.right = '1em'; btn.style.top = '1.2em'; btn.style.bottom = 'auto'; }
+        else if (corner === 'bottom-right') { btn.style.right = '1em'; btn.style.bottom = '1.2em'; btn.style.top = 'auto'; }
+        else { btn.style.left = '1em'; btn.style.bottom = '1.2em'; btn.style.top = 'auto'; } // bottom-left default
+        if (drawer) {
+            // Slide direction matches the button's horizontal anchor.
+            drawer.style.left = slideFromLeft ? '0' : 'auto';
+            drawer.style.right = slideFromLeft ? 'auto' : '0';
+            drawer.style.borderLeft = slideFromLeft ? '1px solid rgba(255,255,255,0.08)' : 'none';
+            drawer.style.borderRight = slideFromLeft ? 'none' : '1px solid rgba(255,255,255,0.08)';
+            // When mounting on the right, slide OUT to the right (translateX(100%))
+            // instead of to the left.
+            drawer.dataset.abSlideDir = slideFromLeft ? 'left' : 'right';
+            drawer.style.transform = _friendsOpen ? 'translateX(0)' : (slideFromLeft ? 'translateX(-100%)' : 'translateX(100%)');
+        }
+        _friendsCornerApplied = corner;
+    }
+
     function ensureFriendsDrawer(){
         if (_friendsMounted) return;
-        _friendsMounted = true;
+        // Gate on admin master switch. If the admin has disabled friends,
+        // don't mount at all. We re-check every 15s via the periodic
+        // resolver — so a FLIP by the admin mounts the UI within 15s
+        // without the user having to reload.
+        resolveFriendsConfig().then(function(cfg){
+            if (!cfg.enabled) return; // feature off; leave DOM untouched
+            _friendsSimpleMode = cfg.simple;
+            _friendsMounted = true;
+            _actuallyMount();
+            applyCorner(cfg.corner);
+        });
+    }
+
+    // Periodic reconcile: admin toggles / user corner changes propagate
+    // without a hard refresh.
+    setInterval(function(){
+        resolveFriendsConfig().then(function(cfg){
+            var btn = document.getElementById('abFriendsBtn');
+            if (!cfg.enabled) {
+                if (btn) btn.style.display = 'none';
+                return;
+            }
+            if (!_friendsMounted) {
+                _friendsSimpleMode = cfg.simple;
+                _friendsMounted = true;
+                _actuallyMount();
+                applyCorner(cfg.corner);
+            } else {
+                if (btn && btn.style.display === 'none') btn.style.display = '';
+                if (_friendsSimpleMode !== cfg.simple) {
+                    _friendsSimpleMode = cfg.simple;
+                    // Re-render drawer contents so tabs reflect simple mode.
+                    try { loadFriends(); } catch(e) {}
+                }
+                if (cfg.corner !== _friendsCornerApplied) applyCorner(cfg.corner);
+            }
+        });
+    }, 15000);
+
+    function _actuallyMount(){
 
         // One-time stylesheet.
         if (!document.getElementById('ab-friends-styles')) {
@@ -379,8 +484,13 @@
                 '.ab-fd-body{flex:1;overflow-y:auto;padding:0.8em;}' +
                 '.ab-fd-row{display:flex;align-items:center;gap:0.7em;padding:0.7em 0.55em;border-radius:12px;transition:background 0.15s;margin-bottom:0.2em;}' +
                 '.ab-fd-row:hover{background:rgba(255,255,255,0.04);}' +
-                '.ab-fd-avatar{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:0.9em;position:relative;background:linear-gradient(135deg,#334155,#1e293b);color:#cbd5e1;background-size:cover;background-position:center;}' +
-                '.ab-fd-avatar.online{background:linear-gradient(135deg,rgba(74,222,128,0.3),rgba(34,197,94,0.18));color:#bbf7d0;box-shadow:inset 0 0 0 2px #4ade80;}' +
+                // Use background-color + background-image SEPARATELY so
+                // setting background-image via inline style (for Jellyfin
+                // avatars) doesn't get clobbered by the gradient background
+                // on `.online`. The online state now shows only via the
+                // inset box-shadow ring + the green status dot (::after).
+                '.ab-fd-avatar{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:0.9em;position:relative;background-color:#1e293b;background-image:linear-gradient(135deg,#334155,#1e293b);color:#cbd5e1;background-size:cover;background-position:center;background-repeat:no-repeat;overflow:hidden;}' +
+                '.ab-fd-avatar.online{color:#bbf7d0;box-shadow:inset 0 0 0 2px #4ade80;}' +
                 '.ab-fd-avatar::after{content:"";position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:999px;background:rgba(255,255,255,0.22);border:2px solid #0d1017;}' +
                 '.ab-fd-avatar.online::after{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.8);}' +
                 '.ab-fd-info{flex:1;min-width:0;}' +
@@ -425,8 +535,10 @@
             '</div>' +
             '<div class="ab-fd-tabs">' +
                 '<button type="button" class="ab-fd-tab active" data-ab-fdtab="friends">' + tr('friends.tab_friends', 'Friends') + '</button>' +
-                '<button type="button" class="ab-fd-tab" data-ab-fdtab="requests">' + tr('friends.tab_requests', 'Requests') + '<span id="abFriendsIncBadge" style="display:none;"></span></button>' +
-                '<button type="button" class="ab-fd-tab" data-ab-fdtab="find">' + tr('friends.tab_find', 'Find') + '</button>' +
+                // Requests + Find tabs hidden in admin-enabled simple mode
+                // (the Friends tab becomes a full server user list).
+                (_friendsSimpleMode ? '' : '<button type="button" class="ab-fd-tab" data-ab-fdtab="requests">' + tr('friends.tab_requests', 'Requests') + '<span id="abFriendsIncBadge" style="display:none;"></span></button>') +
+                (_friendsSimpleMode ? '' : '<button type="button" class="ab-fd-tab" data-ab-fdtab="find">' + tr('friends.tab_find', 'Find') + '</button>') +
             '</div>' +
             '<div class="ab-fd-body">' +
                 '<div id="abFriendsPaneFriends"></div>' +
@@ -438,8 +550,24 @@
             '</div>';
         document.body.appendChild(drawer);
 
-        function open(){ _friendsOpen = true; backdrop.style.display='block'; drawer.style.display='flex'; void drawer.offsetHeight; backdrop.style.opacity='1'; drawer.style.transform='translateX(0)'; loadFriends(); }
-        function close(){ _friendsOpen = false; backdrop.style.opacity='0'; drawer.style.transform='translateX(-100%)'; setTimeout(function(){ drawer.style.display='none'; backdrop.style.display='none'; }, 280); }
+        function open(){
+            _friendsOpen = true;
+            backdrop.style.display='block';
+            drawer.style.display='flex';
+            void drawer.offsetHeight;
+            backdrop.style.opacity='1';
+            drawer.style.transform='translateX(0)';
+            loadFriends();
+        }
+        function close(){
+            _friendsOpen = false;
+            backdrop.style.opacity='0';
+            // Slide out in the direction matching the drawer's anchor so the
+            // animation makes sense whether we're on the left or right side.
+            var dir = drawer.dataset.abSlideDir === 'right' ? 'translateX(100%)' : 'translateX(-100%)';
+            drawer.style.transform = dir;
+            setTimeout(function(){ drawer.style.display='none'; backdrop.style.display='none'; }, 280);
+        }
 
         btn.addEventListener('click', open);
         backdrop.addEventListener('click', close);
@@ -571,9 +699,16 @@
                 var friends = data.Friends || [];
                 var incoming = data.Incoming || [];
                 var outgoing = data.Outgoing || [];
+                // Server-side flag echoed back for parity — the client cache
+                // is updated in the periodic resolver, but honour whichever
+                // is more authoritative here.
+                var simple = (data.SimpleMode === true) || _friendsSimpleMode;
 
                 if (!friends.length) {
-                    fBox.innerHTML = '<div class="ab-fd-empty"><span class="material-icons">people_outline</span><div>' + tr('friends.empty', "You haven't added any friends yet.") + '</div></div>';
+                    var emptyMsg = simple
+                        ? tr('friends.simple_empty', 'No other users on this server.')
+                        : tr('friends.empty', "You haven't added any friends yet.");
+                    fBox.innerHTML = '<div class="ab-fd-empty"><span class="material-icons">people_outline</span><div>' + emptyMsg + '</div></div>';
                 } else {
                     fBox.innerHTML = friends.map(function(f){
                         var status = f.Online
@@ -583,6 +718,11 @@
                             : (f.LastSeen ? tr('friends.last_seen', 'Last seen') + ' ' + new Date(f.LastSeen).toLocaleString() : tr('friends.offline', 'Offline'));
                         var av = avatarStyle(f.UserId);
                         var initialsHtml = av ? '' : escapeHtml(initials(f.UserName));
+                        // In simple mode there's no friendship to remove —
+                        // the row is just a live user card.
+                        var actionsHtml = simple
+                            ? ''
+                            : '<div class="ab-fd-actions"><button type="button" class="ab-fd-act decline" data-ab-friend-remove="' + escapeHtml(f.UserId) + '" title="'+tr('friends.remove','Remove')+'"><span class="material-icons">person_remove</span></button></div>';
                         return '<div class="ab-fd-row">' +
                             '<div class="ab-fd-avatar'+(f.Online?' online':'')+'" style="' + av + '">' + initialsHtml + '</div>' +
                             '<div class="ab-fd-info">' +
@@ -590,7 +730,7 @@
                                 '<div class="ab-fd-status'+(f.Online?' online':'')+'">' + status + '</div>' +
                                 (f.Equipped && f.Equipped.length ? '<div style="margin-top:0.35em;">' + renderEquippedDots(f.Equipped, 16) + '</div>' : '') +
                             '</div>' +
-                            '<div class="ab-fd-actions"><button type="button" class="ab-fd-act decline" data-ab-friend-remove="' + escapeHtml(f.UserId) + '" title="'+tr('friends.remove','Remove')+'"><span class="material-icons">person_remove</span></button></div>' +
+                            actionsHtml +
                         '</div>';
                     }).join('');
                 }

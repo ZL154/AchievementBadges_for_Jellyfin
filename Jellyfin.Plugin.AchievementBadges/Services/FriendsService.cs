@@ -33,10 +33,8 @@ public class FriendsService
     {
         userId = NormalizeId(userId);
         var profile = _badgeService.PeekProfile(userId);
-        if (profile == null)
-        {
-            return new { Friends = new List<object>(), Incoming = new List<object>(), Outgoing = new List<object>() };
-        }
+        var cfg = Plugin.Instance?.Configuration;
+        var simpleMode = cfg?.FriendsSimpleMode == true;
 
         // One session lookup for everyone — used for Online / NowPlaying.
         var sessionByUser = new Dictionary<string, SessionInfo>(StringComparer.OrdinalIgnoreCase);
@@ -51,7 +49,42 @@ public class FriendsService
         }
         catch { /* live status unavailable; everyone offline */ }
 
-        var friends = (profile.Friends ?? new List<string>())
+        // Admin "simple" mode: instead of the friend list, return every
+        // user on the server so admins running small family servers don't
+        // need to go through the request/accept flow.
+        List<FriendRow> friends;
+        if (simpleMode)
+        {
+            try
+            {
+                friends = _userManager.Users
+                    .Where(u => u != null)
+                    .Select(u => u.Id.ToString("N"))
+                    .Where(uid => !string.Equals(uid, userId, StringComparison.OrdinalIgnoreCase))
+                    .Select(uid => BuildFriendRow(userId, uid, sessionByUser))
+                    .OrderByDescending(x => x.Online)
+                    .ThenBy(x => x.UserName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch
+            {
+                friends = new List<FriendRow>();
+            }
+            return new
+            {
+                Friends = friends.Cast<object>().ToList(),
+                Incoming = new List<object>(),
+                Outgoing = new List<object>(),
+                SimpleMode = true
+            };
+        }
+
+        if (profile == null)
+        {
+            return new { Friends = new List<object>(), Incoming = new List<object>(), Outgoing = new List<object>() };
+        }
+
+        friends = (profile.Friends ?? new List<string>())
             .Select(NormalizeId).Distinct()
             .Select(fid => BuildFriendRow(userId, fid, sessionByUser))
             .OrderByDescending(x => x.Online)
@@ -70,9 +103,10 @@ public class FriendsService
 
         return new
         {
-            Friends = friends,
+            Friends = friends.Cast<object>().ToList(),
             Incoming = incoming,
-            Outgoing = outgoing
+            Outgoing = outgoing,
+            SimpleMode = false
         };
     }
 

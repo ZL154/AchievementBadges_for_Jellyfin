@@ -678,5 +678,14 @@
   "settings.appear_offline": "Apparaître hors ligne aux amis",
   "settings.appear_offline_desc": "Vos amis vous verront toujours hors ligne, même lorsque vous utilisez Jellyfin",
   "settings.hide_now_playing": "Cacher ce que je regarde",
-  "settings.hide_now_playing_desc": "Vos amis vous voient toujours en ligne, mais pas la série ou l'épisode regardé"
+  "settings.hide_now_playing_desc": "Vos amis vous voient toujours en ligne, mais pas la série ou l'épisode regardé",
+  "settings.friends_corner": "Position du bouton Amis",
+  "settings.friends_corner_desc": "Dans quel coin le bouton flottant Amis apparaît",
+  "settings.corner_bottom_left": "Bas-gauche",
+  "settings.corner_bottom_right": "Bas-droit",
+  "settings.corner_top_left": "Haut-gauche",
+  "settings.corner_top_right": "Haut-droit",
+  "friends.simple_empty": "Aucun autre utilisateur sur ce serveur.",
+  "admin.fc.friends_enabled": "Fonction Amis activée (bouton flottant + panneau)",
+  "admin.fc.friends_simple": "Mode Amis simple : afficher tous les utilisateurs du serveur au lieu du flux demande/acceptation"
 }

@@ -77,4 +77,14 @@ public class PluginConfiguration : BasePluginConfiguration
     // Built-in quest template Ids the admin has disabled. Entries in either
     // CustomDailyQuests / CustomWeeklyQuests are still eligible.
     public List<string> DisabledQuestIds { get; set; } = new();
+
+    // Friends feature master switches (v1.7.11+)
+    // When false, the floating button + drawer don't mount at all and the
+    // friends API endpoints return empty responses.
+    public bool FriendsEnabled { get; set; } = true;
+
+    // When true, swap the drawer's Friends/Requests/Find tabs for a single
+    // list of every user on the server — useful on small family servers
+    // where the request/accept flow is friction that nobody needs.
+    public bool FriendsSimpleMode { get; set; } = false;
 }

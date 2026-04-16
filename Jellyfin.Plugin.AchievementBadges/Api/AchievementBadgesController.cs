@@ -350,10 +350,13 @@ public class AchievementBadgesController : ControllerBase
 
     // ---------- Friends --------------------------------------------
 
+    private bool FriendsFeatureOn => Plugin.Instance?.Configuration?.FriendsEnabled ?? true;
+
     [HttpGet("users/{userId}/friends")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetFriends([FromRoute] string userId)
     {
+        if (!FriendsFeatureOn) return Ok(new { Friends = new List<object>(), Incoming = new List<object>(), Outgoing = new List<object>() });
         return Ok(_friendsService.List(userId));
     }
 
@@ -362,6 +365,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult SendFriendRequest([FromRoute] string userId, [FromRoute] string friendUserId)
     {
+        if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Friends feature disabled by admin." });
         var (ok, message) = _friendsService.SendRequest(userId, friendUserId);
         return Ok(new { Success = ok, Message = message });
     }
@@ -371,6 +375,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult AcceptFriendRequest([FromRoute] string userId, [FromRoute] string friendUserId)
     {
+        if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Friends feature disabled by admin." });
         var (ok, message) = _friendsService.Accept(userId, friendUserId);
         return Ok(new { Success = ok, Message = message });
     }
@@ -380,6 +385,7 @@ public class AchievementBadgesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult RemoveFriend([FromRoute] string userId, [FromRoute] string friendUserId)
     {
+        if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Friends feature disabled by admin." });
         var (ok, message) = _friendsService.Remove(userId, friendUserId);
         return Ok(new { Success = ok, Message = message });
     }
@@ -747,6 +753,11 @@ public class AchievementBadgesController : ControllerBase
             ? "all" : prefs.MinimumToastRarity.ToLowerInvariant();
 
         prefs.EquippedBadgeSlots = Math.Clamp(prefs.EquippedBadgeSlots, 1, 10);
+
+        // FriendsButtonCorner allowlist — bottom-left is the default.
+        var allowedCorners = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "bottom-left", "bottom-right", "top-left", "top-right" };
+        prefs.FriendsButtonCorner = string.IsNullOrWhiteSpace(prefs.FriendsButtonCorner) || !allowedCorners.Contains(prefs.FriendsButtonCorner)
+            ? "bottom-left" : prefs.FriendsButtonCorner.ToLowerInvariant();
 
         _badgeService.SaveUserPreferences(userId, prefs);
         return Ok(new { Success = true });
@@ -1441,7 +1452,9 @@ public class AchievementBadgesController : ControllerBase
             ForceExtremeSpoilerMode = c?.ForceExtremeSpoilerMode ?? false,
             DefaultLanguage = c?.DefaultLanguage ?? "en",
             CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? "",
-            ForceHideEquippedShowcase = c?.ForceHideEquippedShowcase ?? false
+            ForceHideEquippedShowcase = c?.ForceHideEquippedShowcase ?? false,
+            FriendsEnabled = c?.FriendsEnabled ?? true,
+            FriendsSimpleMode = c?.FriendsSimpleMode ?? false
         });
     }
 
@@ -1470,7 +1483,9 @@ public class AchievementBadgesController : ControllerBase
             DefaultLanguage = c?.DefaultLanguage ?? "en",
             CustomXboxLogoSvg = c?.CustomXboxLogoSvg ?? "",
             RedactUsernamesInAuditLog = c?.RedactUsernamesInAuditLog ?? false,
-            ForceHideEquippedShowcase = c?.ForceHideEquippedShowcase ?? false
+            ForceHideEquippedShowcase = c?.ForceHideEquippedShowcase ?? false,
+            FriendsEnabled = c?.FriendsEnabled ?? true,
+            FriendsSimpleMode = c?.FriendsSimpleMode ?? false
         });
     }
 
@@ -1492,6 +1507,8 @@ public class AchievementBadgesController : ControllerBase
         public string CustomXboxLogoSvg { get; set; } = "";
         public bool RedactUsernamesInAuditLog { get; set; } = false;
         public bool ForceHideEquippedShowcase { get; set; } = false;
+        public bool FriendsEnabled { get; set; } = true;
+        public bool FriendsSimpleMode { get; set; } = false;
     }
 
     [HttpPost("admin/feature-config")]
@@ -1528,6 +1545,8 @@ public class AchievementBadgesController : ControllerBase
 
         config.RedactUsernamesInAuditLog = request.RedactUsernamesInAuditLog;
         config.ForceHideEquippedShowcase = request.ForceHideEquippedShowcase;
+        config.FriendsEnabled = request.FriendsEnabled;
+        config.FriendsSimpleMode = request.FriendsSimpleMode;
 
         // Surface the specific sanitizer error so the admin knows what to
         // fix instead of seeing a generic "rejected" message.

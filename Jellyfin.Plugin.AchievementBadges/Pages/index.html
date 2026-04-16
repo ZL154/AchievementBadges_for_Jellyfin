@@ -657,6 +657,14 @@ font-size:0.88em;
                             <input type="checkbox" id="abFcForceHideEquippedShowcase">
                             <span data-i18n="admin.force_hide_equipped_showcase">Force-hide equipped badge showcase (sidebar strip, header dots, profile-card equipped slots) for all users</span>
                         </label>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
+                            <input type="checkbox" id="abFcFriendsEnabled" checked>
+                            <span data-i18n="admin.fc.friends_enabled">Friends feature enabled (floating button + drawer)</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
+                            <input type="checkbox" id="abFcFriendsSimpleMode">
+                            <span data-i18n="admin.fc.friends_simple">Simple friends mode: show every server user instead of request/accept flow</span>
+                        </label>
                         <button is="emby-button" type="button" class="raised button-submit" id="abFcSaveBtn" data-i18n="admin.btn_save_feature_config">Save feature config</button>
                         <div id="abFcStatus" class="secondaryText"></div>
                     </div>
@@ -2046,6 +2054,10 @@ font-size:0.88em;
             if (redactEl) redactEl.checked = !!c.RedactUsernamesInAuditLog;
             var hideShowcaseEl = document.getElementById('abFcForceHideEquippedShowcase');
             if (hideShowcaseEl) hideShowcaseEl.checked = !!c.ForceHideEquippedShowcase;
+            var friendsOnEl = document.getElementById('abFcFriendsEnabled');
+            if (friendsOnEl) friendsOnEl.checked = c.FriendsEnabled !== false; // default true
+            var friendsSimpleEl = document.getElementById('abFcFriendsSimpleMode');
+            if (friendsSimpleEl) friendsSimpleEl.checked = !!c.FriendsSimpleMode;
         }).catch(function (e) {
             if (fcStatusEl) fcStatusEl.textContent = tr('admin.msg.feature_config_load_failed', 'Failed to load feature config:') + ' ' + (e.message || e);
         });
@@ -2101,7 +2113,9 @@ font-size:0.88em;
             DefaultLanguage: (document.getElementById('abFcDefaultLanguage') || {}).value || 'en',
             CustomXboxLogoSvg: (document.getElementById('abFcCustomXboxLogoSvg') || {}).value || '',
             RedactUsernamesInAuditLog: !!(document.getElementById('abFcRedactUsernamesInAuditLog') || {}).checked,
-            ForceHideEquippedShowcase: !!(document.getElementById('abFcForceHideEquippedShowcase') || {}).checked
+            ForceHideEquippedShowcase: !!(document.getElementById('abFcForceHideEquippedShowcase') || {}).checked,
+            FriendsEnabled: (document.getElementById('abFcFriendsEnabled') || { checked: true }).checked,
+            FriendsSimpleMode: !!(document.getElementById('abFcFriendsSimpleMode') || {}).checked
         }).then(function (res) {
             if (fcStatusEl) {
                 var msg = tr('admin.msg.feature_config_saved', 'Feature config saved.');
