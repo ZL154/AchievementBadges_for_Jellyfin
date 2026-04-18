@@ -36,6 +36,7 @@ A full progression, gamification and achievement system for Jellyfin that reward
 - [Troubleshooting](#-troubleshooting) — permissions, NixOS, reverse proxy
 - [API endpoints](#-api-endpoints)
 - [Screenshots](#-screenshots)
+- [Support the project](#-support-the-project)
 - [License](#-license)
 
 ---
@@ -436,6 +437,18 @@ Auto-injected into the Jellyfin nav menu — no theme changes required.
 <p align="center">
   <img alt="Sidebar entry" src="assets/screenshots/sidebar-entry.png" />
 </p>
+
+---
+
+## ❤ Support the project
+
+Achievement Badges is built and maintained in my spare time. If it's useful to you and you'd like to support ongoing development, any of these means a lot:
+
+- ⭐ **Star this repo** — it's free and helps others find it
+- 💖 **[Sponsor on GitHub](https://github.com/sponsors/ZL154)** — one-off or monthly, every dollar reaches the project
+- ☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/zl154)** — one-off tips
+
+Not expected, just appreciated. Contributions — issues, PRs, translation fixes — are equally valuable.
 
 ---
 
