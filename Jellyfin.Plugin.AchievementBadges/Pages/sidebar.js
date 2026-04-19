@@ -779,20 +779,25 @@
                 // ── v1.8.2 additions ──────────────────────────────────
                 // Author name on group-chat "them" bubbles
                 '.ab-chat-msg.them .ab-chat-author{font-size:0.7em;color:#a5b4ff;font-weight:700;margin-bottom:0.2em;}' +
-                // Receipts (single = delivered/gray, double = read/blue)
-                '.ab-receipt{margin-left:0.3em;font-weight:800;letter-spacing:-0.5px;}' +
-                '.ab-receipt.delivered{color:rgba(255,255,255,0.45);}' +
-                '.ab-receipt.read{color:#60a5fa;}' +
+                // Receipts — larger + bolder + more contrast
+                '.ab-receipt{display:inline-flex;align-items:center;margin-left:0.4em;font-family:inherit;line-height:1;letter-spacing:-1px;font-weight:900;font-size:1.05em;vertical-align:middle;}' +
+                '.ab-receipt.delivered{color:rgba(255,255,255,0.9);opacity:0.85;}' +
+                '.ab-receipt.read{color:#38e07b;text-shadow:0 0 4px rgba(56,224,123,0.4);}' +
                 '.ab-chat-msg.me{padding-bottom:0.4em;}' +
                 '.ab-chat-msg.me .ab-chat-text{margin:0;}' +
                 '.ab-chat-msg.them .ab-chat-text{margin:0;}' +
-                // Reposition the edit/delete actions ABOVE the bubble, centered
-                '.ab-chat-msg-actions{position:absolute;top:-14px;right:6px;left:auto;display:none;gap:4px;background:rgba(15,17,25,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:2px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:2;}' +
-                '.ab-chat-msg.me:hover .ab-chat-msg-actions{display:flex;}' +
-                '.ab-chat-msg-action{width:22px;height:22px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,0.75);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background 0.1s,color 0.1s;}' +
-                '.ab-chat-msg-action:hover{background:rgba(255,255,255,0.15);color:#fff;}' +
-                '.ab-chat-msg-action.danger:hover{background:rgba(239,68,68,0.25);color:#fca5a5;}' +
-                '.ab-chat-msg-action .material-icons{font-size:0.78em;line-height:1;}' +
+                // Single 3-dot button on hover; opens a small dropdown with Edit / Delete
+                '.ab-chat-msg-more{position:absolute;top:4px;right:-26px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);cursor:pointer;display:none;align-items:center;justify-content:center;padding:0;transition:background 0.12s,color 0.12s;}' +
+                '.ab-chat-msg.me:hover .ab-chat-msg-more{display:flex;}' +
+                '.ab-chat-msg-more:hover{background:rgba(255,255,255,0.2);color:#fff;}' +
+                '.ab-chat-msg-more .material-icons{font-size:0.95em;line-height:1;}' +
+                '.ab-chat-msg-menu{position:absolute;top:28px;right:-2px;background:#20263a;border:1px solid rgba(255,255,255,0.12);border-radius:8px;box-shadow:0 8px 22px rgba(0,0,0,0.5);min-width:120px;z-index:20;display:none;flex-direction:column;overflow:hidden;}' +
+                '.ab-chat-msg-menu.open{display:flex;animation:abMenuIn 0.12s ease-out;}' +
+                '.ab-chat-msg-menu-item{padding:0.5em 0.8em;cursor:pointer;font-size:0.82em;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:0.55em;border:none;background:none;text-align:left;font-family:inherit;}' +
+                '.ab-chat-msg-menu-item:hover{background:rgba(255,255,255,0.07);}' +
+                '.ab-chat-msg-menu-item.danger{color:#f87171;}' +
+                '.ab-chat-msg-menu-item.danger:hover{background:rgba(239,68,68,0.15);color:#fca5a5;}' +
+                '.ab-chat-msg-menu-item .material-icons{font-size:0.95em;}' +
                 // Attachments in bubbles
                 '.ab-chat-attachment{margin:0 -0.25em;margin-bottom:0.3em;border-radius:12px;overflow:hidden;max-width:260px;cursor:pointer;}' +
                 '.ab-chat-attachment img{display:block;width:100%;height:auto;max-height:300px;object-fit:cover;}' +
@@ -808,11 +813,11 @@
                 '#abChatAttachPreview button:hover{background:rgba(239,68,68,0.32);color:#fff;}' +
                 '#abChatAttachPreview button .material-icons{font-size:0.8em;}' +
 
-                // Messages-tab header (new-group button)
-                '.ab-msg-tab-header{padding:0.5em 0.9em;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:0.3em;}' +
-                '.ab-msg-newgroup{display:inline-flex;align-items:center;gap:0.4em;background:linear-gradient(135deg,#8b5cf6,#3b82f6);color:#fff;border:none;padding:0.5em 1em;border-radius:20px;cursor:pointer;font-size:0.82em;font-weight:600;transition:filter 0.1s,transform 0.1s;font-family:inherit;}' +
-                '.ab-msg-newgroup:hover{filter:brightness(1.1);transform:translateY(-1px);}' +
-                '.ab-msg-newgroup .material-icons{font-size:1em;}' +
+                // Messages-tab header (compact new-group pill, not a big gradient)
+                '.ab-msg-tab-header{padding:0.55em 0.9em;display:flex;justify-content:flex-end;}' +
+                '.ab-msg-newgroup{display:inline-flex;align-items:center;gap:0.35em;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.1);padding:0.3em 0.75em 0.3em 0.55em;border-radius:14px;cursor:pointer;font-size:0.75em;font-weight:500;transition:background 0.12s,color 0.12s,border-color 0.12s;font-family:inherit;}' +
+                '.ab-msg-newgroup:hover{background:rgba(139,92,246,0.15);color:#fff;border-color:rgba(139,92,246,0.5);}' +
+                '.ab-msg-newgroup .material-icons{font-size:1em;opacity:0.85;}' +
 
                 // New-group overlay
                 '#abNewGroupOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:10000001;display:none;align-items:center;justify-content:center;padding:1em;opacity:0;transition:opacity 0.15s;}' +
@@ -829,6 +834,8 @@
                 '.ab-newgroup-row .ab-fd-avatar{width:32px;height:32px;font-size:0.72em;}' +
                 '.ab-newgroup-row span{flex:1;color:#fff;font-size:0.88em;}' +
                 '.ab-confirm-btn.primary{background:linear-gradient(135deg,#8b5cf6,#3b82f6);color:#fff;}' +
+                '.ab-prompt-input{width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:0.6em 0.85em;font-size:0.92em;font-family:inherit;outline:none;margin-bottom:1em;transition:border-color 0.15s;}' +
+                '.ab-prompt-input:focus{border-color:rgba(139,92,246,0.7);}' +
 
                 // Image lightbox
                 '#abImgLightbox{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000002;display:flex;align-items:center;justify-content:center;padding:2em;cursor:zoom-out;animation:abLightboxIn 0.15s ease-out;}' +
@@ -1320,9 +1327,10 @@
                 }
             }
             var actionsHtml = fromMe
-                ? '<div class="ab-chat-msg-actions">' +
-                    '<button type="button" class="ab-chat-msg-action" data-ab-msg-edit="' + escapeHtml(m.id) + '" data-ab-msg-text="'+escapeHtml(m.text)+'" title="'+tr('friends.edit','Edit')+'"><span class="material-icons">edit</span></button>' +
-                    '<button type="button" class="ab-chat-msg-action danger" data-ab-msg-delete="' + escapeHtml(m.id) + '" title="'+tr('friends.delete','Delete')+'"><span class="material-icons">delete</span></button>' +
+                ? '<button type="button" class="ab-chat-msg-more" data-ab-msg-more="' + escapeHtml(m.id) + '" title="'+tr('friends.msg_options','Message options')+'"><span class="material-icons">more_horiz</span></button>' +
+                  '<div class="ab-chat-msg-menu" data-ab-msg-menu-for="' + escapeHtml(m.id) + '">' +
+                    '<button type="button" class="ab-chat-msg-menu-item" data-ab-msg-edit="' + escapeHtml(m.id) + '" data-ab-msg-text="'+escapeHtml(m.text)+'"><span class="material-icons">edit</span>' + escapeHtml(tr('friends.edit','Edit')) + '</button>' +
+                    '<button type="button" class="ab-chat-msg-menu-item danger" data-ab-msg-delete="' + escapeHtml(m.id) + '"><span class="material-icons">delete</span>' + escapeHtml(tr('friends.delete','Delete')) + '</button>' +
                   '</div>'
                 : '';
             // Author label for groups (non-me only)
@@ -1346,18 +1354,38 @@
         // near the bottom (within ~60px) when the redraw happened.
         var wasNearBottom = (scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight) < 80;
         scroll.innerHTML = html;
+        scroll.querySelectorAll('[data-ab-msg-more]').forEach(function(btn){
+            btn.addEventListener('click', function(ev){
+                ev.stopPropagation();
+                var id = btn.getAttribute('data-ab-msg-more');
+                var menu = scroll.querySelector('[data-ab-msg-menu-for="' + CSS.escape(id) + '"]');
+                scroll.querySelectorAll('.ab-chat-msg-menu.open').forEach(function(m){ if (m !== menu) m.classList.remove('open'); });
+                if (menu) menu.classList.toggle('open');
+            });
+        });
         scroll.querySelectorAll('[data-ab-msg-edit]').forEach(function(btn){
             btn.addEventListener('click', function(ev){
                 ev.stopPropagation();
+                scroll.querySelectorAll('.ab-chat-msg-menu.open').forEach(function(m){ m.classList.remove('open'); });
                 startEditMessage(btn.getAttribute('data-ab-msg-edit'), btn.getAttribute('data-ab-msg-text'));
             });
         });
         scroll.querySelectorAll('[data-ab-msg-delete]').forEach(function(btn){
             btn.addEventListener('click', function(ev){
                 ev.stopPropagation();
+                scroll.querySelectorAll('.ab-chat-msg-menu.open').forEach(function(m){ m.classList.remove('open'); });
                 confirmAndDeleteMessage(btn.getAttribute('data-ab-msg-delete'));
             });
         });
+        // Close any open msg menu when clicking elsewhere in the chat
+        if (!scroll.dataset.abMsgMenuBound) {
+            scroll.dataset.abMsgMenuBound = '1';
+            scroll.addEventListener('click', function(ev){
+                if (!ev.target.closest('[data-ab-msg-more]') && !ev.target.closest('.ab-chat-msg-menu')) {
+                    scroll.querySelectorAll('.ab-chat-msg-menu.open').forEach(function(m){ m.classList.remove('open'); });
+                }
+            });
+        }
         scroll.querySelectorAll('.ab-chat-attachment img').forEach(function(img){
             img.addEventListener('click', function(){ openLightbox(img.getAttribute('src')); });
         });
@@ -1678,9 +1706,15 @@
             img.src = URL.createObjectURL(file);
             preview.style.display = 'flex';
         }
+        // CRITICAL: do NOT send our default Content-Type (application/json)
+        // with a FormData body — browser needs to auto-set multipart boundary.
+        var uploadHeaders = {};
+        var ah = authHeaders();
+        if (ah.Authorization) uploadHeaders.Authorization = ah.Authorization;
+        if (ah['X-Emby-Authorization']) uploadHeaders['X-Emby-Authorization'] = ah['X-Emby-Authorization'];
         fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+'/attachments'), {
             method: 'POST',
-            headers: authHeaders(),
+            headers: uploadHeaders,
             credentials: 'include',
             body: fd
         })
@@ -1808,16 +1842,23 @@
             renameBtn.addEventListener('click', function(){
                 if (menu) menu.classList.remove('open');
                 if (!_chatConvId || _chatConvType !== 'group') return;
-                var newTitle = prompt(tr('friends.rename_group_prompt','New group name:'), _chatPeerName || '');
-                if (newTitle == null) return;
-                var uid = getUserId();
-                fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+'/conversations/'+_chatConvId+'/rename'),
-                    { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()), credentials: 'include', body: JSON.stringify({ Title: newTitle }) })
-                .then(function(){
-                    _chatPeerName = newTitle;
-                    var nm = document.getElementById('abChatPeerName'); if (nm) nm.textContent = newTitle;
-                    if (_activeFdTab === 'messages') loadMessagesPane();
-                });
+                abPrompt(
+                    tr('friends.rename_group','Rename group'),
+                    tr('friends.rename_group_prompt','New group name:'),
+                    _chatPeerName || '',
+                    tr('friends.save','Save'),
+                    function(newTitle){
+                        if (newTitle == null) return;
+                        var uid = getUserId();
+                        fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+'/conversations/'+_chatConvId+'/rename'),
+                            { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()), credentials: 'include', body: JSON.stringify({ Title: newTitle }) })
+                        .then(function(){
+                            _chatPeerName = newTitle;
+                            var nm = document.getElementById('abChatPeerName'); if (nm) nm.textContent = newTitle;
+                            if (_activeFdTab === 'messages') loadMessagesPane();
+                        });
+                    }
+                );
             });
         }
         var leaveBtn = document.getElementById('abChatLeave');
@@ -2016,6 +2057,41 @@
     }
 
     // ── Confirm dialog + toast + notifications ────────────────────────
+
+    function abPrompt(title, label, defaultValue, actionLabel, onSubmit){
+        var existing = document.getElementById('abMsgConfirm');
+        if (existing) existing.remove();
+        var wrap = document.createElement('div');
+        wrap.id = 'abMsgConfirm';
+        wrap.innerHTML =
+            '<div class="ab-confirm-box">' +
+                '<h3 class="ab-confirm-title">' + escapeHtml(title) + '</h3>' +
+                '<div class="ab-confirm-body">' + escapeHtml(label) + '</div>' +
+                '<input type="text" class="ab-prompt-input" maxlength="60" />' +
+                '<div class="ab-confirm-actions">' +
+                    '<button type="button" class="ab-confirm-btn ghost" data-ab-confirm-cancel>' + escapeHtml(tr('friends.cancel','Cancel')) + '</button>' +
+                    '<button type="button" class="ab-confirm-btn primary" data-ab-confirm-ok>' + escapeHtml(actionLabel) + '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(wrap);
+        var input = wrap.querySelector('.ab-prompt-input');
+        if (input) { input.value = defaultValue || ''; setTimeout(function(){ input.focus(); input.select(); }, 60); }
+        void wrap.offsetHeight;
+        wrap.classList.add('open');
+        var cleanup = function(){ if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+        var submit = function(){
+            var v = input ? (input.value || '').trim() : '';
+            cleanup();
+            try { onSubmit(v); } catch (e) {}
+        };
+        wrap.addEventListener('click', function(ev){ if (ev.target === wrap) cleanup(); });
+        wrap.querySelector('[data-ab-confirm-cancel]').addEventListener('click', cleanup);
+        wrap.querySelector('[data-ab-confirm-ok]').addEventListener('click', submit);
+        if (input) input.addEventListener('keydown', function(ev){
+            if (ev.key === 'Enter') { ev.preventDefault(); submit(); }
+            else if (ev.key === 'Escape') { cleanup(); }
+        });
+    }
 
     function abConfirm(title, body, actionLabel, onConfirm){
         var existing = document.getElementById('abMsgConfirm');

@@ -589,10 +589,18 @@ public class AchievementBadgesController : ControllerBase
     [RequestSizeLimit(10 * 1024 * 1024)]
     [EnableRateLimiting("user-60-per-min")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult> UploadAttachment([FromRoute] string userId, [FromForm] IFormFile? file)
+    public async Task<ActionResult> UploadAttachment([FromRoute] string userId)
     {
         if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Messaging disabled." });
-        if (file == null || file.Length == 0) return Ok(new { Success = false, Message = "No file uploaded." });
+        // Read from Request.Form directly to avoid model-binding quirks
+        // (`[FromForm] IFormFile` occasionally fails on top of our other
+        // content filters). This route only accepts multipart/form-data.
+        if (!Request.HasFormContentType)
+            return Ok(new { Success = false, Message = "Upload must be multipart/form-data." });
+        var form = await Request.ReadFormAsync().ConfigureAwait(false);
+        var file = form.Files.Count > 0 ? form.Files[0] : null;
+        if (file == null || file.Length == 0)
+            return Ok(new { Success = false, Message = "No file uploaded." });
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms).ConfigureAwait(false);
         var (ok, err, att) = _messagingService.SaveAttachment(userId, file.FileName, file.ContentType, ms.ToArray(), null, null);
