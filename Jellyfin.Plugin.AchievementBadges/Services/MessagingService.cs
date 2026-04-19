@@ -28,8 +28,9 @@ public class MessagingService
 {
     // ── Limits (conservative; plenty of headroom for real use) ──
     internal const int MaxTextLength                 = 1000;
-    internal const int MaxMessagesPerConversation    = 500;  // FIFO trim
+    internal const int MaxMessagesPerConversation    = 2000; // FIFO trim (raised from 500 in v1.8.1)
     internal const int RateLimitMessagesPerMinute    = 20;   // per sender, per conversation
+    internal static readonly TimeSpan EditWindow     = TimeSpan.FromHours(24);
 
     private readonly FriendsService _friends;
     private readonly AchievementBadgeService _badgeService;
@@ -76,6 +77,11 @@ public class MessagingService
         if (string.IsNullOrWhiteSpace(text))    return (false, "Message is empty.", null);
         if (text.Length > MaxTextLength)        return (false, $"Message exceeds {MaxTextLength} character limit.", null);
         if (!_friends.AreMutualFriends(fromId, toId)) return (false, "You can only message friends.", null);
+
+        // Block check: either side blocking is a hard stop. Sender gets a
+        // generic 'Can't deliver' message — we don't leak whether it was
+        // the other user or us who did the blocking.
+        if (IsEitherBlocked(fromId, toId))      return (false, "Message could not be delivered.", null);
 
         if (!CheckAndRecordRate(fromId))
             return (false, $"Rate limit: max {RateLimitMessagesPerMinute} messages per minute.", null);
@@ -186,6 +192,139 @@ public class MessagingService
         // Newest conversations first
         summaries.Sort((a, b) => b.LastAt.CompareTo(a.LastAt));
         return summaries;
+    }
+
+    // ─────────────────────────────────────────────────────────────────── //
+    // Edit / delete / clear / block
+    // ─────────────────────────────────────────────────────────────────── //
+
+    /// <summary>
+    /// Edits a message the caller originally sent. Enforces a 24-hour
+    /// edit window, same length limit as sending, and only applies to
+    /// the caller's own messages.
+    /// </summary>
+    public (bool ok, string? error, Message? message) EditMessage(string callerId, string messageId, string newText)
+    {
+        callerId = NormalizeId(callerId);
+        newText = (newText ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(newText)) return (false, "Message is empty.", null);
+        if (newText.Length > MaxTextLength)     return (false, $"Message exceeds {MaxTextLength} character limit.", null);
+
+        lock (_lock)
+        {
+            foreach (var list in _store.Conversations.Values)
+            {
+                for (var i = 0; i < list.Count; i++)
+                {
+                    var m = list[i];
+                    if (m.Id != messageId) continue;
+                    if (m.FromUserId != callerId) return (false, "You can only edit your own messages.", null);
+                    if ((DateTime.UtcNow - m.SentAt) > EditWindow)
+                        return (false, "Edit window has passed (24 hours).", null);
+                    m.Text = newText;
+                    m.EditedAt = DateTime.UtcNow;
+                    Save();
+                    return (true, null, m);
+                }
+            }
+        }
+        return (false, "Message not found.", null);
+    }
+
+    /// <summary>
+    /// Deletes a single message. Sender can always delete their own message.
+    /// Recipient can delete inbound messages from their view (but not the
+    /// sender's view) — for simplicity in v1, we only allow sender deletion.
+    /// </summary>
+    public (bool ok, string? error) DeleteMessage(string callerId, string messageId)
+    {
+        callerId = NormalizeId(callerId);
+        lock (_lock)
+        {
+            foreach (var kvp in _store.Conversations)
+            {
+                var list = kvp.Value;
+                for (var i = 0; i < list.Count; i++)
+                {
+                    if (list[i].Id != messageId) continue;
+                    if (list[i].FromUserId != callerId) return (false, "You can only delete your own messages.");
+                    list.RemoveAt(i);
+                    Save();
+                    return (true, null);
+                }
+            }
+        }
+        return (false, "Message not found.");
+    }
+
+    /// <summary>
+    /// Wipes the entire conversation between the caller and another user.
+    /// This deletes for BOTH sides because it's a shared store.
+    /// </summary>
+    public (bool ok, int deleted) ClearConversation(string callerId, string otherId)
+    {
+        callerId = NormalizeId(callerId);
+        otherId  = NormalizeId(otherId);
+        lock (_lock)
+        {
+            var convId = ConversationId(callerId, otherId);
+            if (!_store.Conversations.TryGetValue(convId, out var list)) return (true, 0);
+            var count = list.Count;
+            _store.Conversations.Remove(convId);
+            Save();
+            return (true, count);
+        }
+    }
+
+    /// <summary>
+    /// Adds otherId to callerId's block list. Blocking is one-directional
+    /// storage-wise, but enforcement is mutual (either side blocking stops
+    /// messages from flowing). Existing messages are NOT deleted.
+    /// </summary>
+    public (bool ok, string? error) BlockUser(string callerId, string otherId)
+    {
+        callerId = NormalizeId(callerId);
+        otherId  = NormalizeId(otherId);
+        if (callerId == otherId) return (false, "Can't block yourself.");
+        var profile = _badgeService.GetOrCreateProfileDirect(callerId);
+        profile.Preferences ??= new Models.UserNotificationPreferences();
+        profile.Preferences.BlockedUsers ??= new List<string>();
+        if (!profile.Preferences.BlockedUsers.Any(x => NormalizeId(x) == otherId))
+        {
+            profile.Preferences.BlockedUsers.Add(otherId);
+            _badgeService.SaveProfileDirect(profile);
+        }
+        return (true, null);
+    }
+
+    public (bool ok, string? error) UnblockUser(string callerId, string otherId)
+    {
+        callerId = NormalizeId(callerId);
+        otherId  = NormalizeId(otherId);
+        var profile = _badgeService.GetOrCreateProfileDirect(callerId);
+        if (profile.Preferences?.BlockedUsers != null)
+        {
+            profile.Preferences.BlockedUsers.RemoveAll(x => NormalizeId(x) == otherId);
+            _badgeService.SaveProfileDirect(profile);
+        }
+        return (true, null);
+    }
+
+    public List<string> GetBlockedUsers(string callerId)
+    {
+        callerId = NormalizeId(callerId);
+        var profile = _badgeService.PeekProfile(callerId);
+        return profile?.Preferences?.BlockedUsers?.Select(NormalizeId).Distinct().ToList() ?? new List<string>();
+    }
+
+    private bool IsEitherBlocked(string a, string b)
+    {
+        a = NormalizeId(a); b = NormalizeId(b);
+        var pa = _badgeService.PeekProfile(a);
+        var pb = _badgeService.PeekProfile(b);
+        bool aHasB = pa?.Preferences?.BlockedUsers?.Any(x => NormalizeId(x) == b) == true;
+        bool bHasA = pb?.Preferences?.BlockedUsers?.Any(x => NormalizeId(x) == a) == true;
+        return aHasB || bHasA;
     }
 
     // ─────────────────────────────────────────────────────────────────── //

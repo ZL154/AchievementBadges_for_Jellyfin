@@ -16,6 +16,8 @@ public class Message
     [JsonPropertyName("text")]        public string   Text       { get; set; } = string.Empty;
     [JsonPropertyName("sentAt")]      public DateTime SentAt     { get; set; } = DateTime.UtcNow;
     [JsonPropertyName("readAt")]      public DateTime? ReadAt    { get; set; }
+    /// <summary>Server-side UTC timestamp of the last edit by the sender. Null = not edited.</summary>
+    [JsonPropertyName("editedAt")]    public DateTime? EditedAt  { get; set; }
 }
 
 /// <summary>

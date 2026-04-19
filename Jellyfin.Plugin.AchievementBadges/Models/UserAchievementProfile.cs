@@ -141,6 +141,24 @@ public class UserNotificationPreferences
     // profile card). Default true.
     [JsonPropertyName("ShowEquippedShowcase")]
     public bool ShowEquippedShowcase { get; set; } = true;
+
+    // ---- Messaging preferences (v1.8.1) ----------------------------------
+
+    /// <summary>Show a browser/desktop notification when a message arrives.</summary>
+    [JsonPropertyName("MessageNotifications")]
+    public bool MessageNotifications { get; set; } = true;
+
+    /// <summary>Play a subtle chime when a message arrives.</summary>
+    [JsonPropertyName("MessageNotificationSound")]
+    public bool MessageNotificationSound { get; set; } = true;
+
+    /// <summary>Suppress message notifications while actively watching something.</summary>
+    [JsonPropertyName("MuteMessageNotificationsDuringPlayback")]
+    public bool MuteMessageNotificationsDuringPlayback { get; set; } = false;
+
+    /// <summary>User IDs this user has blocked — no messages in either direction.</summary>
+    [JsonPropertyName("BlockedUsers")]
+    public List<string> BlockedUsers { get; set; } = new();
 }
 
 public class QuestState

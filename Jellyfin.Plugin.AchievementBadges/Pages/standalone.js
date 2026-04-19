@@ -2389,6 +2389,9 @@
                     '</div>' +
                     toggle('autoEquipNewUnlocks', tr('settings.auto_equip', 'Auto-equip new unlocks'), tr('settings.auto_equip_desc', 'Automatically equip newly unlocked badges'), prefs.autoEquipNewUnlocks === true || prefs.AutoEquipNewUnlocks === true) +
                     toggle('enablePushNotifications', tr('settings.push_notifications', 'Push notifications'), tr('settings.push_notifications_desc', 'Receive push notifications for achievements'), prefs.enablePushNotifications === true || prefs.EnablePushNotifications === true) +
+                    toggle('messageNotifications', tr('settings.msg_notifications', 'Message notifications'), tr('settings.msg_notifications_desc', 'Show a toast + browser notification when a friend messages you'), prefs.messageNotifications !== false && prefs.MessageNotifications !== false) +
+                    toggle('messageNotificationSound', tr('settings.msg_sound', 'Message sound'), tr('settings.msg_sound_desc', 'Play a subtle chime when a message arrives'), prefs.messageNotificationSound !== false && prefs.MessageNotificationSound !== false) +
+                    toggle('muteMessageNotificationsDuringPlayback', tr('settings.mute_during_playback', 'Mute during playback'), tr('settings.mute_during_playback_desc', 'Suppress message notifications while watching something'), prefs.muteMessageNotificationsDuringPlayback === true || prefs.MuteMessageNotificationsDuringPlayback === true) +
                     ((pc.ForceHideEquippedShowcase || pc.forceHideEquippedShowcase)
                         ? '<div class="ab-setting-row"><div class="ab-toggle-info"><div class="ab-toggle-label">' + tr('settings.show_equipped_showcase', 'Show equipped showcase') + '</div><div class="ab-toggle-desc">' + tr('settings.showcase_admin_off', 'Hidden by admin.') + '</div></div></div>'
                         : toggle('showEquippedShowcase', tr('settings.show_equipped_showcase', 'Show equipped showcase'), tr('settings.show_equipped_showcase_desc', 'Show the equipped-badge strip in the sidebar, header dots, and equipped slots on this page'), prefs.showEquippedShowcase !== false && prefs.ShowEquippedShowcase !== false)) +
@@ -2522,7 +2525,11 @@
                     payload[toPascalCase(key)] = v;
                 }
             });
-            return fetchJson('Plugins/AchievementBadges/users/' + userId + '/preferences', 'POST', payload);
+            return fetchJson('Plugins/AchievementBadges/users/' + userId + '/preferences', 'POST', payload).then(function (res) {
+                // Tell the sidebar's messaging module to re-read prefs next poll.
+                try { if (window.__abInvalidateMsgPrefs) window.__abInvalidateMsgPrefs(); } catch (e) {}
+                return res;
+            });
         }).catch(function () { });
     }
 

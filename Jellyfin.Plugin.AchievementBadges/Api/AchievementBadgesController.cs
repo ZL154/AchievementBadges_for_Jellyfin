@@ -439,6 +439,7 @@ public class AchievementBadgesController : ControllerBase
     }
 
     public class SendMessageRequest { public string Text { get; set; } = string.Empty; }
+    public class EditMessageRequest { public string Text { get; set; } = string.Empty; }
 
     [HttpPost("users/{userId}/messages/{otherUserId}")]
     [EnableRateLimiting("user-60-per-min")]
@@ -457,6 +458,66 @@ public class AchievementBadgesController : ControllerBase
                        ?? string.Empty;
         var (ok, err, msg) = _messagingService.Send(userId, fromName, otherUserId, body?.Text ?? string.Empty);
         return Ok(new { Success = ok, Message = err, Sent = msg });
+    }
+
+    [HttpPatch("users/{userId}/messages/{messageId}")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult EditMessage(
+        [FromRoute] string userId,
+        [FromRoute] string messageId,
+        [FromBody] EditMessageRequest body)
+    {
+        if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Messaging disabled." });
+        var (ok, err, msg) = _messagingService.EditMessage(userId, messageId, body?.Text ?? string.Empty);
+        return Ok(new { Success = ok, Message = err, Updated = msg });
+    }
+
+    [HttpDelete("users/{userId}/messages/by-id/{messageId}")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult DeleteMessage([FromRoute] string userId, [FromRoute] string messageId)
+    {
+        if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Messaging disabled." });
+        var (ok, err) = _messagingService.DeleteMessage(userId, messageId);
+        return Ok(new { Success = ok, Message = err });
+    }
+
+    [HttpDelete("users/{userId}/messages/{otherUserId}/clear")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult ClearConversation([FromRoute] string userId, [FromRoute] string otherUserId)
+    {
+        if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Messaging disabled." });
+        var (ok, deleted) = _messagingService.ClearConversation(userId, otherUserId);
+        return Ok(new { Success = ok, Deleted = deleted });
+    }
+
+    // Block / unblock / list
+    [HttpPost("users/{userId}/block/{otherUserId}")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult BlockUser([FromRoute] string userId, [FromRoute] string otherUserId)
+    {
+        var (ok, err) = _messagingService.BlockUser(userId, otherUserId);
+        return Ok(new { Success = ok, Message = err });
+    }
+
+    [HttpDelete("users/{userId}/block/{otherUserId}")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult UnblockUser([FromRoute] string userId, [FromRoute] string otherUserId)
+    {
+        var (ok, err) = _messagingService.UnblockUser(userId, otherUserId);
+        return Ok(new { Success = ok, Message = err });
+    }
+
+    [HttpGet("users/{userId}/blocked")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetBlockedUsers([FromRoute] string userId)
+    {
+        return Ok(new { Blocked = _messagingService.GetBlockedUsers(userId) });
     }
 
     // Public read of another user's equipped badges. The route deliberately
