@@ -298,6 +298,34 @@ public class FriendsService
         return (true, "Removed.");
     }
 
+    /// <summary>
+    /// Returns true only when both users have the other in their Friends
+    /// list. Used as the gate for features that require an accepted
+    /// friendship (messaging, etc.), where a pending request or one-sided
+    /// storage state would be wrong.
+    /// </summary>
+    public bool AreMutualFriends(string userIdA, string userIdB)
+    {
+        userIdA = NormalizeId(userIdA);
+        userIdB = NormalizeId(userIdB);
+        if (string.IsNullOrEmpty(userIdA) || string.IsNullOrEmpty(userIdB)) return false;
+        if (userIdA == userIdB) return false;
+
+        // Simple mode skips the explicit friendship step — every user on
+        // the server is treated as a "friend" of every other. Keep that
+        // behaviour consistent here so messaging works in simple mode too.
+        var cfg = Plugin.Instance?.Configuration;
+        if (cfg?.FriendsSimpleMode == true) return true;
+
+        var a = _badgeService.PeekProfile(userIdA);
+        var b = _badgeService.PeekProfile(userIdB);
+        if (a == null || b == null) return false;
+
+        var aHasB = (a.Friends ?? new List<string>()).Any(x => NormalizeId(x) == userIdB);
+        var bHasA = (b.Friends ?? new List<string>()).Any(x => NormalizeId(x) == userIdA);
+        return aHasB && bHasA;
+    }
+
     private static string NormalizeId(string? id)
     {
         if (string.IsNullOrWhiteSpace(id)) return string.Empty;

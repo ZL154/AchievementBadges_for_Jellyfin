@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.8.0.0",
+        "changelog": "Xbox-style 1:1 messaging between friends. Every friend row in the drawer gets a new chat-bubble icon; clicking it slides in a message pane over the friends list with the peer's avatar, online status, conversation history, and a text input at the bottom. Messages are stored server-side in plugins/configurations/achievementbadges/messages.json with atomic writes, auto-read-on-open, unread-count tracking for per-friend red dots, and a combined unread indicator on the floating friends button. Rate limited to 20 msgs/min per sender with a 1000-char max and a 500-message FIFO cap per conversation. Friendship is enforced: non-friends can't message each other (simple-mode treats every server user as a friend, consistent with the rest of the feature). 5 new endpoints under /Plugins/AchievementBadges/users/{userId}/messages/* covering unread-count, threads list, per-thread fetch, and send. Drawer open starts a 6s in-chat poll and a 20s drawer-wide unread poll so updates land without refresh.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.8.0/Jellyfin.Plugin.AchievementBadges_1.8.0.0.zip",
+        "checksum": "3b53ae2d9f06a50f4e5d80384a38a6c3",
+        "timestamp": "2026-04-19T00:00:00Z"
+      },
+      {
         "version": "1.7.16",
         "changelog": "Desktop calendar layout restored + mobile leaderboard fit. DESKTOP (> 640px): heatmap + streak calendar return to the old full-width aspect-ratio-scaled look with no day/month labels and no horizontal-scroll chrome — exactly how it was before v1.7.15. The renderer still emits the inline grid-template-columns=repeat(N,1fr) needed for cells to stretch across the container. MOBILE (<= 640px): keeps v1.7.15's fixed 12px cells, horizontally-scrollable wrapper, Mon/Wed/Fri day labels, localised month labels, and GitHub-style color legend, so cells stay readable at phone widths. Switch is CSS-only via a @media (max-width: 640px) block that uses !important to override the desktop inline grid-template-columns. LEADERBOARD mobile fit: podium + rows were clipping out of the tab container on phones because each podium column maxed at 170px × 3 + gaps = ~520px. Added a @media rule that shrinks the podium (medal 1.4em, name 0.8em, val 0.72em), removes the 170px column cap, compacts row padding, shrinks the rank gutter, and truncates overflowing user names with ellipsis. Panel cards now have overflow:hidden + min-width:0 on flex children so nothing else can bleed past the card edge. Panel padding tightened 1.1em → 0.75em on phones.",
         "targetAbi": "10.11.0.0",

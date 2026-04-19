@@ -412,6 +412,14 @@
     var _friendsCachedUsers = null;
     var _friendsSimpleMode = false;
     var _friendsCornerApplied = null;
+    // Chat / messaging state
+    var _friendUnread = {};         // map of otherUserId → unreadCount
+    var _chatOpen = false;          // is the chat pane currently visible?
+    var _chatPeerId = null;         // which friend the open chat is with
+    var _chatPeerName = null;       // display name for header
+    var _chatPeerOnline = false;    // online state for header dot
+    var _chatPollTimer = null;      // setInterval id for in-chat polling
+    var _chatUnreadPollTimer = null;// setInterval id for drawer unread polling
     // Before mounting, check the admin master switch + user's corner pref.
     // If the admin has turned the friends feature off entirely, we simply
     // don't render the floating button. Periodic re-resolve catches admin
@@ -473,6 +481,12 @@
             _friendsSimpleMode = cfg.simple;
             _actuallyMount();
             applyCorner(cfg.corner);
+            // Kick off background unread-count poll so the button's red
+            // dot lights up even when the drawer is closed. 20s cadence
+            // keeps traffic trivial.
+            if (_chatUnreadPollTimer) clearInterval(_chatUnreadPollTimer);
+            refreshUnreadCounts();
+            _chatUnreadPollTimer = setInterval(refreshUnreadCounts, 20000);
         }).catch(function(){ _friendsMounted = false; });
     }
 
@@ -633,7 +647,47 @@
                 '.ab-fd-empty .material-icons{font-size:2.8em;opacity:0.3;margin-bottom:0.4em;display:block;}' +
                 '.ab-fd-search{width:100%;padding:0.7em 0.9em;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-family:inherit;font-size:0.92em;margin-bottom:0.85em;box-sizing:border-box;}' +
                 '.ab-fd-search:focus{outline:none;border-color:rgba(102,126,234,0.55);box-shadow:0 0 0 3px rgba(102,126,234,0.18);}' +
-                '#abFriendsIncBadge{margin-left:0.3em;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:0.65em;font-weight:800;line-height:16px;min-width:18px;text-align:center;}';
+                '#abFriendsIncBadge{margin-left:0.3em;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:0.65em;font-weight:800;line-height:16px;min-width:18px;text-align:center;}' +
+
+                // ── Chat panel (Xbox-style slide-over inside the drawer) ──
+                '#abFriendsChatPane{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(170deg,#1a1f2e 0%,#0d1017 100%);display:none;flex-direction:column;transform:translateX(100%);transition:transform 0.24s cubic-bezier(.22,.9,.3,1);z-index:5;}' +
+                '#abFriendsChatPane.open{transform:translateX(0);}' +
+                '.ab-chat-header{display:flex;align-items:center;gap:0.7em;padding:1em 1.1em;border-bottom:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);}' +
+                '.ab-chat-back{width:32px;height:32px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.12s;flex-shrink:0;}' +
+                '.ab-chat-back:hover{background:rgba(255,255,255,0.16);}' +
+                '.ab-chat-back .material-icons{font-size:1.2em;}' +
+                '.ab-chat-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85em;flex-shrink:0;background-size:cover;background-position:center;position:relative;}' +
+                '.ab-chat-avatar.online::after{content:"";position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;background:#10b981;border-radius:50%;border:2px solid #1a1f2e;}' +
+                '.ab-chat-peer{flex:1;min-width:0;}' +
+                '.ab-chat-peer-name{font-weight:700;font-size:0.98em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+                '.ab-chat-peer-status{font-size:0.75em;color:rgba(255,255,255,0.55);margin-top:0.15em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+                '.ab-chat-peer-status.online{color:#10b981;}' +
+                '.ab-chat-scroll{flex:1;overflow-y:auto;padding:0.9em 0.9em 0.5em;display:flex;flex-direction:column;gap:0.45em;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.18) transparent;}' +
+                '.ab-chat-scroll::-webkit-scrollbar{width:6px;}' +
+                '.ab-chat-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.18);border-radius:3px;}' +
+                '.ab-chat-msg{max-width:78%;padding:0.55em 0.85em;border-radius:18px;font-size:0.9em;line-height:1.4;word-wrap:break-word;animation:abChatMsgIn 0.16s ease-out;}' +
+                '@keyframes abChatMsgIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}' +
+                '.ab-chat-msg.me{align-self:flex-end;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-bottom-right-radius:4px;box-shadow:0 2px 6px rgba(102,126,234,0.25);}' +
+                '.ab-chat-msg.them{align-self:flex-start;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.95);border-bottom-left-radius:4px;}' +
+                '.ab-chat-time{font-size:0.66em;opacity:0.6;margin-top:0.25em;display:block;}' +
+                '.ab-chat-daysep{align-self:center;margin:0.6em 0 0.1em;font-size:0.65em;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;}' +
+                '.ab-chat-empty{margin:auto;color:rgba(255,255,255,0.45);font-size:0.85em;text-align:center;padding:2em 1em;display:flex;flex-direction:column;align-items:center;gap:0.6em;}' +
+                '.ab-chat-empty .material-icons{font-size:3em;opacity:0.3;}' +
+                '.ab-chat-input-row{display:flex;gap:0.5em;padding:0.75em 0.85em;border-top:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);align-items:flex-end;}' +
+                '.ab-chat-input{flex:1;resize:none;min-height:40px;max-height:120px;padding:0.55em 0.9em;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.9em;font-family:inherit;outline:none;transition:border-color 0.12s,background 0.12s;}' +
+                '.ab-chat-input:focus{border-color:rgba(102,126,234,0.6);background:rgba(255,255,255,0.08);}' +
+                '.ab-chat-input::placeholder{color:rgba(255,255,255,0.35);}' +
+                '.ab-chat-send{width:40px;height:40px;border-radius:50%;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform 0.12s,box-shadow 0.12s;flex-shrink:0;}' +
+                '.ab-chat-send:hover:not(:disabled){transform:scale(1.08);box-shadow:0 4px 14px rgba(102,126,234,0.5);}' +
+                '.ab-chat-send:disabled{opacity:0.4;cursor:not-allowed;}' +
+                '.ab-chat-send .material-icons{font-size:1.2em;}' +
+                '.ab-chat-counter{font-size:0.7em;color:rgba(255,255,255,0.4);text-align:right;padding:0 1em 0.3em;margin-top:-0.15em;}' +
+                '.ab-chat-counter.near{color:#f59e0b;}' +
+                '.ab-chat-counter.over{color:#ef4444;}' +
+                '.ab-chat-error{font-size:0.78em;color:#ef4444;padding:0 1em 0.4em;}' +
+                '.ab-fd-act.chat{color:#8b9dff;}' +
+                '.ab-fd-act.chat:hover{background:rgba(102,126,234,0.18);color:#a5b4ff;}' +
+                '.ab-fd-row .ab-fd-unread{display:inline-flex;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#ef4444;color:#fff;font-size:0.65em;font-weight:800;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(10,12,18,0.92);margin-left:0.35em;vertical-align:middle;}';
             (document.head || document.documentElement).appendChild(fst);
         }
 
@@ -667,12 +721,32 @@
                 '<button type="button" class="ab-fd-tab" data-ab-fdtab="requests" data-ab-hide-in-simple' + (_friendsSimpleMode ? ' style="display:none;"' : '') + '>' + tr('friends.tab_requests', 'Requests') + '<span id="abFriendsIncBadge" style="display:none;"></span></button>' +
                 '<button type="button" class="ab-fd-tab" data-ab-fdtab="find" data-ab-hide-in-simple' + (_friendsSimpleMode ? ' style="display:none;"' : '') + '>' + tr('friends.tab_find', 'Find') + '</button>' +
             '</div>' +
-            '<div class="ab-fd-body">' +
+            '<div class="ab-fd-body" style="position:relative;">' +
                 '<div id="abFriendsPaneFriends"></div>' +
                 '<div id="abFriendsPaneRequests" style="display:none;"></div>' +
                 '<div id="abFriendsPaneFind" style="display:none;">' +
                     '<input type="search" id="abFriendsSearch" class="ab-fd-search" placeholder="' + tr('friends.search_placeholder', 'Search users...') + '">' +
                     '<div id="abFriendsSearchResults"></div>' +
+                '</div>' +
+                // Slide-over chat pane. Lives inside the drawer body so it
+                // animates in from the right, leaving the drawer shell (title
+                // bar, tabs) untouched — consistent with the Xbox Guide pattern.
+                '<div id="abFriendsChatPane">' +
+                    '<div class="ab-chat-header">' +
+                        '<button type="button" class="ab-chat-back" id="abChatBack" title="'+tr('friends.back','Back')+'"><span class="material-icons">arrow_back</span></button>' +
+                        '<div class="ab-chat-avatar" id="abChatAvatar"></div>' +
+                        '<div class="ab-chat-peer">' +
+                            '<div class="ab-chat-peer-name" id="abChatPeerName"></div>' +
+                            '<div class="ab-chat-peer-status" id="abChatPeerStatus"></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="ab-chat-scroll" id="abChatScroll"></div>' +
+                    '<div class="ab-chat-error" id="abChatError" style="display:none;"></div>' +
+                    '<div class="ab-chat-counter" id="abChatCounter"></div>' +
+                    '<div class="ab-chat-input-row">' +
+                        '<textarea class="ab-chat-input" id="abChatInput" rows="1" maxlength="1000" placeholder="'+tr('friends.message_placeholder','Message...')+'"></textarea>' +
+                        '<button type="button" class="ab-chat-send" id="abChatSend" disabled title="'+tr('friends.send','Send')+'"><span class="material-icons">send</span></button>' +
+                    '</div>' +
                 '</div>' +
             '</div>';
         document.body.appendChild(drawer);
@@ -691,9 +765,14 @@
             backdrop.style.opacity='1';
             drawer.style.transform='translateX(0)';
             loadFriends();
+            bindChatPaneControls();
+            refreshUnreadCounts();
         }
         function close(){
             _friendsOpen = false;
+            // Collapse any open chat pane too so reopening the drawer
+            // starts clean on the friends list.
+            if (_chatOpen) closeChatPane();
             backdrop.style.opacity='0';
             // Slide out in the direction matching the drawer's anchor so the
             // animation makes sense whether we're on the left or right side.
@@ -863,13 +942,24 @@
                         var initialsHtml = av ? '' : escapeHtml(initials(f.UserName));
                         // In simple mode there's no friendship to remove —
                         // the row is just a live user card.
-                        var actionsHtml = simple
+                        // Unread badge per friend comes from the latest
+                        // threads snapshot if available (populated async,
+                        // safe fallback to 0).
+                        var unreadN = (_friendUnread && _friendUnread[String(f.UserId).toLowerCase()]) || 0;
+                        var unreadHtml = unreadN > 0
+                            ? '<span class="ab-fd-unread">' + (unreadN > 99 ? '99+' : unreadN) + '</span>'
+                            : '';
+                        // Chat button (for both simple mode and friends mode)
+                        // + remove button (friends mode only).
+                        var chatBtnHtml = '<button type="button" class="ab-fd-act chat" data-ab-chat-open="' + escapeHtml(f.UserId) + '" data-ab-chat-name="' + escapeHtml(f.UserName) + '" data-ab-chat-online="' + (f.Online ? '1' : '0') + '" title="'+tr('friends.message','Message')+'"><span class="material-icons">chat_bubble_outline</span></button>';
+                        var removeBtnHtml = simple
                             ? ''
-                            : '<div class="ab-fd-actions"><button type="button" class="ab-fd-act decline" data-ab-friend-remove="' + escapeHtml(f.UserId) + '" title="'+tr('friends.remove','Remove')+'"><span class="material-icons">person_remove</span></button></div>';
+                            : '<button type="button" class="ab-fd-act decline" data-ab-friend-remove="' + escapeHtml(f.UserId) + '" title="'+tr('friends.remove','Remove')+'"><span class="material-icons">person_remove</span></button>';
+                        var actionsHtml = '<div class="ab-fd-actions">' + chatBtnHtml + removeBtnHtml + '</div>';
                         return '<div class="ab-fd-row">' +
                             '<div class="ab-fd-avatar'+(f.Online?' online':'')+'" style="' + av + '">' + initialsHtml + '</div>' +
                             '<div class="ab-fd-info">' +
-                                '<div class="ab-fd-name">' + escapeHtml(f.UserName) + '</div>' +
+                                '<div class="ab-fd-name">' + escapeHtml(f.UserName) + unreadHtml + '</div>' +
                                 '<div class="ab-fd-status'+(f.Online?' online':'')+'">' + status + '</div>' +
                                 (f.Equipped && f.Equipped.length ? '<div style="margin-top:0.35em;">' + renderEquippedDots(f.Equipped, 16) + '</div>' : '') +
                             '</div>' +
@@ -931,6 +1021,18 @@
                     });
                 });
 
+                // Chat button on each friend row — opens the slide-over pane.
+                document.querySelectorAll('[data-ab-chat-open]').forEach(function(btn){
+                    btn.addEventListener('click', function(ev){
+                        ev.stopPropagation();
+                        openChatPane(
+                            btn.getAttribute('data-ab-chat-open'),
+                            btn.getAttribute('data-ab-chat-name'),
+                            btn.getAttribute('data-ab-chat-online') === '1'
+                        );
+                    });
+                });
+
                 window.__abFriendIds = {};
                 [friends, incoming, outgoing].forEach(function(arr){
                     arr.forEach(function(f){ window.__abFriendIds[String(f.UserId||'').toLowerCase().replace(/-/g,'')] = true; });
@@ -938,6 +1040,272 @@
             }).catch(function(){
                 fBox.innerHTML = '<div class="ab-fd-empty"><span class="material-icons">error_outline</span><div>' + tr('friends.load_failed', 'Failed to load friends.') + '</div></div>';
             });
+    }
+
+    // ───────────────────────── Chat / messaging ─────────────────────────
+
+    function chatApi(path, opts){
+        var uid = getUserId();
+        if (!uid) return Promise.resolve(null);
+        return fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+path), Object.assign(
+            { headers: authHeaders(), credentials: 'include' }, opts || {}))
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .catch(function(){ return null; });
+    }
+
+    function formatChatTime(iso){
+        try {
+            var d = new Date(iso);
+            var now = new Date();
+            var sameDay = d.toDateString() === now.toDateString();
+            if (sameDay) {
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            var yest = new Date(now); yest.setDate(yest.getDate() - 1);
+            if (d.toDateString() === yest.toDateString()) {
+                return tr('friends.yesterday', 'Yesterday') + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            return d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (e) { return ''; }
+    }
+
+    function daySep(iso){
+        try {
+            var d = new Date(iso);
+            var now = new Date();
+            if (d.toDateString() === now.toDateString()) return tr('friends.today', 'Today');
+            var yest = new Date(now); yest.setDate(yest.getDate() - 1);
+            if (d.toDateString() === yest.toDateString()) return tr('friends.yesterday', 'Yesterday');
+            return d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' });
+        } catch (e) { return ''; }
+    }
+
+    function renderChatMessages(msgs){
+        var meId = (getUserId() || '').toLowerCase().replace(/-/g, '');
+        var scroll = document.getElementById('abChatScroll');
+        if (!scroll) return;
+        if (!msgs || !msgs.length) {
+            scroll.innerHTML =
+                '<div class="ab-chat-empty"><span class="material-icons">forum</span>' +
+                '<div>' + tr('friends.chat_empty', 'No messages yet. Say hi!') + '</div></div>';
+            return;
+        }
+        var html = '';
+        var lastDay = '';
+        msgs.forEach(function(m){
+            var d = new Date(m.sentAt);
+            var dayKey = d.toDateString();
+            if (dayKey !== lastDay) {
+                html += '<div class="ab-chat-daysep">' + escapeHtml(daySep(m.sentAt)) + '</div>';
+                lastDay = dayKey;
+            }
+            var fromMe = (m.fromUserId || '').toLowerCase().replace(/-/g, '') === meId;
+            html += '<div class="ab-chat-msg ' + (fromMe ? 'me' : 'them') + '">' +
+                escapeHtml(m.text).replace(/\n/g, '<br>') +
+                '<span class="ab-chat-time">' + escapeHtml(formatChatTime(m.sentAt)) + '</span>' +
+            '</div>';
+        });
+        scroll.innerHTML = html;
+        // Auto-scroll to bottom on (re)render
+        scroll.scrollTop = scroll.scrollHeight;
+    }
+
+    function loadChatMessages(){
+        if (!_chatOpen || !_chatPeerId) return Promise.resolve();
+        return chatApi('/messages/' + _chatPeerId + '?limit=100').then(function(res){
+            if (!_chatOpen || !_chatPeerId) return; // closed while fetching
+            renderChatMessages((res && res.Messages) || []);
+            // Clear this friend's unread in the local map so the red dot
+            // disappears the next time the friend list re-renders.
+            var k = (_chatPeerId || '').toLowerCase().replace(/-/g, '');
+            if (_friendUnread[k]) { _friendUnread[k] = 0; }
+        });
+    }
+
+    function openChatPane(peerId, peerName, peerOnline){
+        _chatOpen = true;
+        _chatPeerId = peerId;
+        _chatPeerName = peerName;
+        _chatPeerOnline = !!peerOnline;
+        var pane = document.getElementById('abFriendsChatPane');
+        if (!pane) return;
+
+        // Populate header
+        var av = avatarStyle(peerId);
+        var avEl = document.getElementById('abChatAvatar');
+        if (avEl) {
+            avEl.setAttribute('style', av);
+            avEl.className = 'ab-chat-avatar' + (peerOnline ? ' online' : '');
+            avEl.textContent = av ? '' : initials(peerName);
+        }
+        var nmEl = document.getElementById('abChatPeerName');
+        if (nmEl) nmEl.textContent = peerName || '';
+        var stEl = document.getElementById('abChatPeerStatus');
+        if (stEl) {
+            stEl.textContent = peerOnline ? tr('friends.online', 'Online') : tr('friends.offline', 'Offline');
+            stEl.className = 'ab-chat-peer-status' + (peerOnline ? ' online' : '');
+        }
+
+        // Reset input state
+        var input = document.getElementById('abChatInput');
+        if (input) { input.value = ''; autoGrowChatInput(input); }
+        updateChatCounter('');
+        hideChatError();
+        var send = document.getElementById('abChatSend');
+        if (send) send.disabled = true;
+
+        // Show pane
+        pane.style.display = 'flex';
+        void pane.offsetHeight;
+        pane.classList.add('open');
+
+        // Initial load + polling
+        loadChatMessages();
+        if (_chatPollTimer) clearInterval(_chatPollTimer);
+        _chatPollTimer = setInterval(loadChatMessages, 6000);
+
+        // Focus input after slide animation
+        setTimeout(function(){
+            var el = document.getElementById('abChatInput');
+            if (el) el.focus();
+        }, 260);
+    }
+
+    function closeChatPane(){
+        _chatOpen = false;
+        _chatPeerId = null;
+        if (_chatPollTimer) { clearInterval(_chatPollTimer); _chatPollTimer = null; }
+        var pane = document.getElementById('abFriendsChatPane');
+        if (!pane) return;
+        pane.classList.remove('open');
+        setTimeout(function(){ if (!_chatOpen) pane.style.display = 'none'; }, 280);
+        // Refresh the friend list so the unread badge on this peer updates
+        if (typeof loadFriends === 'function') try { loadFriends(); } catch (e) {}
+    }
+
+    function showChatError(msg){
+        var err = document.getElementById('abChatError');
+        if (err) { err.textContent = msg; err.style.display = ''; }
+    }
+    function hideChatError(){
+        var err = document.getElementById('abChatError');
+        if (err) err.style.display = 'none';
+    }
+
+    function updateChatCounter(text){
+        var el = document.getElementById('abChatCounter');
+        if (!el) return;
+        var n = (text || '').length;
+        var max = 1000;
+        if (n === 0) { el.textContent = ''; el.className = 'ab-chat-counter'; return; }
+        el.textContent = n + ' / ' + max;
+        el.className = 'ab-chat-counter' + (n >= max ? ' over' : (n > max * 0.9 ? ' near' : ''));
+    }
+
+    function autoGrowChatInput(el){
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(120, el.scrollHeight) + 'px';
+    }
+
+    function sendChatMessage(){
+        if (!_chatOpen || !_chatPeerId) return;
+        var input = document.getElementById('abChatInput');
+        if (!input) return;
+        var text = (input.value || '').trim();
+        if (!text) return;
+        var send = document.getElementById('abChatSend');
+        if (send) send.disabled = true;
+        hideChatError();
+        var uid = getUserId();
+        if (!uid) return;
+        fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+'/messages/'+_chatPeerId), {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+            credentials: 'include',
+            body: JSON.stringify({ Text: text })
+        })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(res){
+            if (!res || !res.Success) {
+                showChatError((res && res.Message) || tr('friends.send_failed', 'Could not send message.'));
+                if (send) send.disabled = false;
+                return;
+            }
+            input.value = '';
+            autoGrowChatInput(input);
+            updateChatCounter('');
+            loadChatMessages();
+        })
+        .catch(function(){
+            showChatError(tr('friends.send_failed', 'Could not send message.'));
+            if (send) send.disabled = false;
+        });
+    }
+
+    // Wire up the chat pane's controls exactly once, at drawer mount time.
+    function bindChatPaneControls(){
+        var back = document.getElementById('abChatBack');
+        if (back && !back.dataset.abBound) {
+            back.dataset.abBound = '1';
+            back.addEventListener('click', closeChatPane);
+        }
+        var input = document.getElementById('abChatInput');
+        if (input && !input.dataset.abBound) {
+            input.dataset.abBound = '1';
+            input.addEventListener('input', function(){
+                autoGrowChatInput(input);
+                updateChatCounter(input.value);
+                var send = document.getElementById('abChatSend');
+                if (send) send.disabled = !(input.value || '').trim();
+            });
+            input.addEventListener('keydown', function(ev){
+                // Enter = send, Shift+Enter = newline
+                if (ev.key === 'Enter' && !ev.shiftKey) {
+                    ev.preventDefault();
+                    sendChatMessage();
+                }
+            });
+        }
+        var send = document.getElementById('abChatSend');
+        if (send && !send.dataset.abBound) {
+            send.dataset.abBound = '1';
+            send.addEventListener('click', sendChatMessage);
+        }
+    }
+
+    // Poll every 20s for unread counts while the drawer is mounted (not
+    // just when it's open) so the friends button's red dot updates even
+    // from other parts of the UI. Low traffic — one GET per 20s.
+    function refreshUnreadCounts(){
+        var uid = getUserId();
+        if (!uid) return;
+        chatApi('/messages/threads').then(function(res){
+            if (!res || !res.Threads) return;
+            var map = {};
+            var totalUnread = 0;
+            res.Threads.forEach(function(t){
+                if (t.unreadCount > 0) {
+                    map[String(t.otherUserId || '').toLowerCase().replace(/-/g, '')] = t.unreadCount;
+                    totalUnread += t.unreadCount;
+                }
+            });
+            _friendUnread = map;
+            // Reflect messages in the floating friends button's badge.
+            // Existing incoming-requests badge owns that slot already;
+            // we OR them together so either signal lights it up.
+            var btnBadge = document.getElementById('abFriendsBadge');
+            if (btnBadge) {
+                var incCount = 0;
+                var incEl = document.getElementById('abFriendsIncBadge');
+                if (incEl && incEl.style.display !== 'none') {
+                    incCount = parseInt(incEl.textContent, 10) || 0;
+                }
+                var combined = incCount + totalUnread;
+                btnBadge.textContent = combined > 99 ? '99+' : String(combined);
+                btnBadge.style.display = combined > 0 ? 'flex' : 'none';
+            }
+        });
     }
 
     function fetchServerUsers(){

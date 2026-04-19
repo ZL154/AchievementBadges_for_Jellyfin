@@ -30,6 +30,7 @@ public class AchievementBadgesController : ControllerBase
     private readonly IUserManager _userManager;
     private readonly IAuthorizationService _authService;
     private readonly FriendsService _friendsService;
+    private readonly MessagingService _messagingService;
 
     public AchievementBadgesController(
         AchievementBadgeService badgeService,
@@ -42,7 +43,8 @@ public class AchievementBadgesController : ControllerBase
         AuditLogService auditLog,
         IUserManager userManager,
         IAuthorizationService authService,
-        FriendsService friendsService)
+        FriendsService friendsService,
+        MessagingService messagingService)
     {
         _badgeService = badgeService;
         _playbackCompletionService = playbackCompletionService;
@@ -55,6 +57,7 @@ public class AchievementBadgesController : ControllerBase
         _userManager = userManager;
         _authService = authService;
         _friendsService = friendsService;
+        _messagingService = messagingService;
     }
 
     [HttpGet("test")]
@@ -397,6 +400,63 @@ public class AchievementBadgesController : ControllerBase
         if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Friends feature disabled by admin." });
         var (ok, message) = _friendsService.Remove(userId, friendUserId);
         return Ok(new { Success = ok, Message = message });
+    }
+
+    // ─── Messaging ───────────────────────────────────────────────────── //
+    // Xbox-style 1:1 chat between friends. All routes are user-scoped so
+    // the UserOwnershipFilter already guards them against other-user
+    // access. MessagingService enforces friendship + rate limits.
+
+    [HttpGet("users/{userId}/messages/unread-count")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetUnreadMessageCount([FromRoute] string userId)
+    {
+        if (!FriendsFeatureOn) return Ok(new { Count = 0 });
+        return Ok(new { Count = _messagingService.GetUnreadCount(userId) });
+    }
+
+    [HttpGet("users/{userId}/messages/threads")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetMessageThreads([FromRoute] string userId)
+    {
+        if (!FriendsFeatureOn) return Ok(new { Threads = new List<object>() });
+        return Ok(new { Threads = _messagingService.GetThreads(userId) });
+    }
+
+    [HttpGet("users/{userId}/messages/{otherUserId}")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetMessageThread(
+        [FromRoute] string userId,
+        [FromRoute] string otherUserId,
+        [FromQuery] int limit = 100)
+    {
+        if (!FriendsFeatureOn) return Ok(new { Messages = new List<object>() });
+        var msgs = _messagingService.GetThread(userId, otherUserId, limit);
+        return Ok(new { Messages = msgs });
+    }
+
+    public class SendMessageRequest { public string Text { get; set; } = string.Empty; }
+
+    [HttpPost("users/{userId}/messages/{otherUserId}")]
+    [EnableRateLimiting("user-60-per-min")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult SendMessage(
+        [FromRoute] string userId,
+        [FromRoute] string otherUserId,
+        [FromBody] SendMessageRequest body)
+    {
+        if (!FriendsFeatureOn) return Ok(new { Success = false, Message = "Messaging disabled by admin." });
+        // Resolve sender's display name from claims so the stored message
+        // has a name even if user-manager lookup later fails.
+        var fromName = User.FindFirst("Jellyfin-User")?.Value
+                       ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                       ?? User.Identity?.Name
+                       ?? string.Empty;
+        var (ok, err, msg) = _messagingService.Send(userId, fromName, otherUserId, body?.Text ?? string.Empty);
+        return Ok(new { Success = ok, Message = err, Sent = msg });
     }
 
     // Public read of another user's equipped badges. The route deliberately
