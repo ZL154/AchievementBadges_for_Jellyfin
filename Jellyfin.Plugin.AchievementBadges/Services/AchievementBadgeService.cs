@@ -2618,12 +2618,22 @@ public class AchievementBadgeService
         // SyncDefinitions / EvaluateBadges per profile in its OWN try so a
         // single broken profile doesn't prevent every other user from being
         // loaded.
+        //
+        // CRITICAL: pass silent=true + UnixEpoch timestamp so any badge
+        // that newly unlocks during the load pass (because a new definition
+        // was added in this release whose threshold the user's existing
+        // counters already meet) does NOT fire a webhook, audit entry, or
+        // client toast. v1.8.7 patched the same issue in EvaluateAllProfiles
+        // but missed this synchronous load-path call, which runs BEFORE the
+        // 8s-delayed SafeStartupRunner and was the true origin of the
+        // "update = every achievement re-toasts" cascade.
+        var epochStamp = DateTimeOffset.UnixEpoch;
         foreach (var profile in _userProfiles.Values)
         {
             try
             {
                 SyncDefinitions(profile, profile.UserId);
-                EvaluateBadges(profile, profile.UserId);
+                EvaluateBadges(profile, profile.UserId, silent: true, unlockTimestamp: epochStamp);
             }
             catch (Exception ex)
             {
