@@ -843,6 +843,16 @@
                 '.ab-newgroup-row input{accent-color:#667eea;width:16px;height:16px;}' +
                 '.ab-newgroup-row .ab-fd-avatar{width:32px;height:32px;font-size:0.72em;}' +
                 '.ab-newgroup-row span{flex:1;color:#fff;font-size:0.88em;}' +
+
+                // Members modal — re-uses .ab-newgroup-box but rows are static
+                // (no checkbox) and show a "you"/"admin" pill on the right.
+                '.ab-members-row{display:flex;align-items:center;gap:0.7em;padding:0.5em 0.6em;border-radius:8px;}' +
+                '.ab-members-row .ab-fd-avatar{width:32px;height:32px;font-size:0.72em;}' +
+                '.ab-members-row .ab-members-name{flex:1;color:#fff;font-size:0.88em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+                '.ab-members-pill{font-size:0.65em;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:0.18em 0.55em;border-radius:999px;color:#c7d2fe;background:rgba(102,126,234,0.18);border:1px solid rgba(102,126,234,0.35);}' +
+                '.ab-members-pill.admin{color:#fcd34d;background:rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.35);}' +
+                '.ab-chat-peer-status.clickable{cursor:pointer;}' +
+                '.ab-chat-peer-status.clickable:hover{color:#c7d2fe;}' +
                 '.ab-confirm-btn.primary{background:linear-gradient(135deg,#8b5cf6,#3b82f6);color:#fff;}' +
                 '.ab-prompt-input{width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:0.6em 0.85em;font-size:0.92em;font-family:inherit;outline:none;margin-bottom:1em;transition:border-color 0.15s;}' +
                 '.ab-prompt-input:focus{border-color:rgba(139,92,246,0.7);}' +
@@ -913,6 +923,7 @@
                     '<div class="ab-chat-menu" id="abChatMenu">' +
                         '<button type="button" class="ab-chat-menu-item" id="abChatClear"><span class="material-icons">delete_sweep</span><span>'+tr('friends.clear_chat','Clear conversation')+'</span></button>' +
                         '<button type="button" class="ab-chat-menu-item" id="abChatMute"><span class="material-icons">notifications_off</span><span id="abChatMuteLabel">'+tr('friends.mute','Mute notifications')+'</span></button>' +
+                        '<button type="button" class="ab-chat-menu-item" id="abChatMembers" style="display:none;"><span class="material-icons">group</span><span>'+tr('friends.view_members','View members')+'</span></button>' +
                         '<button type="button" class="ab-chat-menu-item" id="abChatRename" style="display:none;"><span class="material-icons">edit</span><span>'+tr('friends.rename_group','Rename group')+'</span></button>' +
                         '<button type="button" class="ab-chat-menu-item" id="abChatLeave" style="display:none;"><span class="material-icons">logout</span><span>'+tr('friends.leave_group','Leave group')+'</span></button>' +
                         '<div class="ab-chat-menu-sep"></div>' +
@@ -1577,10 +1588,12 @@
             if (_chatConvType === 'group') {
                 var n = _chatParticipants.length + 1;
                 stEl.textContent = n + ' ' + tr('friends.members','members');
-                stEl.className = 'ab-chat-peer-status';
+                stEl.className = 'ab-chat-peer-status clickable';
+                stEl.title = tr('friends.view_members','View members');
             } else {
                 stEl.textContent = _chatPeerOnline ? tr('friends.online', 'Online') : tr('friends.offline', 'Offline');
                 stEl.className = 'ab-chat-peer-status' + (_chatPeerOnline ? ' online' : '');
+                stEl.title = '';
             }
         }
 
@@ -1605,6 +1618,8 @@
             if (muteItem) muteItem.style.display = (_chatConvType === 'group') ? 'none' : 'flex';
             var blockItem = document.getElementById('abChatBlock');
             if (blockItem) blockItem.style.display = (_chatConvType === 'group') ? 'none' : 'flex';
+            var membersItem = document.getElementById('abChatMembers');
+            if (membersItem) membersItem.style.display = (_chatConvType === 'group') ? 'flex' : 'none';
             var renameItem = document.getElementById('abChatRename');
             if (renameItem) renameItem.style.display = (_chatConvType === 'group') ? 'flex' : 'none';
             var leaveItem = document.getElementById('abChatLeave');
@@ -1901,6 +1916,23 @@
                 );
             });
         }
+        var membersBtn = document.getElementById('abChatMembers');
+        if (membersBtn && !membersBtn.dataset.abBound) {
+            membersBtn.dataset.abBound = '1';
+            membersBtn.addEventListener('click', function(){
+                if (menu) menu.classList.remove('open');
+                if (!_chatConvId || _chatConvType !== 'group') return;
+                openMembersModal();
+            });
+        }
+        var statusEl = document.getElementById('abChatPeerStatus');
+        if (statusEl && !statusEl.dataset.abBound) {
+            statusEl.dataset.abBound = '1';
+            statusEl.addEventListener('click', function(){
+                if (_chatConvType !== 'group' || !_chatConvId) return;
+                openMembersModal();
+            });
+        }
         var leaveBtn = document.getElementById('abChatLeave');
         if (leaveBtn && !leaveBtn.dataset.abBound) {
             leaveBtn.dataset.abBound = '1';
@@ -2025,6 +2057,95 @@
                     }
                 });
             });
+        });
+    }
+
+    // ── Group members modal ───────────────────────────────────────────
+    // Shows the full participant list for the currently-open group chat.
+    // Hits GET /conversations/{convId} for fresh participantIds + creator,
+    // then maps unknown IDs via the friends list (and falls back to the
+    // bundled _chatParticipants names we already have for display).
+    function openMembersModal(){
+        var uid = getUserId(); if (!uid || !_chatConvId) return;
+        var meNorm = uid.toLowerCase().replace(/-/g,'');
+
+        Promise.all([
+            fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+'/conversations/'+_chatConvId),
+                { headers: authHeaders(), credentials: 'include' })
+                .then(function(r){ return r.ok ? r.json() : null; }),
+            fetch(buildUrl('Plugins/AchievementBadges/users/'+uid+'/friends'),
+                { headers: authHeaders(), credentials: 'include' })
+                .then(function(r){ return r.ok ? r.json() : null; })
+        ]).then(function(results){
+            var convRes = results[0];
+            var friendsRes = results[1];
+            var conv = convRes && convRes.Conversation;
+            if (!conv) { showToast(tr('friends.members_load_failed','Could not load members.'),''); return; }
+
+            var friends = (friendsRes && friendsRes.Friends) || [];
+            var participantNameById = {};
+            // Seed from in-memory chat state (other members)
+            (_chatParticipants || []).forEach(function(p){
+                if (p && p.userId) participantNameById[p.userId.toLowerCase().replace(/-/g,'')] = p.userName || '';
+            });
+            // Also seed from friends list (catches members not currently bundled)
+            friends.forEach(function(f){
+                var k = (f.UserId||'').toLowerCase().replace(/-/g,'');
+                if (k && !participantNameById[k]) participantNameById[k] = f.UserName || '';
+            });
+
+            var creatorNorm = (conv.createdByUserId||'').toLowerCase().replace(/-/g,'');
+            var rows = (conv.participantIds || []).map(function(pid){
+                var k = (pid||'').toLowerCase().replace(/-/g,'');
+                var isMe = k === meNorm;
+                var isAdmin = k === creatorNorm;
+                var name = isMe
+                    ? tr('friends.you','You')
+                    : (participantNameById[k] || tr('friends.unknown_user','Unknown user'));
+                var av = avatarStyle(pid);
+                var ih = av ? '' : escapeHtml(initials(name));
+                var pills = '';
+                if (isMe) pills += '<span class="ab-members-pill">' + escapeHtml(tr('friends.you_pill','You')) + '</span>';
+                if (isAdmin) pills += '<span class="ab-members-pill admin">' + escapeHtml(tr('friends.admin_pill','Admin')) + '</span>';
+                return '<div class="ab-members-row">' +
+                    '<div class="ab-fd-avatar" style="' + av + '">' + ih + '</div>' +
+                    '<div class="ab-members-name">' + escapeHtml(name) + '</div>' +
+                    pills +
+                '</div>';
+            });
+
+            // Sort: me first, then admin, then alphabetical
+            // (build a parallel sort key list before joining)
+            var pairs = (conv.participantIds || []).map(function(pid, i){
+                var k = (pid||'').toLowerCase().replace(/-/g,'');
+                var isMe = k === meNorm;
+                var isAdmin = k === creatorNorm;
+                var name = isMe ? '' : (participantNameById[k] || '~');
+                var rank = isMe ? '0' : (isAdmin ? '1' : '2');
+                return { html: rows[i], key: rank + name.toLowerCase() };
+            });
+            pairs.sort(function(a,b){ return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
+            var listHtml = pairs.map(function(p){ return p.html; }).join('');
+
+            var overlay = document.createElement('div');
+            overlay.id = 'abNewGroupOverlay';
+            overlay.innerHTML =
+                '<div class="ab-newgroup-box">' +
+                    '<h3>' + escapeHtml(tr('friends.members_title','Group members')) + '</h3>' +
+                    '<div class="ab-newgroup-hint">' +
+                        escapeHtml((conv.participantIds || []).length + ' ' + tr('friends.members','members')) +
+                    '</div>' +
+                    '<div class="ab-newgroup-list">' + listHtml + '</div>' +
+                    '<div class="ab-confirm-actions">' +
+                        '<button type="button" class="ab-confirm-btn primary" id="abMembersClose">' + escapeHtml(tr('friends.close','Close')) + '</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(overlay);
+            void overlay.offsetHeight;
+            overlay.classList.add('open');
+            var cleanup = function(){ if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+            overlay.addEventListener('click', function(e){ if (e.target === overlay) cleanup(); });
+            overlay.querySelector('#abMembersClose').addEventListener('click', cleanup);
         });
     }
 

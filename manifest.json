@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
     "versions": [
       {
+        "version": "1.8.9.0",
+        "changelog": "New feature: VIEW MEMBERS in group chats. The chat menu (kebab) now has a 'View members' entry for groups, and the '… members' text in the group-chat header is clickable. Both open a new modal listing every participant in the group with avatar, name, a 'You' pill on yourself and an 'Admin' pill on the group's creator. Members are sorted you-first, then admin, then alphabetical. Pulls a fresh participant list from GET /conversations/{id} so newly added members show up immediately, and falls back to the friends list to resolve names for non-friend members.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ZL154/AchievementBadges_for_Jellyfin/releases/download/v1.8.9/Jellyfin.Plugin.AchievementBadges_1.8.9.0.zip",
+        "checksum": "39e661b3f30dbe153c3a7c32e151ccec",
+        "timestamp": "2026-04-23T00:00:00Z"
+      },
+      {
         "version": "1.8.8.0",
         "changelog": "Follow-up to v1.8.7: v1.8.7 patched the DELAYED startup EvaluateAllProfiles pass, but MISSED the synchronous Load() path inside the AchievementBadgeService constructor, which also calls EvaluateBadges with default args (silent=false, stamp=utcNow) for every profile during plugin load. That's the true origin of the update-toast cascade — every badge re-evaluated on load was stamped with 'now' and fired a webhook + audit + toast. Fix: Load() now passes silent=true + DateTimeOffset.UnixEpoch so any unlocks that happen during profile load never count as toast-worthy (same 1970 cutoff trick used by EvaluateAllProfiles). Also addresses the 'data reset' perception reported by the community: no counter data is actually being wiped on update (atomic writes + 3-layer recovery chain remain untouched, SyncDefinitions only adds, EvaluateBadges only increments). The perceived 'reset' was the cascade of old unlocks re-toasting, which made it look like achievements were being re-earned. With v1.8.7 + v1.8.8 together, the cascade should be fully eliminated.",
         "targetAbi": "10.11.0.0",
