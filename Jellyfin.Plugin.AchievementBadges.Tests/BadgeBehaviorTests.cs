@@ -157,7 +157,13 @@ public class BadgeBehaviorTests : IDisposable
             "admin.test_toast.batch_help",
             "admin.msg.firing_batch",
             "toast.view_achievement",
-            "toast.view_recent_unlocks"
+            "toast.view_recent_unlocks",
+            "admin.targets.cap_label",
+            "admin.targets.cap_help",
+            "admin.targets.summary",
+            "admin.targets.clamped",
+            "admin.targets.dropped",
+            "admin.targets.invalid"
         };
 
         foreach (var locale in locales)

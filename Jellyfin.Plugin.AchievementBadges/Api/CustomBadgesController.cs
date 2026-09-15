@@ -84,6 +84,55 @@ public class CustomBadgesController : ControllerBase
         return Ok(_customBadges.GetAll());
     }
 
+    /// <summary>
+    /// [issue #129] The target cap as the settings page shows it: the configured
+    /// value, the value applied after clamping, its bounds, how many distinct
+    /// targets the enabled badges reference and the names past the cap, so an
+    /// admin sees what is not being computed without reading the log.
+    /// </summary>
+    [HttpGet("targets")]
+    public ActionResult<object> Targets()
+    {
+        return Ok(Describe(_targetProgress.Summarize()));
+    }
+
+    /// <summary>
+    /// [issue #129] Set the target cap from the settings page. Clamped the same
+    /// way the recompute reads it, persisted in the plugin configuration, and
+    /// answered with the fresh summary so the page can show what the new cap
+    /// leaves out. Saving a badge afterwards runs the full pass for the targets
+    /// that were past the old cap.
+    /// </summary>
+    [HttpPost("targets")]
+    public ActionResult<object> SetTargetCap([FromBody] TargetCapRequest request)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin?.Configuration is null || request is null)
+        {
+            return BadRequest();
+        }
+
+        var previous = plugin.Configuration.MaxTargetedBadgeTargets;
+        plugin.Configuration.MaxTargetedBadgeTargets = TargetProgressService.EffectiveCap(request.MaxTargets);
+        plugin.SaveConfiguration();
+        _auditLog.Log(string.Empty, string.Empty, "admin_target_cap",
+            $"MaxTargetedBadgeTargets {previous} -> {plugin.Configuration.MaxTargetedBadgeTargets}");
+        return Ok(Describe(_targetProgress.Summarize()));
+    }
+
+    private static object Describe(TargetCapSummary summary)
+    {
+        return new
+        {
+            configured = summary.Configured,
+            cap = summary.Cap,
+            min = TargetProgressService.MinTargetCap,
+            max = TargetProgressService.MaxTargetCap,
+            observed = summary.Observed,
+            dropped = summary.Dropped,
+        };
+    }
+
     [HttpGet("{id}")]
     public ActionResult<CustomBadge> Get(string id)
     {
@@ -202,4 +251,10 @@ public class CustomBadgesController : ControllerBase
             System.Text.Json.JsonSerializer.Serialize(new { count = imported.Count }));
         return Ok(imported);
     }
+}
+
+/// <summary>[issue #129] Body of POST custom-badges/targets.</summary>
+public sealed class TargetCapRequest
+{
+    public int MaxTargets { get; set; }
 }

@@ -415,7 +415,7 @@ Both take their target in `metricParameter`, formatted `"{guid}|{name}"`. The co
 
 For an **arbitrary group of episodes**, such as one story arc of a long-running show, make a Jellyfin collection and point a `ContainerCompletionPercent` badge at it. That keeps the grouping in a native Jellyfin feature instead of a badge-editor episode list.
 
-Targeted badges are evaluated against your existing history, so a badge you author today unlocks immediately for anyone who already finished the target, with no scan needed. The number of distinct targets across all badges is capped by `MaxTargetedBadgeTargets` (default 50); anything past the cap is named in the log rather than dropped silently.
+Targeted badges are evaluated against your existing history, so a badge you author today unlocks immediately for anyone who already finished the target, with no scan needed. How many distinct targets all badges may reference is set on the config page, under **Custom badges**, as **Targeted badge cap** (1 to 1000, default 50). The page shows how many targets the enabled badges reference against the cap and names the ones past it, which are not computed. Every play checks each target with a set lookup: series, seasons and folders against the played item's ancestors, collections and playlists against a cached member list that is refreshed when the container changes, so hundreds of targets of any kind are fine on any server.
 
 #### Template — finish one series
 

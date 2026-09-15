@@ -22,6 +22,13 @@ public sealed class TargetProgressResult
 }
 
 /// <summary>
+/// [issue #129] What the admin page shows about the target cap: the value
+/// in the configuration, the value actually applied after clamping, how many
+/// distinct targets the enabled badges reference, and the names past the cap.
+/// </summary>
+public sealed record TargetCapSummary(int Configured, int Cap, int Observed, IReadOnlyList<string> Dropped);
+
+/// <summary>
 /// [issue #107] Computes the two targeted metrics against the library.
 /// <para>
 /// Kept out of LibraryCompletionService on purpose: that file already carries
@@ -37,9 +44,23 @@ public sealed class TargetProgressResult
 /// folder member (a whole series dropped into a collection) through the
 /// first path.
 /// </para>
+/// <para>
+/// [issue #129] The per-play path used to ask the library once per target
+/// whether the played item sat under it, which is what made the target cap
+/// necessary at 50. It now reads the played item's ancestor ids once and
+/// tests each hierarchical target against that set. Collections and playlists
+/// have no such index, so their member ids are cached per target
+/// (<see cref="LinkedTargetMembers"/>), dropped when Jellyfin reports the
+/// container changed. The cap stays as the admin's ceiling and is clamped to
+/// <see cref="MinTargetCap"/>..<see cref="MaxTargetCap"/>.
+/// </para>
 /// </summary>
-public class TargetProgressService
+public class TargetProgressService : IDisposable
 {
+    /// <summary>Bounds for MaxTargetedBadgeTargets, whatever the config file says.</summary>
+    public const int MinTargetCap = 1;
+    public const int MaxTargetCap = 1000;
+
     private static readonly BaseItemKind[] LeafKinds =
     {
         BaseItemKind.Movie,
@@ -55,6 +76,8 @@ public class TargetProgressService
     private readonly CustomBadgeService _customBadges;
     private readonly AchievementBadgeService _badgeService;
     private readonly ILogger<TargetProgressService> _logger;
+    private readonly LinkedTargetMembers _linkedMembers = new();
+    private bool _disposed;
 
     public TargetProgressService(
         ILibraryManager libraryManager,
@@ -70,6 +93,10 @@ public class TargetProgressService
         _customBadges = customBadges;
         _badgeService = badgeService;
         _logger = logger;
+        // [issue #129] Adding or removing a member updates the collection or
+        // playlist item, which is the signal to drop its cached member set.
+        _libraryManager.ItemUpdated += OnItemChanged;
+        _libraryManager.ItemRemoved += OnItemChanged;
     }
 
     /// <summary>
@@ -143,11 +170,12 @@ public class TargetProgressService
             return result;
         }
 
+        var ancestors = AncestorsOf(item);
         foreach (var target in CollectTargets())
         {
             try
             {
-                if (!Contains(user, target, item))
+                if (!Contains(user, target, item, ancestors))
                 {
                     continue;
                 }
@@ -174,7 +202,7 @@ public class TargetProgressService
 
     private IReadOnlyList<ObservedTarget> CollectTargets()
     {
-        var cap = Plugin.Instance?.Configuration?.MaxTargetedBadgeTargets ?? 50;
+        var cap = EffectiveCap(Plugin.Instance?.Configuration?.MaxTargetedBadgeTargets);
         var targets = ObservedTargets.Collect(_customBadges.GetEnabled(), cap, out var dropped);
         if (dropped.Count > 0)
         {
@@ -362,20 +390,76 @@ public class TargetProgressService
         return _libraryManager.GetItemsResult(query).Items;
     }
 
-    private bool Contains(User user, ObservedTarget target, BaseItem item)
+    /// <summary>The cap as the admin page reports it, for the enabled badges.</summary>
+    public TargetCapSummary Summarize()
+    {
+        return Summarize(_customBadges.GetEnabled(), Plugin.Instance?.Configuration?.MaxTargetedBadgeTargets);
+    }
+
+    /// <summary>Pure form of <see cref="Summarize()"/>: the same walk CollectTargets runs, without the log line.</summary>
+    public static TargetCapSummary Summarize(IEnumerable<CustomBadge> badges, int? configured)
+    {
+        var cap = EffectiveCap(configured);
+        var observed = ObservedTargets.Collect(badges, cap, out var dropped);
+        return new TargetCapSummary(configured ?? 50, cap, observed.Count, dropped);
+    }
+
+    /// <summary>The configured cap, kept inside the bounds the feature was sized for.</summary>
+    public static int EffectiveCap(int? configured)
+    {
+        return Math.Clamp(configured ?? 50, MinTargetCap, MaxTargetCap);
+    }
+
+    /// <summary>
+    /// [issue #129] Whether a target can be decided without asking the library:
+    /// a name-only target always goes to Compute (which resolves it), and an
+    /// item target is a plain id comparison. Null means "look at the library".
+    /// </summary>
+    public static bool? DecideWithoutLibrary(ObservedTarget target, Guid itemId)
     {
         if (target.Id == Guid.Empty)
         {
-            // Unresolved targets are always recomputed: that pass is what
-            // resolves them.
             return true;
         }
 
         if (target.Metric == AchievementMetric.ItemPlayCount)
         {
-            return target.Id == item.Id;
+            return target.Id == itemId;
         }
 
+        return null;
+    }
+
+    /// <summary>A hierarchical target contains the item when it is one of the item's ancestors.</summary>
+    public static bool UnderAncestor(Guid targetId, IReadOnlySet<Guid> ancestors)
+    {
+        return ancestors.Contains(targetId);
+    }
+
+    private HashSet<Guid>? AncestorsOf(BaseItem item)
+    {
+        try
+        {
+            return new HashSet<Guid>(item.GetAncestorIds());
+        }
+        catch (Exception ex)
+        {
+            // The old per-target query still works; only the shortcut is lost.
+            _logger.LogDebug(ex, "[AchievementBadges] Could not read ancestors of {Item}; falling back to library queries", item.Id);
+            return null;
+        }
+    }
+
+    private bool Contains(User user, ObservedTarget target, BaseItem item, IReadOnlySet<Guid>? ancestors)
+    {
+        var decided = DecideWithoutLibrary(target, item.Id);
+        if (decided.HasValue)
+        {
+            return decided.Value;
+        }
+
+        // A target whose id no longer resolves goes to Compute, which re-resolves
+        // it by name and rewrites the badge; a resolved non-folder is a no-op there.
         if (_libraryManager.GetItemById(target.Id) is not Folder folder)
         {
             return true;
@@ -383,13 +467,74 @@ public class TargetProgressService
 
         if (IsLinkedContainer(folder))
         {
-            return Leaves(user, folder).Any(l => l.Id == item.Id);
+            // User-agnostic on purpose: the set answers membership only, and
+            // Compute re-reads the members through the user's own view.
+            return _linkedMembers.Contains(folder.Id, item.Id, () => LeafIdsOfLinked(folder));
         }
 
+        if (ancestors is not null)
+        {
+            return UnderAncestor(target.Id, ancestors);
+        }
+
+        return ContainsByQuery(user, target.Id, item.Id);
+    }
+
+    /// <summary>Leaf ids of a collection or playlist without a user filter,
+    /// folder members expanded the way <see cref="Leaves"/> does.</summary>
+    private IEnumerable<Guid> LeafIdsOfLinked(Folder folder)
+    {
+        foreach (var child in folder.GetLinkedChildren())
+        {
+            if (child is Folder inner)
+            {
+                var query = new InternalItemsQuery
+                {
+                    IncludeItemTypes = LeafKinds,
+                    AncestorIds = new[] { inner.Id },
+                    Recursive = true,
+                    EnableTotalRecordCount = false,
+                };
+                foreach (var leaf in _libraryManager.GetItemsResult(query).Items)
+                {
+                    yield return leaf.Id;
+                }
+            }
+            else
+            {
+                yield return child.Id;
+            }
+        }
+    }
+
+    private void OnItemChanged(object? sender, ItemChangeEventArgs e)
+    {
+        if (e?.Item is not null && _linkedMembers.Invalidate(e.Item.Id))
+        {
+            _logger.LogDebug("[AchievementBadges] Dropped cached members of {Id} after a library change", e.Item.Id);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _libraryManager.ItemUpdated -= OnItemChanged;
+        _libraryManager.ItemRemoved -= OnItemChanged;
+        _linkedMembers.Clear();
+        GC.SuppressFinalize(this);
+    }
+
+    private bool ContainsByQuery(User user, Guid targetId, Guid itemId)
+    {
         var query = new InternalItemsQuery(user)
         {
-            AncestorIds = new[] { target.Id },
-            ItemIds = new[] { item.Id },
+            AncestorIds = new[] { targetId },
+            ItemIds = new[] { itemId },
             Recursive = true,
             EnableTotalRecordCount = false,
         };

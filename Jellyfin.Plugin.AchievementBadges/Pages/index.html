@@ -2219,6 +2219,18 @@ font-size:0.88em;
                         </div>
                         <div id="abCustomBadgesList" style="margin-top:0.5em;"></div>
 
+                        <!-- [issue #129] Target cap: how many distinct targets the badges may reference -->
+                        <div id="abTargetCapBlock" style="margin-top:0.85em;">
+                            <strong data-i18n="admin.targets.cap_label">Targeted badge cap</strong>
+                            <p class="secondaryText" style="margin:0.25em 0;" data-i18n="admin.targets.cap_help">How many distinct series, seasons, collections, playlists or items the enabled targeted badges may reference. Targets past the cap are listed below and not computed. Series, seasons and folders cost one set lookup per play; collections and playlists walk their members.</p>
+                            <div style="display:flex;align-items:center;gap:0.5em;flex-wrap:wrap;">
+                                <input is="emby-input" type="number" id="abTargetCapValue" min="1" max="1000" step="1" style="width:7em;" />
+                                <button is="emby-button" type="button" class="raised" id="abTargetCapSaveBtn" data-i18n="admin.btn_save">Save</button>
+                                <span id="abTargetCapStatus" class="secondaryText"></span>
+                            </div>
+                            <div id="abTargetCapSummary" class="secondaryText" style="margin-top:0.35em;"></div>
+                        </div>
+
                         <!-- Add a badge: paste a single-badge JSON template from the README -->
                         <p class="secondaryText" style="margin-bottom:0.25em;margin-top:1em;" data-i18n="admin.custom_badges.add_label">Add a badge — paste one badge object (see README template):</p>
                         <textarea id="abCustomBadgesJson" rows="10" placeholder='{ "name": "Cinephile", "description": "Watch 100 films.", "rarity": "Rare", "media": "Film", "enabled": true, "criteria": { "metric": "MoviesWatched", "threshold": 100 } }' style="width:100%; font-family:monospace; font-size:0.85em; padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px;"></textarea>
@@ -3964,9 +3976,52 @@ font-size:0.88em;
         }
     }
 
+    // [issue #129] The target cap and the names past it, from the same walk
+    // the recompute runs, so the admin sees what is left out without the log.
+    var targetCapValueEl = document.getElementById('abTargetCapValue');
+    var targetCapSaveBtn = document.getElementById('abTargetCapSaveBtn');
+    var targetCapStatusEl = document.getElementById('abTargetCapStatus');
+    var targetCapSummaryEl = document.getElementById('abTargetCapSummary');
+    function renderTargetCap(s) {
+        if (!targetCapSummaryEl || !s) return;
+        if (targetCapValueEl) {
+            targetCapValueEl.min = s.min;
+            targetCapValueEl.max = s.max;
+            if (document.activeElement !== targetCapValueEl) targetCapValueEl.value = s.configured;
+        }
+        var line = tr('admin.targets.summary', '{observed} target(s) referenced by enabled badges, cap {cap}.')
+            .replace('{observed}', s.observed).replace('{cap}', s.cap);
+        if (s.configured !== s.cap) {
+            line += ' ' + tr('admin.targets.clamped', 'The configured value {configured} is outside {min} to {max} and was clamped.')
+                .replace('{configured}', s.configured).replace('{min}', s.min).replace('{max}', s.max);
+        }
+        var html = '<span>' + escapeHtml(line) + '</span>';
+        if (s.dropped && s.dropped.length) {
+            html += '<div style="color:#ffb74d;margin-top:0.25em;">' + escapeHtml(tr('admin.targets.dropped', 'Past the cap and not computed:')) + ' ' + escapeHtml(s.dropped.join(', ')) + '</div>';
+        }
+        targetCapSummaryEl.innerHTML = html;
+    }
+    function loadTargetCap() {
+        if (!targetCapSummaryEl) return;
+        fetchJson('Plugins/AchievementBadges/custom-badges/targets').then(renderTargetCap).catch(function () { /* not an admin, or an older server */ });
+    }
+    if (targetCapSaveBtn) {
+        targetCapSaveBtn.addEventListener('click', function () {
+            var value = parseInt(targetCapValueEl.value, 10);
+            if (!value || value < 1) { targetCapStatusEl.textContent = tr('admin.targets.invalid', 'Enter a whole number of at least 1.'); return; }
+            targetCapStatusEl.textContent = tr('admin.msg.saving', 'Saving...');
+            fetchJson('Plugins/AchievementBadges/custom-badges/targets', 'POST', { MaxTargets: value }).then(function (s) {
+                renderTargetCap(s);
+                targetCapStatusEl.textContent = tr('admin.msg.saved', 'Saved.');
+            }).catch(function (e) { targetCapStatusEl.textContent = tr('admin.msg.save_failed', 'Save failed:') + ' ' + (e.message || e); });
+        });
+        loadTargetCap();
+    }
+
     function loadCustomBadges() {
         fetchJson('Plugins/AchievementBadges/custom-badges').then(function (r) {
             renderCustomBadges(r || []);
+            loadTargetCap();
         }).catch(function (e) {
             if (customBadgesListEl) customBadgesListEl.innerHTML = '<span class="secondaryText">' + tr('admin.msg.load_failed', 'Failed to load:') + ' ' + escapeHtml(e.message || String(e)) + '</span>';
         });
