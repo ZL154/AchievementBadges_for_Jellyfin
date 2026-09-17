@@ -620,6 +620,7 @@ https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/mani
 - **Proper metadata provider** (TMDb, OMDb) — required for Director/Actor badges to populate. Badges based on `item.People` will stay empty if your library doesn't have people scraped
 - **Home Screen Sections plugin** — lets the achievement home widget inject more reliably
 - **Custom Tabs or Plugin Pages** — optional alternative hosts for the Achievements page; enable the matching integration under **Page integrations** in plugin settings. Saving installs/repairs the owned Custom Tabs entry without changing existing tabs; restart Jellyfin afterward.
+  - Custom Tabs injects the tab's content panel by patching Jellyfin's home page on the server, so a theme that ships its own copy of that page (Abyss's Spotlight, for one) can leave the tab button with no panel behind it, which used to show as a blank Achievements page (#131). The plugin now builds the missing panel itself, so the tab keeps working; a panel it had to build carries `data-ab-repaired-panel="true"`. Other Custom Tabs tabs are still empty on such a server, since only this one is ours to repair.
 
 ### What each feature needs
 

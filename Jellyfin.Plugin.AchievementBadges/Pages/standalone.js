@@ -4752,12 +4752,100 @@
         for (var i = 0; i < links.length; i++) setOwnedElementVisible(links[i], visible);
     }
 
+    // [#131] The tab button and the tab panel come from two different
+    // places, and only one of them is reliable. Custom Tabs creates the
+    // button in the browser, but injects the panel server-side into
+    // Jellyfin's home page chunk by matching one exact string:
+    //
+    //     id="favoritesTab" data-index="1"> <div class="sections"></div> </div>
+    //
+    // Any theme that ships a reformatted copy of that chunk (Abyss's
+    // Spotlight pretty prints it across three lines) stops the match. Nothing
+    // fails loudly: the button is there, the panel never exists, and the user
+    // clicks Achievements and gets a blank page with no explanation. We know
+    // exactly which panel should have been injected, so build it ourselves
+    // rather than leave our own tab broken.
+    var CUSTOM_TABS_MARKER = '<div data-achievement-badges-host="custom-tabs"></div>';
+    var customTabsIndex = null;
+    var customTabsIndexPromise = null;
+
+    /// Resolves which Custom Tabs entry is ours, by its position in that
+    /// plugin's own config: the panel ids are customTab_<position>. Resolved
+    /// once; -1 means "nothing to repair" (Custom Tabs absent, or our entry
+    /// not installed) and stops us asking again on every watchdog tick.
+    function getCustomTabsIndex() {
+        if (customTabsIndex !== null) return Promise.resolve(customTabsIndex);
+        if (customTabsIndexPromise) return customTabsIndexPromise;
+        customTabsIndexPromise = fetchJson('CustomTabs/Config').then(function (tabs) {
+            customTabsIndex = -1;
+            if (Array.isArray(tabs)) {
+                for (var i = 0; i < tabs.length; i++) {
+                    var tab = tabs[i] || {};
+                    var content = String(tab.ContentHtml != null ? tab.ContentHtml : (tab.contentHtml || ''));
+                    if (content.indexOf('data-achievement-badges-host="custom-tabs"') !== -1) {
+                        customTabsIndex = i;
+                        break;
+                    }
+                }
+            }
+            return customTabsIndex;
+        }).catch(function () {
+            customTabsIndex = -1;
+            return -1;
+        });
+        return customTabsIndexPromise;
+    }
+
+    function createCustomTabsPanel(index) {
+        if (index < 0) return;
+        var page = document.getElementById('indexPage');
+        if (!page) return;
+        var button = document.getElementById('customTabButton_' + index);
+        // No button means Custom Tabs has not run yet, or the entry is gone.
+        // Either way there is no orphaned tab to repair.
+        if (!button) return;
+        if (document.getElementById('customTab_' + index)) return;
+        var siblings = page.querySelectorAll('.pageTabContent');
+        if (!siblings.length) return;
+
+        var panel = document.createElement('div');
+        panel.className = 'tabContent pageTabContent';
+        panel.id = 'customTab_' + index;
+        // The button's own data-index is what Jellyfin's tab machinery
+        // matches on, so copy it instead of recomputing the offset.
+        panel.setAttribute('data-index', button.getAttribute('data-index') || String(index + 2));
+        // Marks the panel as ours, so a later look at the page can tell a
+        // repaired panel from one Custom Tabs injected properly.
+        panel.setAttribute('data-ab-repaired-panel', 'true');
+        panel.innerHTML = CUSTOM_TABS_MARKER;
+
+        var last = siblings[siblings.length - 1];
+        if (last.parentNode) last.parentNode.insertBefore(panel, last.nextSibling);
+        else page.appendChild(panel);
+    }
+
+    function repairCustomTabsPanel(cfg, prefs) {
+        // Cheapest exits first: this runs on every watchdog tick. A host that
+        // already exists is the normal case and costs one selector.
+        if (document.querySelector('[data-achievement-badges-host="custom-tabs"]')) return;
+        if (!document.getElementById('indexPage')) return;
+        cfg = cfg || {};
+        prefs = prefs || {};
+        if (!(cfg.EnableCustomTabsIntegration === true || cfg.enableCustomTabsIntegration === true)) return;
+        if (!navigationPreferenceEnabled(prefs, 'ShowCustomTabsEntry', 'showCustomTabsEntry')) return;
+        // Synchronous once the index is known, so the host is in the DOM for
+        // the caller's own findIntegrationHost() in this same tick.
+        if (customTabsIndex !== null) createCustomTabsPanel(customTabsIndex);
+        else getCustomTabsIndex().then(createCustomTabsPanel);
+    }
+
     function applyNavigationIntegrationVisibility(cfg, prefs) {
         cfg = cfg || {};
         prefs = prefs || {};
         applyCustomTabsVisibility(cfg, prefs);
         applyPluginPagesVisibility(cfg, prefs);
         injectUserMenuShortcut(cfg, prefs);
+        repairCustomTabsPanel(cfg, prefs);
     }
 
     function findIntegrationHost() {
@@ -5026,6 +5114,10 @@
     // aren't. Cheap (every 1.5s, only does work if the route state mismatches).
     setInterval(function () {
         try {
+            // [#131] Runs before the host lookup below: repairCustomTabsPanel
+            // can put the host in the DOM, and doing it afterwards would
+            // postpone the mount to the next tick.
+            applyNavigationIntegrationVisibility(publicConfigGlobal || {}, navigationPreferencesGlobal || {});
             var r = document.getElementById(ROOT_ID);
             if (isAchievementsRoute()) {
                 if (!r || r.style.display === 'none' || r.parentNode !== document.body) onRouteChange();
@@ -5036,7 +5128,6 @@
                 if (shouldMount && (!r || r.style.display === 'none' || r.parentNode !== host || activeHost !== host)) onRouteChange();
                 if (!shouldMount && r && r.style.display !== 'none') unmountRoute();
             }
-            applyNavigationIntegrationVisibility(publicConfigGlobal || {}, navigationPreferencesGlobal || {});
             syncNativeNavigationSettings();
         } catch (e) { /* swallow — recovery is best-effort */ }
     }, 1500);
