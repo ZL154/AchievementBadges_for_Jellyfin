@@ -1135,11 +1135,25 @@
    13. INPUTS (forms inside drawer, etc.)
    ============================================================================ */
 
-[data-ab-style="revamp"] input[type="text"],
-[data-ab-style="revamp"] input[type="number"],
-[data-ab-style="revamp"] input[type="email"],
-[data-ab-style="revamp"] textarea,
-[data-ab-style="revamp"] select {
+/* [#133] Everything from here to the end of this group styles generic
+   elements, so it has to stay anchored to the two surfaces that own it. The
+   attribute is stamped on <body> as well (sidebar.js), so that the widgets we
+   mount outside those roots can style themselves, which means a bare
+   [data-ab-style="revamp"] <element> rule restyles all of Jellyfin and every
+   other plugin settings page. The design tokens these rules use are declared
+   on those two roots only, so outside them the rules also resolved to nothing:
+   an appearance:none checkbox with no border and no background is how a
+   vanilla checkbox went invisible. */
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input[type="text"],
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input[type="number"],
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input[type="email"],
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] textarea,
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] select,
+[data-ab-style="revamp"] #AchievementBadgesPage input[type="text"],
+[data-ab-style="revamp"] #AchievementBadgesPage input[type="number"],
+[data-ab-style="revamp"] #AchievementBadgesPage input[type="email"],
+[data-ab-style="revamp"] #AchievementBadgesPage textarea,
+[data-ab-style="revamp"] #AchievementBadgesPage select {
     background: var(--rv-deeper);
     color: var(--rv-text);
     border: 1px solid var(--rv-edge);
@@ -1149,16 +1163,20 @@
     transition: border-color var(--rv-fast) var(--rv-ease),
                 box-shadow var(--rv-fast) var(--rv-ease);
 }
-[data-ab-style="revamp"] input:focus,
-[data-ab-style="revamp"] textarea:focus,
-[data-ab-style="revamp"] select:focus {
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input:focus,
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] textarea:focus,
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] select:focus,
+[data-ab-style="revamp"] #AchievementBadgesPage input:focus,
+[data-ab-style="revamp"] #AchievementBadgesPage textarea:focus,
+[data-ab-style="revamp"] #AchievementBadgesPage select:focus {
     outline: none;
     border-color: var(--rv-accent);
     box-shadow: 0 0 0 3px var(--rv-accent-soft);
 }
 
 /* custom checkbox */
-[data-ab-style="revamp"] input[type="checkbox"] {
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input[type="checkbox"],
+[data-ab-style="revamp"] #AchievementBadgesPage input[type="checkbox"] {
     appearance: none;
     width: 20px; height: 20px;
     border-radius: var(--rv-r-xs);
@@ -1170,12 +1188,15 @@
     vertical-align: middle;
     transition: all var(--rv-fast) var(--rv-ease);
 }
-[data-ab-style="revamp"] input[type="checkbox"]:hover { border-color: var(--rv-accent); }
-[data-ab-style="revamp"] input[type="checkbox"]:checked {
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input[type="checkbox"]:hover,
+[data-ab-style="revamp"] #AchievementBadgesPage input[type="checkbox"]:hover { border-color: var(--rv-accent); }
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input[type="checkbox"]:checked,
+[data-ab-style="revamp"] #AchievementBadgesPage input[type="checkbox"]:checked {
     background: var(--rv-accent);
     border-color: var(--rv-accent);
 }
-[data-ab-style="revamp"] input[type="checkbox"]:checked::after {
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] input[type="checkbox"]:checked::after,
+[data-ab-style="revamp"] #AchievementBadgesPage input[type="checkbox"]:checked::after {
     content: "";
     position: absolute;
     width: 5px; height: 9px;
@@ -1200,11 +1221,13 @@
    15. SELECTION + FOCUS + UTILITIES
    ============================================================================ */
 
-[data-ab-style="revamp"] ::selection {
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] ::selection,
+[data-ab-style="revamp"] #AchievementBadgesPage ::selection {
     background: var(--rv-accent-soft);
     color: oklch(98% 0 0);
 }
-[data-ab-style="revamp"] :focus-visible {
+:is(#AchievementBadgesPage, #achievementBadgesStandaloneRoot)[data-ab-style="revamp"] :focus-visible,
+[data-ab-style="revamp"] #AchievementBadgesPage :focus-visible {
     outline: 2px solid var(--rv-accent);
     outline-offset: 2px;
 }
