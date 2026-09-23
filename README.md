@@ -329,7 +329,7 @@ A gear icon on the achievements page opens a full settings panel with auto-save:
 - **Message notifications + sound + mute-during-playback** — full control over the Friends drawer's chat notifications
 - **Shareable card skin (v2.3.0)** — Console / Metro / Aurora Spine for your own profile card
 - **Friend popover style (v2.3.0)** — detailed or compact layout for the hover/click card
-- **Toast position (v2.3.0)** — place unlock toasts in any of the four corners or top-centre
+- **Toast position (v2.3.0, #136)**: place unlock toasts in any of the four corners, top-center or bottom-center, or leave it on the server default your admin picks
 
 ### 🌍 Languages
 
@@ -370,6 +370,7 @@ A gear icon on the achievements page opens a full settings panel with auto-save:
 - **Integrity test injection (v1.9.8)** — verify daily-cap and suspicious-rate audit flag end-to-end on a throwaway user
 - **Admin auth lockdown** — all admin endpoints require elevated permissions
 - **Default UI style + lock (#43)** — pick whether users start on Classic or Revamp, and optionally make it the only choice so the achievements page matches your Jellyfin theme. A user's own pick is remembered rather than erased, so it returns if you lift the lock
+- **Default toast position (#136)**: where unlock toasts appear for everyone who has not picked a placement; a user's own choice always wins
 - **Tracearr watch history (#45)** — set a Tracearr URL and API token to credit plays the library scan cannot see. See [Tracearr integration](#-tracearr-integration)
 
 ### 🔒 Tracking
@@ -959,7 +960,7 @@ Credit genuine first watches the library scan can't prove on its own — media y
 
 ### 🔔 Notifications and layout
 
-- **Per-user toast position** — any of the four corners or top-centre, applied live.
+- **Per-user toast position**: any of the four corners, top-center or bottom-center, applied live, with a server default the admin sets for everyone who has not chosen (#136).
 - Unlock toasts moved off the subtitle line, and the floating friends button hides while the video player is on screen.
 - **Admin-set default UI style, optionally locked (#43)** — start users on Classic or Revamp, and optionally make it the only choice so the page matches your Jellyfin theme; a user's own pick is remembered and returns if the lock is lifted.
 
