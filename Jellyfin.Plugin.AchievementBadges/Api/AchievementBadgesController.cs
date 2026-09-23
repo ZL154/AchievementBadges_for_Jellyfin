@@ -2597,6 +2597,10 @@ public class AchievementBadgesController : ControllerBase
             EnableCustomTabsIntegration = c?.EnableCustomTabsIntegration ?? false,
             EnablePluginPagesIntegration = c?.EnablePluginPagesIntegration ?? false,
             EnableUserMenuShortcut = c?.EnableUserMenuShortcut ?? false,
+            // [issue #43] The admin page loads its default style controls from
+            // here; without these two it always showed Classic, unforced.
+            DefaultUiStyle = UiStyle.Normalize(c?.DefaultUiStyle),
+            ForceDefaultUiStyle = c?.ForceDefaultUiStyle ?? false,
             // [v2.1.0] Audiobook counting policy (BooksOnly default / MusicOnly / Both).
             AudiobookCounting = (c?.AudiobookCounting ?? Configuration.AudiobookCounting.BooksOnly).ToString()
         });
@@ -2634,10 +2638,24 @@ public class AchievementBadgesController : ControllerBase
         public bool ForceHideEquippedShowcase { get; set; } = false;
         public bool FriendsEnabled { get; set; } = true;
         public bool FriendsSimpleMode { get; set; } = false;
-        public bool EnableCustomTabsIntegration { get; set; } = false;
-        public bool EnablePluginPagesIntegration { get; set; } = false;
-        public bool EnableUserMenuShortcut { get; set; } = false;
+        // Nullable for the same reason as WatchCarryRetentionDays: omitted means
+        // "keep what is stored". The admin page has two saves that post here.
+        // The page integrations section reads the whole config and posts it
+        // back, but the main feature-config save builds its body field by field
+        // and never sent these three, so as plain bools every main save reset
+        // them to false: enabling the Custom Tabs host and then editing the
+        // welcome message turned the host back off without a word.
+        public bool? EnableCustomTabsIntegration { get; set; }
+        public bool? EnablePluginPagesIntegration { get; set; }
+        public bool? EnableUserMenuShortcut { get; set; }
         public string AudiobookCounting { get; set; } = "BooksOnly";
+
+        // [issue #43] The admin page has always posted these two, but nothing
+        // here bound them, so the default UI style could be picked and saved
+        // and was never stored. Nullable so the page integrations save, which
+        // posts back what GET returned, cannot clear them either.
+        public string? DefaultUiStyle { get; set; }
+        public bool? ForceDefaultUiStyle { get; set; }
     }
 
     [HttpPost("admin/feature-config")]
@@ -2694,9 +2712,11 @@ public class AchievementBadgesController : ControllerBase
         config.ForceHideEquippedShowcase = request.ForceHideEquippedShowcase;
         config.FriendsEnabled = request.FriendsEnabled;
         config.FriendsSimpleMode = request.FriendsSimpleMode;
-        config.EnableCustomTabsIntegration = request.EnableCustomTabsIntegration;
-        config.EnablePluginPagesIntegration = request.EnablePluginPagesIntegration;
-        config.EnableUserMenuShortcut = request.EnableUserMenuShortcut;
+        if (request.EnableCustomTabsIntegration is bool customTabs) config.EnableCustomTabsIntegration = customTabs;
+        if (request.EnablePluginPagesIntegration is bool pluginPages) config.EnablePluginPagesIntegration = pluginPages;
+        if (request.EnableUserMenuShortcut is bool userMenu) config.EnableUserMenuShortcut = userMenu;
+        if (request.DefaultUiStyle is not null) config.DefaultUiStyle = UiStyle.Normalize(request.DefaultUiStyle);
+        if (request.ForceDefaultUiStyle is bool forceStyle) config.ForceDefaultUiStyle = forceStyle;
 
         // Surface the specific sanitizer error so the admin knows what to
         // fix instead of seeing a generic "rejected" message.
