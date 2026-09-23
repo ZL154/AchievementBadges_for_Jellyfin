@@ -173,13 +173,14 @@ public class UserNotificationPreferences
     public string UnlockToastGrouping { get; set; } = "grouped";
 
     /// <summary>
-    /// Where unlock toasts appear on this user's own screen: "top-right"
-    /// (default, since #74 moved them off the subtitle line), "top-left",
-    /// "bottom-right", "bottom-left", or "bottom-center" (the original
-    /// placement). Purely presentational and per-user.
+    /// Where unlock toasts appear on this user's own screen: "top-right",
+    /// "top-center", "top-left", "bottom-right", "bottom-center" (the original
+    /// placement) or "bottom-left". Empty means the user has not chosen and
+    /// follows the admin's DefaultToastPosition (#136), which is also where a
+    /// new profile starts. Purely presentational and per user.
     /// </summary>
     [JsonPropertyName("ToastPosition")]
-    public string ToastPosition { get; set; } = "top-right";
+    public string ToastPosition { get; set; } = "";
 
     /// <summary>
     /// "all-devices" preserves cross-client delivery. "originating-device"
@@ -314,6 +315,15 @@ public class UserNotificationPreferences
     /// </summary>
     [JsonPropertyName("ToastPlaybackMuteDefaultMigrated")]
     public bool? ToastPlaybackMuteDefaultMigrated { get; set; }
+
+    /// <summary>
+    /// One-time migration marker for #136. ToastPosition used to default to
+    /// "top-right" for every profile, so a stored "top-right" cannot be told
+    /// apart from "never chose"; it is read once as no choice, then this is
+    /// set so a later explicit top-right is kept as a choice.
+    /// </summary>
+    [JsonPropertyName("ToastPositionDefaultMigrated")]
+    public bool? ToastPositionDefaultMigrated { get; set; }
 
     /// <summary>Suppress achievement unlock SOUND while actively watching.</summary>
     [JsonPropertyName("MuteToastSoundDuringPlayback")]

@@ -1255,6 +1255,11 @@ public class AchievementBadgesController : ControllerBase
         prefs.MinimumToastRarity = string.IsNullOrWhiteSpace(prefs.MinimumToastRarity) || !allowedRarities.Contains(prefs.MinimumToastRarity)
             ? "all" : prefs.MinimumToastRarity.ToLowerInvariant();
 
+        // [#136] One of the six placements, or empty to follow the admin's
+        // DefaultToastPosition. This used to be stored as sent, so any string
+        // reached the profile and the client had to guess.
+        prefs.ToastPosition = ToastPlacement.NormalizeUserChoice(prefs.ToastPosition);
+
         prefs.UnlockToastGrouping = UnlockNotificationPolicy.NormalizeGrouping(prefs.UnlockToastGrouping);
         prefs.UnlockToastDeviceScope = UnlockNotificationPolicy.NormalizeDeviceScope(prefs.UnlockToastDeviceScope);
 
@@ -2547,7 +2552,9 @@ public class AchievementBadgesController : ControllerBase
             EnablePluginPagesIntegration = c?.EnablePluginPagesIntegration ?? false,
             EnableUserMenuShortcut = c?.EnableUserMenuShortcut ?? false,
             DefaultUiStyle = UiStyle.Normalize(c?.DefaultUiStyle),
-            ForceDefaultUiStyle = c?.ForceDefaultUiStyle ?? false
+            ForceDefaultUiStyle = c?.ForceDefaultUiStyle ?? false,
+            // [#136] Where toasts go for a user whose own ToastPosition is empty.
+            DefaultToastPosition = ToastPlacement.NormalizeDefault(c?.DefaultToastPosition)
         });
     }
 
@@ -2601,6 +2608,7 @@ public class AchievementBadgesController : ControllerBase
             // here; without these two it always showed Classic, unforced.
             DefaultUiStyle = UiStyle.Normalize(c?.DefaultUiStyle),
             ForceDefaultUiStyle = c?.ForceDefaultUiStyle ?? false,
+            DefaultToastPosition = ToastPlacement.NormalizeDefault(c?.DefaultToastPosition),
             // [v2.1.0] Audiobook counting policy (BooksOnly default / MusicOnly / Both).
             AudiobookCounting = (c?.AudiobookCounting ?? Configuration.AudiobookCounting.BooksOnly).ToString()
         });
@@ -2656,6 +2664,9 @@ public class AchievementBadgesController : ControllerBase
         // posts back what GET returned, cannot clear them either.
         public string? DefaultUiStyle { get; set; }
         public bool? ForceDefaultUiStyle { get; set; }
+
+        // [issue #136] Nullable like the pair above, for the same reason.
+        public string? DefaultToastPosition { get; set; }
     }
 
     [HttpPost("admin/feature-config")]
@@ -2717,6 +2728,7 @@ public class AchievementBadgesController : ControllerBase
         if (request.EnableUserMenuShortcut is bool userMenu) config.EnableUserMenuShortcut = userMenu;
         if (request.DefaultUiStyle is not null) config.DefaultUiStyle = UiStyle.Normalize(request.DefaultUiStyle);
         if (request.ForceDefaultUiStyle is bool forceStyle) config.ForceDefaultUiStyle = forceStyle;
+        if (request.DefaultToastPosition is not null) config.DefaultToastPosition = ToastPlacement.NormalizeDefault(request.DefaultToastPosition);
 
         // Surface the specific sanitizer error so the admin knows what to
         // fix instead of seeing a generic "rejected" message.

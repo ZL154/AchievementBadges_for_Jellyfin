@@ -97,11 +97,26 @@ public class FeatureConfigRoundTripTests
 
         foreach (var key in new[]
         {
-            "DefaultUiStyle", "ForceDefaultUiStyle",
+            "DefaultUiStyle", "ForceDefaultUiStyle", "DefaultToastPosition",
             "EnableCustomTabsIntegration", "EnablePluginPagesIntegration", "EnableUserMenuShortcut",
         })
         {
             Assert.Contains(key, returned);
         }
+    }
+
+    [Fact]
+    public void The_client_learns_the_admin_toast_default_from_public_config()
+    {
+        // [#136] A user whose ToastPosition is empty follows this value, and
+        // public-config is the only admin setting a non admin client can read.
+        var controller = new AchievementBadgesController(
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            null!, null!, null!, null!, null!, null!, null!);
+
+        var result = Assert.IsType<OkObjectResult>(controller.GetPublicConfig());
+        var prop = result.Value!.GetType().GetProperty("DefaultToastPosition");
+        Assert.NotNull(prop);
+        Assert.Equal("top-right", prop!.GetValue(result.Value));
     }
 }
