@@ -3574,7 +3574,24 @@
 
         var minRarity = prefs.minimumToastRarity || prefs.MinimumToastRarity || 'all';
         var toastGrouping = (prefs.unlockToastGrouping || prefs.UnlockToastGrouping || 'grouped').toString().toLowerCase();
-        var toastPos = (prefs.toastPosition || prefs.ToastPosition || 'top-right').toString().toLowerCase();
+        // [#136] Empty means "follow the server default". Keep it empty here so
+        // the select shows that option instead of pretending it is top-right.
+        var toastPosRaw = prefs.ToastPosition != null ? prefs.ToastPosition : prefs.toastPosition;
+        var toastPos = (toastPosRaw || '').toString().toLowerCase().trim();
+        var toastPosLabels = {
+            'top-right': tr('settings.toast_pos_top_right', 'Top-right'),
+            'top-center': tr('settings.toast_pos_top_center', 'Top-center'),
+            'top-left': tr('settings.toast_pos_top_left', 'Top-left'),
+            'bottom-right': tr('settings.toast_pos_bottom_right', 'Bottom-right'),
+            'bottom-center': tr('settings.toast_pos_bottom_center', 'Bottom-center (original)'),
+            'bottom-left': tr('settings.toast_pos_bottom_left', 'Bottom-left')
+        };
+        var adminToastPos = String((publicConfigGlobal && (publicConfigGlobal.DefaultToastPosition || publicConfigGlobal.defaultToastPosition)) || '').toLowerCase();
+        var toastServerDefaultLabel = tr('settings.toast_pos_server_default', 'Server default') +
+            (toastPosLabels[adminToastPos] ? ' (' + toastPosLabels[adminToastPos] + ')' : '');
+        function toastPosOption(value) {
+            return '<option value="' + value + '"' + (toastPos === value ? ' selected' : '') + '>' + escapeHtml(toastPosLabels[value]) + '</option>';
+        }
         var toastDeviceScope = (prefs.unlockToastDeviceScope || prefs.UnlockToastDeviceScope || 'all-devices').toString().toLowerCase();
         var pageTheme = prefs.achievementPageTheme || prefs.AchievementPageTheme || 'default';
         var slots = prefs.equippedBadgeSlots || prefs.EquippedBadgeSlots || 5;
@@ -3679,11 +3696,13 @@
                     '<div class="ab-setting-row">' +
                         '<div class="ab-toggle-info"><div class="ab-toggle-label">' + tr('settings.toast_position', 'Toast position') + '</div><div class="ab-toggle-desc">' + tr('settings.toast_position_desc', 'Where unlock notifications appear on your screen') + '</div></div>' +
                         '<select class="ab-select" data-settings-select="toastPosition">' +
-                            '<option value="top-right"' + (toastPos === 'top-right' ? ' selected' : '') + '>' + tr('settings.toast_pos_top_right', 'Top-right (default)') + '</option>' +
-                            '<option value="top-left"' + (toastPos === 'top-left' ? ' selected' : '') + '>' + tr('settings.toast_pos_top_left', 'Top-left') + '</option>' +
-                            '<option value="bottom-right"' + (toastPos === 'bottom-right' ? ' selected' : '') + '>' + tr('settings.toast_pos_bottom_right', 'Bottom-right') + '</option>' +
-                            '<option value="bottom-left"' + (toastPos === 'bottom-left' ? ' selected' : '') + '>' + tr('settings.toast_pos_bottom_left', 'Bottom-left') + '</option>' +
-                            '<option value="bottom-center"' + (toastPos === 'bottom-center' ? ' selected' : '') + '>' + tr('settings.toast_pos_bottom_center', 'Bottom-center (original)') + '</option>' +
+                            '<option value=""' + (toastPosLabels[toastPos] ? '' : ' selected') + '>' + escapeHtml(toastServerDefaultLabel) + '</option>' +
+                            toastPosOption('top-right') +
+                            toastPosOption('top-center') +
+                            toastPosOption('top-left') +
+                            toastPosOption('bottom-right') +
+                            toastPosOption('bottom-center') +
+                            toastPosOption('bottom-left') +
                         '</select>' +
                     '</div>' +
                     '<div class="ab-setting-row">' +

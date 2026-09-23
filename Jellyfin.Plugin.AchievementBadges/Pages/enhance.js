@@ -155,7 +155,11 @@
         return Promise.all([prefP, pubP]).then(function (parts) {
             var prefs = parts[0] || {};
             var cfg = parts[1] || {};
-            _toastPos = normalizeToastPos(prefs.ToastPosition || prefs.toastPosition);
+            _adminToastPos = normalizeToastPos(cfg.DefaultToastPosition || cfg.defaultToastPosition);
+            _toastPos = resolveToastPos(prefs.ToastPosition != null ? prefs.ToastPosition : prefs.toastPosition);
+            // A toast shown before these arrived was placed on the fallback.
+            var existingContainer = document.getElementById(TOAST_ID);
+            if (existingContainer) positionToastContainer(existingContainer);
             var userLang = (prefs.Language || prefs.language || 'default').toString().toLowerCase();
             var adminLang = (cfg.DefaultLanguage || cfg.defaultLanguage || 'en').toString().toLowerCase();
             var lang = (userLang === 'default' || !userLang) ? adminLang : userLang;
@@ -168,7 +172,9 @@
     }
 
     // Per-user toast placement (#74 moved the default off the subtitle line to
-    // top-right). "bottom-center" restores the original spot.
+    // top-right). "bottom-center" restores the original spot, "top-center"
+    // (#136) centres it under the header, and an empty choice follows the
+    // admin's DefaultToastPosition.
     //
     // [issue #116] The six placement properties are written with the
     // "important" priority. styles-revamp.css pins #ab-toast-container to
@@ -183,12 +189,25 @@
     // z-index deliberately stays a plain declaration: the stylesheet raises it
     // far above 99999 on purpose, and that must keep winning.
     var _toastPos = 'top-right';
+    // [#136] The admin's DefaultToastPosition, from public-config. A user
+    // whose own ToastPosition is empty has not chosen, and follows it.
+    var _adminToastPos = 'top-right';
+    var TOAST_PLACEMENTS = ['top-right', 'top-center', 'top-left', 'bottom-right', 'bottom-center', 'bottom-left'];
+    function isToastPlacement(v) { return TOAST_PLACEMENTS.indexOf(v) !== -1; }
+    // Always a real placement: what the admin side is normalised to.
     function normalizeToastPos(v) {
-        v = (v || '').toString().toLowerCase();
-        return (v === 'top-left' || v === 'bottom-right' || v === 'bottom-left' || v === 'bottom-center') ? v : 'top-right';
+        v = (v || '').toString().toLowerCase().trim();
+        return isToastPlacement(v) ? v : 'top-right';
+    }
+    // A user's own choice wins; empty or unrecognised means "follow the
+    // server", so a bad value lands where the admin chose, not in a corner.
+    function resolveToastPos(userValue) {
+        var v = (userValue || '').toString().toLowerCase().trim();
+        return isToastPlacement(v) ? v : normalizeToastPos(_adminToastPos);
     }
     function toastPosProps(pos) {
         switch (pos) {
+            case 'top-center':    return { top: '4.5em', right: 'auto',  bottom: 'auto',  left: '50%',   transform: 'translateX(-50%)', 'align-items': 'center' };
             case 'top-left':      return { top: '4.5em', right: 'auto',  bottom: 'auto',  left: '1.2em', transform: 'none',             'align-items': 'flex-start' };
             case 'bottom-right':  return { top: 'auto',  right: '1.2em', bottom: '1.2em', left: 'auto',  transform: 'none',             'align-items': 'flex-end' };
             case 'bottom-left':   return { top: 'auto',  right: 'auto',  bottom: '1.2em', left: '1.2em', transform: 'none',             'align-items': 'flex-start' };
@@ -693,7 +712,7 @@
                         .then(function (r) { return r.ok ? r.json() : null; })
                         .then(function (p) {
                             if (!p) return;
-                            _toastPos = normalizeToastPos(p.ToastPosition || p.toastPosition);
+                            _toastPos = resolveToastPos(p.ToastPosition != null ? p.ToastPosition : p.toastPosition);
                             var c = document.getElementById(TOAST_ID);
                             if (c) positionToastContainer(c);
                         }).catch(function () {});
