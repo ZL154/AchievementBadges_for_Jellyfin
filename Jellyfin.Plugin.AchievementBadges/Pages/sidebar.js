@@ -3292,9 +3292,14 @@
         });
     }
 
+    // [issue #138] The plugin's directory, not Jellyfin's /Users: that one lists
+    // accounts hidden from the login screen to every signed-in user, while the
+    // directory applies the admin's option (and lists the same users with it off).
     function fetchServerUsers(){
         if (_friendsCachedUsers) return Promise.resolve(_friendsCachedUsers);
-        return fetch(buildUrl('Users'), { headers: authHeaders(), credentials: 'include' })
+        var uid = getUserId();
+        if (!uid) return Promise.resolve([]);
+        return fetch(buildUrl('Plugins/AchievementBadges/users/' + encodeURIComponent(uid) + '/directory'), { headers: authHeaders(), credentials: 'include' })
             .then(function(r){ return r.ok ? r.json() : []; })
             .then(function(list){
                 _friendsCachedUsers = (list || []).map(function(u){ return { Id: (u.Id||'').toString(), Name: u.Name || u.Id }; });

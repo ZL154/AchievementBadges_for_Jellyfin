@@ -240,6 +240,31 @@ public class HiddenFromLoginVisibilityTests : IDisposable
         Assert.Equal("users/{userId}/directory", route.Template);
     }
 
+    [Theory]
+    [InlineData("sidebar.js")]
+    [InlineData("standalone.js")]
+    public void Clients_FindUsersThroughTheDirectory_NotJellyfinsUserList(string script)
+    {
+        // Jellyfin's /Users lists hidden accounts to any signed-in user, so a
+        // client still reading it would put them back in the friend search and
+        // the compare picker whatever the server filters.
+        var js = EmbeddedPage(script);
+        Assert.Contains("'/directory'", js, StringComparison.Ordinal);
+        Assert.DoesNotContain("buildUrl('Users')", js, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AdminPage_HasTheOption_AndLoadsAndSavesIt()
+    {
+        var html = EmbeddedPage("index.html");
+        Assert.Contains("id=\"abFcHideUsersHiddenFromLogin\"", html, StringComparison.Ordinal);
+        Assert.Contains("hideLoginHiddenEl.checked = !!c.HideUsersHiddenFromLogin;", html, StringComparison.Ordinal);
+        Assert.Contains(
+            "HideUsersHiddenFromLogin: !!(document.getElementById('abFcHideUsersHiddenFromLogin') || {}).checked,",
+            html,
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public void FeatureConfig_TreatsAnOmittedOptionAsLeaveItAlone()
     {
@@ -302,4 +327,13 @@ public class HiddenFromLoginVisibilityTests : IDisposable
         => result.GetType().GetProperty("Error")?.GetValue(result) as string;
 
     private static string N(string id) => Guid.Parse(id).ToString("N");
+
+    private static string EmbeddedPage(string fileName)
+    {
+        var assembly = typeof(Plugin).Assembly;
+        var name = assembly.GetManifestResourceNames().Single(n => n.EndsWith("." + fileName, StringComparison.Ordinal));
+        using var stream = assembly.GetManifestResourceStream(name)!;
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
 }
