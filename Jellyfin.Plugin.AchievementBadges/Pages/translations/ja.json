@@ -533,6 +533,7 @@
   "admin.fc.prestige": "プレステージシステム有効",
   "admin.fc.quests": "クエスト有効",
   "admin.fc.force_privacy": "プライバシーモードを強制（全ユーザー間で相互非表示）",
+  "admin.fc.hide_login_hidden": "ログイン画面で非表示のアカウントを他のユーザーから隠す（非表示アカウント、管理者、そのフレンドには引き続き表示）",
   "admin.fc.force_spoiler": "ネタバレ防止モードを強制（全員に未解除バッジの説明を隠す）",
   "admin.fc.force_extreme_spoiler": "極ネタバレ防止モードを強制（全員に未解除バッジを完全に隠す）",
   "admin.fc.max_equipped": "最大装備バッジ数（1-10）：",
