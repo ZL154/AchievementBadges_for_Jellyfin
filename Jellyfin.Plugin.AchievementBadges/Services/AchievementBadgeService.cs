@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data;
+using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Jellyfin.Plugin.AchievementBadges.Models;
 using MediaBrowser.Common.Configuration;
@@ -44,6 +46,10 @@ public class AchievementBadgeService : IDisposable
     // criteria. Optional so existing constructors still resolve in tests
     // that don't wire the service.
     private readonly CustomBadgeService? _customBadges;
+    // [issue #138] Reads HideUsersHiddenFromLogin. Injectable so tests can turn
+    // the option on without setting Plugin.Instance, a singleton every other
+    // test running in parallel would see.
+    private readonly Func<bool> _hideUsersHiddenFromLogin;
 
     public AchievementBadgeService(
         IApplicationPaths applicationPaths,
@@ -54,7 +60,8 @@ public class AchievementBadgeService : IDisposable
         PowerUpService? powerUps = null,
         ShopService? shop = null,
         CustomBadgeService? customBadges = null,
-        TracearrCreditLedger? tracearrLedger = null)
+        TracearrCreditLedger? tracearrLedger = null,
+        Func<bool>? hideUsersHiddenFromLogin = null)
     {
         _logger = logger;
         _tracearrLedger = tracearrLedger;
@@ -64,6 +71,8 @@ public class AchievementBadgeService : IDisposable
         _powerUps = powerUps;
         _shop = shop;
         _customBadges = customBadges;
+        _hideUsersHiddenFromLogin = hideUsersHiddenFromLogin
+            ?? (() => Plugin.Instance?.Configuration?.HideUsersHiddenFromLogin == true);
 
         var pluginDataPath = Path.Combine(applicationPaths.PluginConfigurationsPath, "achievementbadges");
         Directory.CreateDirectory(pluginDataPath);
@@ -72,7 +81,7 @@ public class AchievementBadgeService : IDisposable
         Load();
     }
 
-    public object CompareUsers(string userIdA, string userIdB)
+    public object CompareUsers(string userIdA, string userIdB, string? viewerUserId = null)
     {
         var config = Plugin.Instance?.Configuration;
         if (config != null && !config.CompareEnabled)
@@ -91,7 +100,13 @@ public class AchievementBadgeService : IDisposable
         {
             var pa = _userProfiles.TryGetValue(userIdA, out var profileA) ? profileA : null;
             var pb = _userProfiles.TryGetValue(userIdB, out var profileB) ? profileB : null;
-            if (pa is null || pb is null) return new { Error = "One or both users not found." };
+            // [issue #138] An account this viewer may not see reads as missing,
+            // the same answer as an id without a profile, so compare cannot be
+            // used to probe for hidden accounts.
+            if (pa is null || pb is null || !CanSee(viewerUserId, userIdA) || !CanSee(viewerUserId, userIdB))
+            {
+                return new { Error = "One or both users not found." };
+            }
 
             if ((pa.Preferences?.HideFromCompare ?? false) || (pb.Preferences?.HideFromCompare ?? false))
             {
@@ -181,6 +196,8 @@ public class AchievementBadgeService : IDisposable
                 // This checks current preferences at display time so toggling retroactively hides/shows entries.
                 bool isOwnProfile = requestingCanon != null && string.Equals(profile.UserId, requestingCanon, StringComparison.OrdinalIgnoreCase);
                 if (!isOwnProfile && profile.Preferences != null && !profile.Preferences.AppearInActivityFeed) continue;
+                // [issue #138] Same rule for an account hidden from the login screen.
+                if (!CanSee(requestingCanon, profile.UserId)) continue;
                 foreach (var b in profile.Badges)
                 {
                     if (b.Unlocked && b.UnlockedAt.HasValue && IsBadgeEnabled(b.Id))
@@ -296,7 +313,7 @@ public class AchievementBadgeService : IDisposable
         }
     }
 
-    public object GetPrestigeLeaderboard(int limit = 10)
+    public object GetPrestigeLeaderboard(int limit = 10, string? viewerUserId = null)
     {
         var config = Plugin.Instance?.Configuration;
         if (config != null && !config.PrestigeEnabled)
@@ -312,7 +329,7 @@ public class AchievementBadgeService : IDisposable
         lock (_lock)
         {
             return _userProfiles.Values
-                .Where(p => (p.PrestigeLevel > 0 || p.LifetimeScore > 0) && !(p.Preferences?.HideFromPrestigeBoard ?? false) && UserExists(p.UserId))
+                .Where(p => (p.PrestigeLevel > 0 || p.LifetimeScore > 0) && !(p.Preferences?.HideFromPrestigeBoard ?? false) && UserExists(p.UserId) && CanSee(viewerUserId, p.UserId))
                 .OrderByDescending(p => p.PrestigeLevel)
                 .ThenByDescending(p => p.LifetimeScore)
                 .Take(limit)
@@ -2512,7 +2529,7 @@ public class AchievementBadgeService : IDisposable
         }
     }
 
-    public object GetLeaderboardByCategory(string category, int limit = 10)
+    public object GetLeaderboardByCategory(string category, int limit = 10, string? viewerUserId = null)
     {
         var config = Plugin.Instance?.Configuration;
         if (config != null && !config.LeaderboardEnabled)
@@ -2529,7 +2546,7 @@ public class AchievementBadgeService : IDisposable
         lock (_lock)
         {
             var projected = _userProfiles.Values
-                .Where(profile => !(profile.Preferences?.HideFromLeaderboard ?? false) && UserExists(profile.UserId))
+                .Where(profile => !(profile.Preferences?.HideFromLeaderboard ?? false) && UserExists(profile.UserId) && CanSee(viewerUserId, profile.UserId))
                 .Select(profile =>
             {
                 EvaluateBadges(profile, profile.UserId);
@@ -2568,7 +2585,7 @@ public class AchievementBadgeService : IDisposable
         }
     }
 
-    public object GetLeaderboard(int limit = 10)
+    public object GetLeaderboard(int limit = 10, string? viewerUserId = null)
     {
         var config = Plugin.Instance?.Configuration;
         if (config != null && !config.LeaderboardEnabled)
@@ -2585,7 +2602,7 @@ public class AchievementBadgeService : IDisposable
         lock (_lock)
         {
             var entries = _userProfiles.Values
-                .Where(profile => !(profile.Preferences?.HideFromLeaderboard ?? false) && UserExists(profile.UserId))
+                .Where(profile => !(profile.Preferences?.HideFromLeaderboard ?? false) && UserExists(profile.UserId) && CanSee(viewerUserId, profile.UserId))
                 .Select(profile =>
                 {
                     EvaluateBadges(profile, profile.UserId);
@@ -2776,7 +2793,7 @@ public class AchievementBadgeService : IDisposable
     /// HideFromLeaderboard / ShowEquippedShowcase prefs and the admin-level
     /// ForcePrivacyMode / ForceHideEquippedShowcase toggles.
     /// </summary>
-    public List<object> GetPublicEquippedPreview(string targetUserId)
+    public List<object> GetPublicEquippedPreview(string targetUserId, string? viewerUserId = null)
     {
         targetUserId = NormalizeUserId(targetUserId);
         var cfg = Plugin.Instance?.Configuration;
@@ -2785,6 +2802,8 @@ public class AchievementBadgeService : IDisposable
         lock (_lock)
         {
             if (!_userProfiles.TryGetValue(targetUserId, out var profile)) return new List<object>();
+            // [issue #138] Nothing for an account this viewer may not see.
+            if (!CanSee(viewerUserId, targetUserId)) return new List<object>();
             EvaluateBadges(profile, targetUserId);
             // BuildEquippedPreview already checks HideFromLeaderboard /
             // HideFromCompare / ShowEquippedShowcase — don't need to duplicate.
@@ -2807,7 +2826,7 @@ public class AchievementBadgeService : IDisposable
     /// exist, so a caller cannot tell the two apart and probe for ids.
     /// </para>
     /// </summary>
-    public object? GetPublicProfileSummary(string targetUserId)
+    public object? GetPublicProfileSummary(string targetUserId, string? viewerUserId = null)
     {
         targetUserId = NormalizeUserId(targetUserId);
         var config = Plugin.Instance?.Configuration;
@@ -2817,6 +2836,8 @@ public class AchievementBadgeService : IDisposable
         {
             if (!_userProfiles.TryGetValue(targetUserId, out var profile)) return null;
             if (profile.Preferences?.HideFromLeaderboard ?? false) return null;
+            // [issue #138] The same null for an account this viewer may not see.
+            if (!CanSee(viewerUserId, targetUserId)) return null;
 
             EvaluateBadges(profile, targetUserId);
             var enabled = profile.Badges.Where(b => IsBadgeEnabled(b.Id)).ToList();
@@ -2959,6 +2980,82 @@ public class AchievementBadgeService : IDisposable
 
         return userId;
     }
+
+    /// <summary>
+    /// [issue #138] Whether <paramref name="viewerUserId"/> may see
+    /// <paramref name="targetUserId"/> in anything this plugin shows about other
+    /// users. With HideUsersHiddenFromLogin off, and for every account that is
+    /// not hidden from Jellyfin's login screen, the answer is always yes. A
+    /// hidden account is seen only by itself, administrators, other hidden
+    /// accounts and the accounts it is already friends with: the option keeps
+    /// it out of strangers' sight, it does not silently undo a friendship both
+    /// sides accepted. An unknown viewer sees no hidden account.
+    /// </summary>
+    public bool CanSee(string? viewerUserId, string targetUserId)
+    {
+        if (!_hideUsersHiddenFromLogin()) return true;
+        if (!Guid.TryParse(targetUserId, out var target)) return true;
+        if (!HasJellyfinPermission(target, PermissionKind.IsHidden)) return true;
+
+        var knownViewer = Guid.TryParse(viewerUserId, out var viewer) && viewer != Guid.Empty;
+        return IsVisibleToViewer(
+            optionOn: true,
+            targetHidden: true,
+            isSelf: knownViewer && viewer == target,
+            viewerIsAdministrator: knownViewer && HasJellyfinPermission(viewer, PermissionKind.IsAdministrator),
+            viewerHidden: knownViewer && HasJellyfinPermission(viewer, PermissionKind.IsHidden),
+            explicitFriends: knownViewer && AreExplicitFriends(viewer, target));
+    }
+
+    /// <summary>
+    /// [issue #138] The rule behind <see cref="CanSee"/>, without any lookup, so
+    /// every combination can be tested.
+    /// </summary>
+    public static bool IsVisibleToViewer(
+        bool optionOn,
+        bool targetHidden,
+        bool isSelf,
+        bool viewerIsAdministrator,
+        bool viewerHidden,
+        bool explicitFriends)
+        => !optionOn || !targetHidden || isSelf || viewerIsAdministrator || viewerHidden || explicitFriends;
+
+    /// <summary>
+    /// [issue #138] Every Jellyfin account this viewer may see, for the friend
+    /// search and the compare picker. They read Jellyfin's own /Users before,
+    /// which lists hidden accounts to any signed-in user. Same shape the
+    /// clients mapped out of /Users: the id without hyphens and the name.
+    /// </summary>
+    public List<object> GetUserDirectory(string? viewerUserId)
+    {
+        return _userManager.EnumerateAll()
+            .Where(u => CanSee(viewerUserId, u.Id.ToString("D")))
+            .OrderBy(u => u.Username, StringComparer.OrdinalIgnoreCase)
+            .Select(u => (object)new { Id = u.Id.ToString("N"), Name = u.Username })
+            .ToList();
+    }
+
+    private bool HasJellyfinPermission(Guid userId, PermissionKind permission)
+    {
+        try { return _userManager.GetUserById(userId)?.HasPermission(permission) == true; }
+        catch { return false; }
+    }
+
+    // Explicit friendship only: FriendsSimpleMode treats everyone as a friend,
+    // which would make every hidden account visible to everyone.
+    private bool AreExplicitFriends(Guid a, Guid b)
+    {
+        lock (_lock)
+        {
+            return _userProfiles.TryGetValue(a.ToString("D"), out var pa)
+                && _userProfiles.TryGetValue(b.ToString("D"), out var pb)
+                && ListsFriend(pa, b)
+                && ListsFriend(pb, a);
+        }
+    }
+
+    private static bool ListsFriend(UserAchievementProfile profile, Guid friend)
+        => (profile.Friends ?? new List<string>()).Any(f => Guid.TryParse(f, out var g) && g == friend);
 
     private UserAchievementProfile GetOrCreateProfile(string userId)
     {
