@@ -533,6 +533,7 @@
   "admin.fc.prestige": "Sistema de prestígio ativado",
   "admin.fc.quests": "Missões ativadas",
   "admin.fc.force_privacy": "Forçar modo privacidade (esconder todos os usuários uns dos outros)",
+  "admin.fc.hide_login_hidden": "Esconder dos outros usuários as contas ocultas da tela de login (contas ocultas, administradores e os amigos delas continuam a vê-las)",
   "admin.fc.force_spoiler": "Forçar modo anti-spoiler (ocultar descrições de medalhas bloqueadas para todos)",
   "admin.fc.force_extreme_spoiler": "Forçar modo anti-spoiler extremo (ocultar completamente as medalhas bloqueadas para todos)",
   "admin.fc.max_equipped": "Máx. medalhas equipadas (1-10):",

@@ -534,6 +534,7 @@
   "admin.fc.prestige": "Prestige system enabled",
   "admin.fc.quests": "Quests enabled",
   "admin.fc.force_privacy": "Force privacy mode (hide all users from each other)",
+  "admin.fc.hide_login_hidden": "Keep accounts hidden from the login screen out of other users' views (hidden accounts, admins and their friends still see them)",
   "admin.fc.force_spoiler": "Force Spoiler Mode (hide locked badge descriptions for all users)",
   "admin.fc.force_extreme_spoiler": "Force Extreme Spoiler Mode (completely hide locked badges for all users)",
   "admin.fc.max_equipped": "Max equipped badges (1-10):",

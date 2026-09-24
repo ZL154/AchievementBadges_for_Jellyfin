@@ -258,7 +258,7 @@ Xbox-Guide-style chat built into the Friends drawer. No external service, no Web
 - **Anti-flicker rendering** — content-hashed; the chat pane only repaints when something actually changed, preserving scroll position
 - **Auto-polling** — 6 s inside an open chat, 8 s on the Messages tab, 20 s drawer-wide when closed; all small, all `[Authorize]`-gated
 - **Rate limits** — 20 messages per minute per sender, max 1000 chars per message, 2000-message FIFO cap per conversation
-- **Friendship gate** — only mutual friends can DM; group creators can only add their own friends. Admin's `FriendsSimpleMode` treats the whole server as one friend list for messaging too
+- **Friendship gate**: only mutual friends can DM; group creators can only add their own friends. Admin's `FriendsSimpleMode` treats the whole server as one friend list for messaging too (with the #138 option on, only between users who can see each other)
 - **Storage** — single `messages.json` + `attachments.json` + `attachments/<id>.<ext>` on disk under `plugins/configurations/achievementbadges/`. Atomic writes via temp file + `File.Move` so a crash mid-send can't corrupt the store. Messages survive server restarts
 
 ### 🏅 Rarity percentage chip
@@ -347,6 +347,7 @@ A gear icon on the achievements page opens a full settings panel with auto-save:
 
 - **Feature Controls** — kill switches for leaderboard, compare, activity feed, prestige, quests
 - **Force Privacy Mode** — override all users to hidden from all social features
+- **Keep accounts hidden from the login screen out of other users' views (#138)**: an account with Jellyfin's *Hide this user from login screens* stays out of the leaderboards, the activity feed, friend search, compare and profile cards for everyone else. Hidden accounts, administrators and the account's existing friends still see it. Off by default, and with every account hidden from the login screen it changes nothing even when on, since hidden accounts see each other
 - **Max Equipped Badges** — server-wide cap (1-10)
 - **Restrict Badge Visibility** — users can only see their own badges
 - **Disable Badge Categories** — hide entire categories (e.g. "Late Night" for family servers)
@@ -731,6 +732,7 @@ GET    /Plugins/AchievementBadges/users/{userId}/profile-card         — HTML p
 GET    /Plugins/AchievementBadges/users/{userId}/unlocks-since?since=ISO&deviceId=ID
 GET    /Plugins/AchievementBadges/users/{userId}/library-completion
 POST   /Plugins/AchievementBadges/users/{userId}/login-ping
+GET    /Plugins/AchievementBadges/users/{userId}/directory            (#138) users this user may see, for friend search and compare
 GET    /Plugins/AchievementBadges/leaderboard?limit=10
 GET    /Plugins/AchievementBadges/leaderboard/{category}?limit=10     — score|movies|episodes|hours|streak|series
 GET    /Plugins/AchievementBadges/embedded-page                       — Plugin Pages host fragment
