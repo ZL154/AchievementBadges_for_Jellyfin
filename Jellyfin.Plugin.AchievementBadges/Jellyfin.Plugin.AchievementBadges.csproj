@@ -34,13 +34,29 @@
 
   <!-- [issue #109] Jellyfin package line per target framework. The 12.0
        line is a release candidate until Jellyfin tags 12.0.0; bump it here
-       and in the Tests csproj together, they must stay identical. -->
+       and in the Tests csproj together, they must stay identical.
+
+       [issue #140] The fourth version component identifies the package, and
+       it has to be stamped into the assembly as well as into the file name.
+       Releases ship two zips from this one source tree, X.Y.Z.0 for Jellyfin
+       10.11 and X.Y.Z.1 for Jellyfin 12, and the manifest entry each server
+       installs carries that version. Jellyfin then reads two different
+       numbers for the same install: the dashboard shows the assembly's
+       version, while GetPlugin(id, version) - which uninstall and the plugin
+       image endpoint both use - matches the manifest's. With both assemblies
+       stamped X.Y.Z.0 the Jellyfin 12 package showed as .0, its image 404'd
+       and uninstall failed outright, which is what @Roboatlas21 reported.
+       Version stays three-part so the release workflow can read it. -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <JellyfinVersion>10.11.6</JellyfinVersion>
+    <AssemblyVersion>$(Version).0</AssemblyVersion>
+    <FileVersion>$(Version).0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <JellyfinVersion>12.0.0</JellyfinVersion>
+    <AssemblyVersion>$(Version).1</AssemblyVersion>
+    <FileVersion>$(Version).1</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

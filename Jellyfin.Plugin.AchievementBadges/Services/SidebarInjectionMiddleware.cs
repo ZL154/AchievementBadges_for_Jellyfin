@@ -47,6 +47,25 @@ public class SidebarInjectionMiddleware
 
         var originalBody = context.Response.Body;
 
+        // [issue #141] A browser that cached the SPA shell before this plugin
+        // was installed revalidates with If-None-Match / If-Modified-Since.
+        // Jellyfin's static file handler answers 304 from the file on disk,
+        // there is no body for this middleware to inject into, and the browser
+        // goes on using the copy it already has — one with no bootstrap in it.
+        // The result is a plugin that works in a private window and nowhere
+        // else, for as long as that cache entry survives, which is what
+        // @Roboatlas21 reported after his install.
+        //
+        // Dropping the validators forces a full body we can rewrite. Only
+        // needed while the on-disk patch has not taken: when it has, the file
+        // itself carries the bootstrap, its validators describe a patched
+        // body, and a 304 is the right answer, so those installs keep it.
+        if (!WebInjectionService.DiagIndexPatched)
+        {
+            context.Request.Headers.Remove("If-None-Match");
+            context.Request.Headers.Remove("If-Modified-Since");
+        }
+
         try
         {
             using var buffer = new MemoryStream();
@@ -132,6 +151,14 @@ public class SidebarInjectionMiddleware
                     // Clear Content-Length so the framework re-derives it from the new body.
                     // Setting it to bytes.Length first caused a race on some Kestrel paths.
                     context.Response.ContentLength = null;
+
+                    // [issue #141] These describe the file on disk, not the body
+                    // being sent. Leaving them lets the browser, or a reverse
+                    // proxy in front of it, store the injected page under a
+                    // validator that maps to the un-injected one and revalidate
+                    // its way back to a page with no bootstrap in it.
+                    context.Response.Headers.Remove("ETag");
+                    context.Response.Headers.Remove("Last-Modified");
                     context.Response.Body = originalBody;
                     await context.Response.Body.WriteAsync(bytes);
 
