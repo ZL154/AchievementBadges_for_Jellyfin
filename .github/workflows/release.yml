@@ -42,13 +42,15 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(grep -oPm1 '(?<=<Version>)[^<]+' Jellyfin.Plugin.AchievementBadges/Jellyfin.Plugin.AchievementBadges.csproj)"
-          # Existing releases use a 4-segment version (1.9.6.0) in the zip
-          # filename. Normalize: if csproj has 3 segments, append .0.
-          case "$(echo "$VERSION" | awk -F. '{print NF}')" in
-            3) ZIPVER="${VERSION}.0" ;;
-            4) ZIPVER="${VERSION}" ;;
-            *) echo "::error::Unexpected version format: $VERSION"; exit 1 ;;
-          esac
+          # [issue #143] The csproj builds X.Y.Z.0 and X.Y.Z.1 out of a
+          # three-part Version and refuses a fourth part. A release takes no
+          # prerelease suffix either: the zip names and the manifest carry
+          # plain four-part numbers, as releases always have (1.9.6.0).
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::A release needs Version X.Y.Z in the csproj, found: $VERSION"
+            exit 1
+          fi
+          ZIPVER="${VERSION}.0"
           # [issue #109] Two zips per release, one per Jellyfin line. The
           # 4th segment tells them apart: .0 is the net9.0 build for 10.11,
           # .1 is the net10.0 build for 12. Jellyfin's catalog filters by

@@ -218,7 +218,15 @@ public class StaleShellCacheTests : IDisposable
         // assemblies stamped .0 the Jellyfin 12 package could not be
         // uninstalled at all.
         var version = typeof(Plugin).Assembly.GetName().Version!;
-        var expected = Environment.Version.Major >= 10 ? 1 : 0;
+
+        // [issue #143] Taken from the target framework, which is what picks the
+        // build under test. The runtime can be newer: with roll-forward
+        // allowed, the net9.0 tests run on .NET 10.
+#if NET10_0_OR_GREATER
+        const int expected = 1;
+#else
+        const int expected = 0;
+#endif
 
         Assert.Equal(expected, version.Revision);
     }
