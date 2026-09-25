@@ -37,76 +37,13 @@ jobs:
             9.0.x
             10.0.x
 
-      - name: Read version
-        id: ver
-        run: |
-          set -euo pipefail
-          VERSION="$(grep -oPm1 '(?<=<Version>)[^<]+' Jellyfin.Plugin.AchievementBadges/Jellyfin.Plugin.AchievementBadges.csproj)"
-          # Existing releases use a 4-segment version (1.9.6.0) in the zip
-          # filename. Normalize: if csproj has 3 segments, append .0.
-          case "$(echo "$VERSION" | awk -F. '{print NF}')" in
-            3) ZIPVER="${VERSION}.0" ;;
-            4) ZIPVER="${VERSION}" ;;
-            *) echo "::error::Unexpected version format: $VERSION"; exit 1 ;;
-          esac
-          # [issue #109] Two zips per release, one per Jellyfin line. The
-          # 4th segment tells them apart: .0 is the net9.0 build for 10.11,
-          # .1 is the net10.0 build for 12. Jellyfin's catalog filters by
-          # targetAbi and then takes the highest version number, so a 12
-          # server lands on .1 and a 10.11 server can only ever see .0.
-          ZIPVER12="${ZIPVER%.*}.1"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "zipver=$ZIPVER" >> "$GITHUB_OUTPUT"
-          echo "zipver12=$ZIPVER12" >> "$GITHUB_OUTPUT"
-          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Build plugin
-        run: |
-          set -euo pipefail
-          dotnet restore Jellyfin.Plugin.AchievementBadges/Jellyfin.Plugin.AchievementBadges.csproj --locked-mode
-          # [issue #109] The csproj multi-targets net9.0 and net10.0, and
-          # dotnet publish refuses a multi-target project without an explicit
-          # framework (NETSDK1129). One publish per line: net9.0 for
-          # Jellyfin 10.11 and net10.0 for Jellyfin 12, into separate
-          # folders so the two DLLs never overwrite each other.
-          for TFM in net9.0 net10.0; do
-            dotnet publish Jellyfin.Plugin.AchievementBadges/Jellyfin.Plugin.AchievementBadges.csproj \
-              --configuration Release \
-              --framework "$TFM" \
-              --no-restore \
-              --output "dist/build-$TFM"
-          done
-
-      - name: Stage plugin payload
-        run: |
-          set -euo pipefail
-          # Copy only the plugin DLL — Jellyfin.Controller / Jellyfin.Model
-          # are ExcludeAssets=runtime in the csproj, so they're not emitted.
-          # Anything else in dist/build-* is either a transitive ref of the
-          # SDK base or the app host (unused by plugins). Both zips carry the
-          # same wrapper folder name, so a manual install flattens the same way.
-          for TFM in net9.0 net10.0; do
-            mkdir -p "dist/$TFM/Jellyfin.Plugin.AchievementBadges"
-            cp "dist/build-$TFM/Jellyfin.Plugin.AchievementBadges.dll" "dist/$TFM/Jellyfin.Plugin.AchievementBadges/"
-          done
-
-      - name: Package zip + checksums
+      - name: Build and package
         id: pkg
-        run: |
-          set -euo pipefail
-          ZIPNAME="Jellyfin.Plugin.AchievementBadges_${{ steps.ver.outputs.zipver }}.zip"
-          ZIPNAME12="Jellyfin.Plugin.AchievementBadges_${{ steps.ver.outputs.zipver12 }}.zip"
-          (cd dist/net9.0  && zip -r "../$ZIPNAME"   "Jellyfin.Plugin.AchievementBadges")
-          (cd dist/net10.0 && zip -r "../$ZIPNAME12" "Jellyfin.Plugin.AchievementBadges")
-          cd dist
-          for Z in "$ZIPNAME" "$ZIPNAME12"; do
-            md5sum "$Z"    | awk '{print toupper($1)}' > "${Z}.md5"
-            sha256sum "$Z"                              > "${Z}.sha256"
-          done
-          echo "zipname=$ZIPNAME"         >> "$GITHUB_OUTPUT"
-          echo "zippath=dist/$ZIPNAME"     >> "$GITHUB_OUTPUT"
-          echo "zipname12=$ZIPNAME12"     >> "$GITHUB_OUTPUT"
-          echo "zippath12=dist/$ZIPNAME12" >> "$GITHUB_OUTPUT"
+        # [issue #143] The same script CI runs on every pull request, so a
+        # release ships the build and packaging CI has already been through.
+        # It also stops here if a DLL is stamped with any other version than
+        # its zip, which Jellyfin needs to be equal (#140).
+        run: bash .github/scripts/build-packages.sh
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
@@ -170,7 +107,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.ver.outputs.tag }}"
+          TAG="${{ steps.pkg.outputs.tag }}"
           ASSETS=()
           for ZIP in "${{ steps.pkg.outputs.zippath }}" "${{ steps.pkg.outputs.zippath12 }}"; do
             ASSETS+=("$ZIP" "${ZIP}.md5" "${ZIP}.sha256" "${ZIP}.sig" "${ZIP}.pem" "${ZIP}.intoto.jsonl")
@@ -179,13 +116,13 @@ jobs:
           # else fall back to a generic blurb. Lets each release ship a real
           # changelog without editing the workflow file.
           NOTES_FILE=""
-          if [ -f "docs/release-notes/v${{ steps.ver.outputs.version }}.md" ]; then
-            NOTES_FILE="docs/release-notes/v${{ steps.ver.outputs.version }}.md"
+          if [ -f "docs/release-notes/v${{ steps.pkg.outputs.version }}.md" ]; then
+            NOTES_FILE="docs/release-notes/v${{ steps.pkg.outputs.version }}.md"
           elif [ -f "docs/release-notes/${TAG}.md" ]; then
             NOTES_FILE="docs/release-notes/${TAG}.md"
           fi
           if [ -z "$NOTES_FILE" ]; then
-            echo "Automated release for Achievement Badges for Jellyfin ${{ steps.ver.outputs.version }}. Sigstore-signed zip — verify with cosign verify-blob." > "$RUNNER_TEMP/notes.md"
+            echo "Automated release for Achievement Badges for Jellyfin ${{ steps.pkg.outputs.version }}. Sigstore-signed zip: verify with cosign verify-blob." > "$RUNNER_TEMP/notes.md"
             NOTES_FILE="$RUNNER_TEMP/notes.md"
           fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
