@@ -52,6 +52,11 @@ jobs:
           dotnet build Jellyfin.Plugin.AchievementBadges/Jellyfin.Plugin.AchievementBadges.csproj --configuration Release --no-restore
           dotnet build Jellyfin.Plugin.AchievementBadges.Tests/Jellyfin.Plugin.AchievementBadges.Tests.csproj --configuration Release --no-restore
 
+      - name: Package as a release does
+        # [issue #143] The release's own build, DLL version check and zips,
+        # so a change that would break a release fails here first.
+        run: bash .github/scripts/build-packages.sh
+
   test:
     name: Test
     runs-on: ubuntu-latest

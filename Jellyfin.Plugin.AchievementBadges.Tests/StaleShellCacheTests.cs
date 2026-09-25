@@ -234,12 +234,26 @@ public class StaleShellCacheTests : IDisposable
     [Fact]
     public void TheReleaseNamesTheZipAfterThatSameComponent()
     {
-        // The stamp above is only right while the workflow keeps naming the
-        // Jellyfin 12 zip with the same fourth component.
-        var workflow = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "release.yml"));
+        // The stamp above is only right while the packaging keeps naming the
+        // Jellyfin 12 zip with the same fourth component. [issue #143] That
+        // packaging is the script the release and CI both run.
+        var script = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "scripts", "build-packages.sh"));
 
-        Assert.Contains("ZIPVER12=\"${ZIPVER%.*}.1\"", workflow, StringComparison.Ordinal);
-        Assert.Contains("--framework \"$TFM\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("ZIPVER12=\"${ZIPVER%.*}.1\"", script, StringComparison.Ordinal);
+        Assert.Contains("--framework \"$TFM\"", script, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("release.yml")]
+    [InlineData("ci.yml")]
+    public void TheReleaseAndCiPackageThroughTheSameScript(string workflow)
+    {
+        // [issue #143] CI used to stop at dotnet build, so the release's own
+        // publish was first exercised by a release: #142 would have broken it
+        // with every check green.
+        var text = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", workflow));
+
+        Assert.Contains("bash .github/scripts/build-packages.sh", text, StringComparison.Ordinal);
     }
 
     private static string RepoRoot()
