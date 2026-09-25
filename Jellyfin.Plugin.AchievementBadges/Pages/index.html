@@ -2067,6 +2067,9 @@ font-size:0.88em;
                             <input type="checkbox" id="abFcForcePrivacyMode"> <span data-i18n="admin.fc.force_privacy">Force privacy mode (hide all users from each other)</span>
                         </label>
                         <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
+                            <input type="checkbox" id="abFcHideUsersHiddenFromLogin"> <span data-i18n="admin.fc.hide_login_hidden">Keep accounts hidden from the login screen out of other users' views (hidden accounts, admins and their friends still see them)</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
                             <input type="checkbox" id="abFcForceSpoilerMode"> <span data-i18n="admin.fc.force_spoiler">Force Spoiler Mode (hide locked badge descriptions for all users)</span>
                         </label>
                         <label style="display:flex; align-items:center; gap:0.5em; margin-bottom:0.75em;">
@@ -4484,6 +4487,8 @@ font-size:0.88em;
             document.getElementById('abFcPrestigeEnabled').checked = c.PrestigeEnabled !== false;
             document.getElementById('abFcQuestsEnabled').checked = c.QuestsEnabled !== false;
             document.getElementById('abFcForcePrivacyMode').checked = !!c.ForcePrivacyMode;
+            var hideLoginHiddenEl = document.getElementById('abFcHideUsersHiddenFromLogin');
+            if (hideLoginHiddenEl) hideLoginHiddenEl.checked = !!c.HideUsersHiddenFromLogin;
             document.getElementById('abFcForceSpoilerMode').checked = !!c.ForceSpoilerMode;
             document.getElementById('abFcForceExtremeSpoilerMode').checked = !!c.ForceExtremeSpoilerMode;
             document.getElementById('abFcMaxEquippedBadges').value = c.MaxEquippedBadges || 5;
@@ -4570,6 +4575,7 @@ font-size:0.88em;
             PrestigeEnabled: document.getElementById('abFcPrestigeEnabled').checked,
             QuestsEnabled: document.getElementById('abFcQuestsEnabled').checked,
             ForcePrivacyMode: document.getElementById('abFcForcePrivacyMode').checked,
+            HideUsersHiddenFromLogin: !!(document.getElementById('abFcHideUsersHiddenFromLogin') || {}).checked,
             ForceSpoilerMode: document.getElementById('abFcForceSpoilerMode').checked,
             ForceExtremeSpoilerMode: document.getElementById('abFcForceExtremeSpoilerMode').checked,
             MaxEquippedBadges: maxBadges,

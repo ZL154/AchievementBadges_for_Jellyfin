@@ -133,6 +133,14 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool ForceSpoilerMode { get; set; } = false;
     public bool ForceExtremeSpoilerMode { get; set; } = false;
 
+    // [issue #138] When true, an account with Jellyfin's "Hide this user from
+    // login screens" is left out of what other users see here: leaderboards,
+    // the activity feed, friend search, compare and public profiles. Hidden
+    // accounts, administrators and the account's existing friends still see
+    // it. Off by default, because servers that hide every account from the
+    // login screen still want their users to see each other.
+    public bool HideUsersHiddenFromLogin { get; set; } = false;
+
     // Badge controls
     public int MaxEquippedBadges { get; set; } = 5;
     public bool RestrictBadgeVisibility { get; set; } = false;

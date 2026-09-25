@@ -195,6 +195,8 @@ public class FriendsService
                     .Where(u => u != null)
                     .Select(u => u.Id.ToString("N"))
                     .Where(uid => !string.Equals(uid, userId, StringComparison.OrdinalIgnoreCase))
+                    // [issue #138] "Everyone" means everyone this user may see.
+                    .Where(uid => _badgeService.CanSee(userId, uid))
                     .Select(uid => BuildFriendRow(userId, uid, sessionByUser))
                     .OrderByDescending(x => x.Online)
                     .ThenBy(x => x.UserName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
@@ -248,7 +250,7 @@ public class FriendsService
     {
         var fProfile = _badgeService.PeekProfile(fid);
         var userName = ResolveUserName(fid);
-        var equipped = _badgeService.GetPublicEquippedPreview(fid);
+        var equipped = _badgeService.GetPublicEquippedPreview(fid, userId);
         sessionByUser.TryGetValue(fid, out var session);
         // Relaxed online check: Jellyfin's `SessionInfo.IsActive` is tied to
         // active playback controllers, so an idle-logged-in user flips to
@@ -325,6 +327,10 @@ public class FriendsService
         {
             return (false, "User not found.");
         }
+
+        // [issue #138] An account this user may not see gets the same answer
+        // as one that does not exist, so the request cannot probe for it.
+        if (!_badgeService.CanSee(userId, targetUserId)) return (false, "User not found.");
 
         var caller = _badgeService.GetOrCreateProfileDirect(userId);
         var target = _badgeService.GetOrCreateProfileDirect(targetUserId);
@@ -462,8 +468,10 @@ public class FriendsService
         // Simple mode skips the explicit friendship step — every user on
         // the server is treated as a "friend" of every other. Keep that
         // behaviour consistent here so messaging works in simple mode too.
+        // [issue #138] Only between users who can see each other, so simple
+        // mode cannot open a conversation with an account hidden from one side.
         var cfg = Plugin.Instance?.Configuration;
-        if (cfg?.FriendsSimpleMode == true) return true;
+        if (cfg?.FriendsSimpleMode == true) return _badgeService.CanSee(userIdA, userIdB) && _badgeService.CanSee(userIdB, userIdA);
 
         var a = _badgeService.PeekProfile(userIdA);
         var b = _badgeService.PeekProfile(userIdB);

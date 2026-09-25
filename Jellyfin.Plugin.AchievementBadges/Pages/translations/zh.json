@@ -533,6 +533,7 @@
   "admin.fc.prestige": "启用声望系统",
   "admin.fc.quests": "启用任务",
   "admin.fc.force_privacy": "强制隐私模式（对用户互相隐藏）",
+  "admin.fc.hide_login_hidden": "对其他用户隐藏在登录界面中隐藏的账户（隐藏账户、管理员及其好友仍可看到）",
   "admin.fc.force_spoiler": "强制防剧透模式（对所有人隐藏锁定徽章描述）",
   "admin.fc.force_extreme_spoiler": "强制极致防剧透模式（对所有人完全隐藏锁定徽章）",
   "admin.fc.max_equipped": "最多装备徽章（1-10）：",

@@ -533,6 +533,7 @@
   "admin.fc.prestige": "Prestige-System aktiviert",
   "admin.fc.quests": "Quests aktiviert",
   "admin.fc.force_privacy": "Datenschutzmodus erzwingen (alle Benutzer voreinander verbergen)",
+  "admin.fc.hide_login_hidden": "Auf dem Anmeldebildschirm verborgene Konten vor anderen Benutzern verbergen (verborgene Konten, Administratoren und ihre Freunde sehen sie weiterhin)",
   "admin.fc.force_spoiler": "Spoiler-Modus erzwingen (Beschreibungen gesperrter Abzeichen für alle verbergen)",
   "admin.fc.force_extreme_spoiler": "Extremen Spoiler-Modus erzwingen (gesperrte Abzeichen komplett für alle verbergen)",
   "admin.fc.max_equipped": "Max. ausgerüstete Abzeichen (1-10):",

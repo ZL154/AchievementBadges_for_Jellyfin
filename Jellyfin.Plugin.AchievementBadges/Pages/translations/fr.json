@@ -533,6 +533,7 @@
   "admin.fc.prestige": "Système de prestige activé",
   "admin.fc.quests": "Quêtes activées",
   "admin.fc.force_privacy": "Forcer le mode confidentialité (masquer tous les utilisateurs entre eux)",
+  "admin.fc.hide_login_hidden": "Masquer aux autres utilisateurs les comptes masqués de l'écran de connexion (les comptes masqués, les administrateurs et leurs amis les voient toujours)",
   "admin.fc.force_spoiler": "Forcer le mode anti-spoiler (masquer les descriptions des badges verrouillés pour tous)",
   "admin.fc.force_extreme_spoiler": "Forcer le mode anti-spoiler extrême (masquer complètement les badges verrouillés pour tous)",
   "admin.fc.max_equipped": "Badges équipés max (1-10) :",

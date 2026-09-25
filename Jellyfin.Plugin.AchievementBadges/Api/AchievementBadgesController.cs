@@ -523,12 +523,28 @@ public class AchievementBadgesController : ControllerBase
 
     private bool FriendsFeatureOn => Plugin.Instance?.Configuration?.FriendsEnabled ?? true;
 
+    // [issue #138] The signed-in user, for the views that depend on who is
+    // looking. The same claim the activity feed and compare already read.
+    private string? CallerUserId() => User.FindFirst("Jellyfin-UserId")?.Value;
+
     [HttpGet("users/{userId}/friends")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult GetFriends([FromRoute] string userId)
     {
         if (!FriendsFeatureOn) return Ok(new { Friends = new List<object>(), Incoming = new List<object>(), Outgoing = new List<object>() });
         return Ok(_friendsService.List(userId));
+    }
+
+    // [issue #138] The users this user may see, for the friend search and the
+    // compare picker. Both read Jellyfin's own /Users before, which lists the
+    // accounts hidden from the login screen to any signed-in user. {userId}
+    // puts the route under the UserOwnershipFilter: the caller, or an admin
+    // looking as that user.
+    [HttpGet("users/{userId}/directory")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetUserDirectory([FromRoute] string userId)
+    {
+        return Ok(_badgeService.GetUserDirectory(userId));
     }
 
     [HttpPost("users/{userId}/friends/{friendUserId}")]
@@ -850,7 +866,7 @@ public class AchievementBadgesController : ControllerBase
         // for userId probing.
         if (string.IsNullOrWhiteSpace(targetUserId) || targetUserId.Length > 64 || !Guid.TryParse(targetUserId, out _))
             return Ok(new List<object>());
-        return Ok(_badgeService.GetPublicEquippedPreview(targetUserId));
+        return Ok(_badgeService.GetPublicEquippedPreview(targetUserId, CallerUserId()));
     }
 
     // [issue #42] Summary card for another user, shown on hover / click in the
@@ -873,7 +889,7 @@ public class AchievementBadgesController : ControllerBase
         if (string.IsNullOrWhiteSpace(targetUserId) || targetUserId.Length > 64 || !Guid.TryParse(targetUserId, out _))
             return NotFound();
 
-        var summary = _badgeService.GetPublicProfileSummary(targetUserId);
+        var summary = _badgeService.GetPublicProfileSummary(targetUserId, CallerUserId());
         return summary is null ? NotFound() : Ok(summary);
     }
 
@@ -924,7 +940,7 @@ public class AchievementBadgesController : ControllerBase
     public ActionResult GetLeaderboard([FromQuery] int limit = 10)
     {
         limit = Math.Clamp(limit, 1, 200);
-        var leaderboard = _badgeService.GetLeaderboard(limit);
+        var leaderboard = _badgeService.GetLeaderboard(limit, CallerUserId());
         return Ok(leaderboard);
     }
 
@@ -1200,15 +1216,18 @@ public class AchievementBadgesController : ControllerBase
         // Only record history for the caller's side — never touch the other
         // user's profile so a malicious call can't be used to flush / inject
         // entries into a victim's CompareHistory.
-        if (callerMatchesA)
+        // [issue #138] And only for an account the caller may see: the compare
+        // below answers "not found" for any other, and the history would keep
+        // listing it.
+        if (callerMatchesA && _badgeService.CanSee(caller, userIdB))
         {
             _badgeService.RecordCompareHistory(userIdA, userIdB);
         }
-        else if (callerMatchesB)
+        else if (callerMatchesB && _badgeService.CanSee(caller, userIdA))
         {
             _badgeService.RecordCompareHistory(userIdB, userIdA);
         }
-        return Ok(_badgeService.CompareUsers(userIdA, userIdB));
+        return Ok(_badgeService.CompareUsers(userIdA, userIdB, caller));
     }
 
     [HttpGet("users/{userId}/compare-history")]
@@ -1339,7 +1358,7 @@ public class AchievementBadgesController : ControllerBase
     public ActionResult GetPrestigeLeaderboard([FromQuery] int limit = 10)
     {
         limit = Math.Clamp(limit, 1, 200);
-        return Ok(_badgeService.GetPrestigeLeaderboard(limit));
+        return Ok(_badgeService.GetPrestigeLeaderboard(limit, CallerUserId()));
     }
 
     [HttpGet("users/{userId}/recent-unlocks-v2")]
@@ -1653,7 +1672,7 @@ public class AchievementBadgesController : ControllerBase
     public ActionResult GetCategoryLeaderboard([FromRoute] string category, [FromQuery] int limit = 10)
     {
         limit = Math.Clamp(limit, 1, 200);
-        return Ok(_badgeService.GetLeaderboardByCategory(category, limit));
+        return Ok(_badgeService.GetLeaderboardByCategory(category, limit, CallerUserId()));
     }
 
     // ---------- Custom badges (admin) -------------------------------
@@ -2588,6 +2607,7 @@ public class AchievementBadgesController : ControllerBase
             ForcePrivacyMode = c?.ForcePrivacyMode ?? false,
             ForceSpoilerMode = c?.ForceSpoilerMode ?? false,
             ForceExtremeSpoilerMode = c?.ForceExtremeSpoilerMode ?? false,
+            HideUsersHiddenFromLogin = c?.HideUsersHiddenFromLogin ?? false,
             MaxEquippedBadges = c?.MaxEquippedBadges ?? 5,
             WatchCarryRetentionDays = c?.WatchCarryRetentionDays ?? 7,
             RestrictBadgeVisibility = c?.RestrictBadgeVisibility ?? false,
@@ -2624,6 +2644,13 @@ public class AchievementBadgesController : ControllerBase
         public bool ForcePrivacyMode { get; set; } = false;
         public bool ForceSpoilerMode { get; set; } = false;
         public bool ForceExtremeSpoilerMode { get; set; } = false;
+
+        /// <summary>
+        /// [issue #138] Nullable for the same reason as the retention below:
+        /// a body without the field must not switch the option off.
+        /// </summary>
+        public bool? HideUsersHiddenFromLogin { get; set; }
+
         public int MaxEquippedBadges { get; set; } = 5;
 
         /// <summary>
@@ -2685,6 +2712,12 @@ public class AchievementBadgesController : ControllerBase
         config.ForcePrivacyMode = request.ForcePrivacyMode;
         config.ForceSpoilerMode = request.ForceSpoilerMode;
         config.ForceExtremeSpoilerMode = request.ForceExtremeSpoilerMode;
+        // [issue #138] Omitted leaves it alone, so an admin page that predates
+        // the option cannot switch it off by saving.
+        if (request.HideUsersHiddenFromLogin is bool hideUsersHiddenFromLogin)
+        {
+            config.HideUsersHiddenFromLogin = hideUsersHiddenFromLogin;
+        }
         config.MaxEquippedBadges = Math.Clamp(request.MaxEquippedBadges, 1, 10);
 
         // Omitted means "leave it alone", so a partial body cannot quietly

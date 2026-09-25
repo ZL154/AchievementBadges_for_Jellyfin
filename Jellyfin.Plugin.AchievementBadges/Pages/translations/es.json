@@ -533,6 +533,7 @@
   "admin.fc.prestige": "Sistema de prestigio activado",
   "admin.fc.quests": "Misiones activadas",
   "admin.fc.force_privacy": "Forzar modo privacidad (ocultar a todos los usuarios entre sí)",
+  "admin.fc.hide_login_hidden": "Ocultar a los demás usuarios las cuentas ocultas en la pantalla de inicio de sesión (las cuentas ocultas, los administradores y sus amigos siguen viéndolas)",
   "admin.fc.force_spoiler": "Forzar modo anti-spoiler (ocultar descripciones de insignias bloqueadas para todos)",
   "admin.fc.force_extreme_spoiler": "Forzar modo anti-spoiler extremo (ocultar completamente las insignias bloqueadas para todos)",
   "admin.fc.max_equipped": "Máx. insignias equipadas (1-10):",
