@@ -61,6 +61,9 @@ jobs:
           echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build plugin
+        env:
+          ZIPVER: ${{ steps.ver.outputs.zipver }}
+          ZIPVER12: ${{ steps.ver.outputs.zipver12 }}
         run: |
           set -euo pipefail
           dotnet restore Jellyfin.Plugin.AchievementBadges/Jellyfin.Plugin.AchievementBadges.csproj --locked-mode
@@ -69,13 +72,44 @@ jobs:
           # framework (NETSDK1129). One publish per line: net9.0 for
           # Jellyfin 10.11 and net10.0 for Jellyfin 12, into separate
           # folders so the two DLLs never overwrite each other.
+          # [issue #140] Each DLL is stamped with the version its zip and
+          # catalog entry carry. Jellyfin shows a plugin's version from the DLL
+          # but looks the plugin up by the version in meta.json, so a net10.0
+          # DLL left at X.Y.Z.0 inside the X.Y.Z.1 package made the dashboard's
+          # uninstall, disable and image requests fail with 404.
           for TFM in net9.0 net10.0; do
+            case "$TFM" in
+              net9.0)  PKGVER="$ZIPVER" ;;
+              net10.0) PKGVER="$ZIPVER12" ;;
+            esac
             dotnet publish Jellyfin.Plugin.AchievementBadges/Jellyfin.Plugin.AchievementBadges.csproj \
               --configuration Release \
               --framework "$TFM" \
               --no-restore \
+              -p:Version="$PKGVER" \
               --output "dist/build-$TFM"
           done
+
+      - name: Check DLL versions
+        # [issue #140] Stop the release if a DLL does not carry the version its
+        # zip is published under; Jellyfin needs the two to be equal.
+        shell: pwsh
+        env:
+          ZIPVER: ${{ steps.ver.outputs.zipver }}
+          ZIPVER12: ${{ steps.ver.outputs.zipver12 }}
+        run: |
+          $expected = @{
+            'net9.0'  = $env:ZIPVER
+            'net10.0' = $env:ZIPVER12
+          }
+          foreach ($tfm in $expected.Keys) {
+            $dll = "dist/build-$tfm/Jellyfin.Plugin.AchievementBadges.dll"
+            $actual = [System.Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $dll).Path).Version.ToString()
+            if ($actual -ne $expected[$tfm]) {
+              throw "$dll is $actual, but its zip is published as $($expected[$tfm])"
+            }
+            Write-Host "$dll is $actual"
+          }
 
       - name: Stage plugin payload
         run: |
