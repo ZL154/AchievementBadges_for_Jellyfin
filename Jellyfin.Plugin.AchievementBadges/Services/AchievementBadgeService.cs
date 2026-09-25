@@ -550,6 +550,7 @@ public class AchievementBadgeService : IDisposable
             var profile = GetOrCreateProfile(userId);
             profile.Preferences = prefs ?? new UserNotificationPreferences();
             profile.Preferences.ToastPlaybackMuteDefaultMigrated = true;
+            profile.Preferences.ToastPositionDefaultMigrated = true;
             Save();
         }
     }
@@ -3063,7 +3064,8 @@ public class AchievementBadgeService : IDisposable
             EquippedBadgeIds = new List<string>(),
             Preferences = new UserNotificationPreferences
             {
-                ToastPlaybackMuteDefaultMigrated = true
+                ToastPlaybackMuteDefaultMigrated = true,
+                ToastPositionDefaultMigrated = true
             }
         };
     }
@@ -3966,6 +3968,23 @@ public class AchievementBadgeService : IDisposable
                 {
                     profile.Preferences.MuteToastsDuringPlayback = false;
                     profile.Preferences.ToastPlaybackMuteDefaultMigrated = true;
+                    migrated = true;
+                }
+
+                // [#136] ToastPosition used to default to "top-right" for every
+                // profile, so a stored "top-right" is indistinguishable from
+                // "never chose". Read it as no choice once, so existing users
+                // follow the admin's DefaultToastPosition until they pick one.
+                // That default is itself top-right unless the admin changes
+                // it, so nothing moves on upgrade. The marker keeps a later
+                // explicit top-right from being reinterpreted.
+                if (profile.Preferences.ToastPositionDefaultMigrated != true)
+                {
+                    if (string.Equals(profile.Preferences.ToastPosition?.Trim(), ToastPlacement.TopRight, StringComparison.OrdinalIgnoreCase))
+                    {
+                        profile.Preferences.ToastPosition = ToastPlacement.ServerDefault;
+                    }
+                    profile.Preferences.ToastPositionDefaultMigrated = true;
                     migrated = true;
                 }
 

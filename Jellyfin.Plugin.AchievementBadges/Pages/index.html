@@ -2111,6 +2111,17 @@ font-size:0.88em;
                             <input type="checkbox" id="abFcForceDefaultUiStyle">
                             <span data-i18n="admin.fc.force_default_ui_style">Only use the default UI style (hides the Classic/Revamp toggle for all users)</span>
                         </label>
+                        <!-- [#136] Where unlock toasts appear for users who have not picked a placement. -->
+                        <label style="display:block; margin-bottom:0.75em;"><span data-i18n="admin.fc.default_toast_position">Default toast position (used when a user hasn't chosen one):</span><br>
+                            <select id="abFcDefaultToastPosition" style="padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px;">
+                                <option value="top-right" data-i18n="settings.toast_pos_top_right">Top-right</option>
+                                <option value="top-center" data-i18n="settings.toast_pos_top_center">Top-center</option>
+                                <option value="top-left" data-i18n="settings.toast_pos_top_left">Top-left</option>
+                                <option value="bottom-right" data-i18n="settings.toast_pos_bottom_right">Bottom-right</option>
+                                <option value="bottom-center" data-i18n="settings.toast_pos_bottom_center">Bottom-center (original)</option>
+                                <option value="bottom-left" data-i18n="settings.toast_pos_bottom_left">Bottom-left</option>
+                            </select>
+                        </label>
                         <label style="display:block; margin-bottom:0.75em;"><span data-i18n="admin.fc.tracearr_url">Tracearr URL (optional):</span><br>
                             <input type="text" id="abFcTracearrUrl" placeholder="https://tracearr.example" style="width:100%; padding:0.5em; background:rgba(0,0,0,0.3); color:inherit; border:1px solid rgba(255,255,255,0.15); border-radius:4px;">
                         </label>
@@ -4488,6 +4499,8 @@ font-size:0.88em;
             if (uiSel) uiSel.value = (c.DefaultUiStyle === 'revamp' ? 'revamp' : 'classic');
             var forceUiEl = document.getElementById('abFcForceDefaultUiStyle');
             if (forceUiEl) forceUiEl.checked = !!c.ForceDefaultUiStyle;
+            var toastPosSel = document.getElementById('abFcDefaultToastPosition');
+            if (toastPosSel) toastPosSel.value = c.DefaultToastPosition || 'top-right';
             var tuEl = document.getElementById('abFcTracearrUrl');
             if (tuEl) tuEl.value = c.TracearrUrl || '';
             var ttEl = document.getElementById('abFcTracearrApiToken');
@@ -4567,6 +4580,7 @@ font-size:0.88em;
             DefaultLanguage: (document.getElementById('abFcDefaultLanguage') || {}).value || 'en',
             DefaultUiStyle: (document.getElementById('abFcDefaultUiStyle') || {}).value === 'revamp' ? 'revamp' : 'classic',
             ForceDefaultUiStyle: !!(document.getElementById('abFcForceDefaultUiStyle') || {}).checked,
+            DefaultToastPosition: (document.getElementById('abFcDefaultToastPosition') || {}).value || 'top-right',
             TracearrUrl: (document.getElementById('abFcTracearrUrl') || {}).value || '',
             TracearrApiToken: (document.getElementById('abFcTracearrApiToken') || {}).value || '',
             AudiobookCounting: (document.getElementById('abFcAudiobookCounting') || {}).value || 'BooksOnly',

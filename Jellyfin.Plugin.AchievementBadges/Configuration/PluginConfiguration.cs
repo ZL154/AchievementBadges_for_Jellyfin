@@ -155,6 +155,13 @@ public class PluginConfiguration : BasePluginConfiguration
     // comes back if this is turned off again.
     public bool ForceDefaultUiStyle { get; set; } = false;
 
+    // [issue #136] Where unlock toasts appear for users who have not picked a
+    // placement themselves. One of top-right, top-center, top-left,
+    // bottom-right, bottom-center or bottom-left; anything else is read as
+    // top-right, the default since #74. A starting point like DefaultLanguage,
+    // not a lock: a user's own choice always wins.
+    public string DefaultToastPosition { get; set; } = "top-right";
+
     // [issue #45] Base URL of a Tracearr instance, e.g. https://tracearr.example
     // or http://10.0.0.5:3000. Empty disables the integration entirely.
     public string TracearrUrl { get; set; } = "";
