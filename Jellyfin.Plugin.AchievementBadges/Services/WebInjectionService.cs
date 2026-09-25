@@ -58,6 +58,35 @@ public class WebInjectionService : IHostedService
     public static string DiagPatchedPath { get; internal set; } = "none";
     public static string DiagLastError { get; internal set; } = "none";
 
+    /// <summary>
+    /// [issue #143] Whether the file patched on disk is the index.html Jellyfin
+    /// actually serves. <see cref="DiagIndexPatched"/> only says a patch took
+    /// somewhere: when the web path cannot be written, the patch loop moves on
+    /// to fixed fallback paths, and a copy patched there reaches no browser.
+    /// Paths are compared as written, so a web path reached through a symlink
+    /// reads as not served, which costs a 304 and nothing else.
+    /// </summary>
+    public static bool ServedIndexPatched => DiagIndexPatched && IsServedIndex(DiagPatchedPath, DiagWebPath);
+
+    internal static bool IsServedIndex(string patchedPath, string webPath)
+    {
+        if (string.IsNullOrEmpty(patchedPath) || string.IsNullOrEmpty(webPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var served = Path.GetFullPath(Path.Combine(webPath, "index.html"));
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            return string.Equals(Path.GetFullPath(patchedPath), served, comparison);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
+    }
+
     // [v2.1.0 "Open Library" M5] When the on-disk patch fails (typically
     // Linux bare-metal where /usr/share/jellyfin/web is owned by root),
     // surface admin guidance describing how to load the badges UI via

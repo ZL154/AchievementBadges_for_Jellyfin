@@ -31,11 +31,21 @@ public class StaleShellCacheTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>The disk patch result is a static the middleware reads; set it per case.</summary>
-    private static void SetDiskPatched(bool value)
+    /// <summary>
+    /// The disk patch result is a set of statics the middleware reads; set them
+    /// per case. The path defaults are the values before any patch attempt.
+    /// </summary>
+    private static void SetDiskPatched(bool value, string webPath = "not set", string patchedPath = "none")
+    {
+        SetStatic(nameof(WebInjectionService.DiagIndexPatched), value);
+        SetStatic(nameof(WebInjectionService.DiagWebPath), webPath);
+        SetStatic(nameof(WebInjectionService.DiagPatchedPath), patchedPath);
+    }
+
+    private static void SetStatic(string name, object value)
     {
         typeof(WebInjectionService)
-            .GetProperty(nameof(WebInjectionService.DiagIndexPatched), BindingFlags.Public | BindingFlags.Static)!
+            .GetProperty(name, BindingFlags.Public | BindingFlags.Static)!
             .SetValue(null, value);
     }
 
@@ -119,12 +129,48 @@ public class StaleShellCacheTests : IDisposable
     {
         // There the file itself carries the bootstrap, so its validators
         // describe a patched body and 304 is the right answer.
-        SetDiskPatched(true);
+        SetDiskPatched(true, webPath: "/usr/share/jellyfin/web", patchedPath: "/usr/share/jellyfin/web/index.html");
 
         var context = await RunAsync(ifNoneMatch: "\"on-disk\"");
 
         Assert.Equal(StatusCodes.Status304NotModified, context.Response.StatusCode);
         Assert.Equal(string.Empty, Body(context));
+    }
+
+    [Fact]
+    public async Task APatchOnACopyJellyfinDoesNotServeStillDropsTheValidators()
+    {
+        // [issue #143] When the web path cannot be written, the patch loop
+        // moves on to its fallback paths. A copy patched there reaches no
+        // browser, the served file still has no bootstrap, and a 304 would
+        // bring #141 back.
+        SetDiskPatched(true, webPath: "/custom-web", patchedPath: "/jellyfin/jellyfin-web/index.html");
+
+        var context = await RunAsync(ifNoneMatch: "\"on-disk\"");
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Contains("achievementbadges-bootstrap", Body(context), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/usr/share/jellyfin/web", "/usr/share/jellyfin/web/index.html", true)]
+    [InlineData("/usr/share/jellyfin/web/", "/usr/share/jellyfin/web/index.html", true)]
+    [InlineData("/usr/share/jellyfin/./web", "/usr/share/jellyfin/web/index.html", true)]
+    [InlineData("/custom-web", "/jellyfin/jellyfin-web/index.html", false)]
+    [InlineData("not set", "none", false)]
+    public void OnlyAPatchOnTheServedFileCounts(string webPath, string patchedPath, bool expected)
+    {
+        SetDiskPatched(true, webPath, patchedPath);
+
+        Assert.Equal(expected, WebInjectionService.ServedIndexPatched);
+    }
+
+    [Fact]
+    public void AMatchingPathWithoutAPatchDoesNotCount()
+    {
+        SetDiskPatched(false, webPath: "/usr/share/jellyfin/web", patchedPath: "/usr/share/jellyfin/web/index.html");
+
+        Assert.False(WebInjectionService.ServedIndexPatched);
     }
 
     [Fact]

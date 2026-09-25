@@ -60,7 +60,9 @@ public class SidebarInjectionMiddleware
         // needed while the on-disk patch has not taken: when it has, the file
         // itself carries the bootstrap, its validators describe a patched
         // body, and a 304 is the right answer, so those installs keep it.
-        if (!WebInjectionService.DiagIndexPatched)
+        // [issue #143] Taken on the file Jellyfin serves, that is: a patch on
+        // one of the fallback copies leaves the served file without it.
+        if (!WebInjectionService.ServedIndexPatched)
         {
             context.Request.Headers.Remove("If-None-Match");
             context.Request.Headers.Remove("If-Modified-Since");
