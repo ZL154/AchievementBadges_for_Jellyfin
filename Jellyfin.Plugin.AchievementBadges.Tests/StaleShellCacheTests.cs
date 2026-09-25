@@ -55,11 +55,11 @@ public class StaleShellCacheTests : IDisposable
     /// otherwise. That is the behaviour that decides whether this middleware
     /// has anything to inject into.
     /// </summary>
-    private static async Task<HttpContext> RunAsync(string? ifNoneMatch, string? ifModifiedSince = null)
+    private static async Task<HttpContext> RunAsync(string? ifNoneMatch, string? ifModifiedSince = null, string path = "/web/index.html")
     {
         var context = new DefaultHttpContext();
         context.Request.Method = "GET";
-        context.Request.Path = "/web/index.html";
+        context.Request.Path = path;
         if (ifNoneMatch is not null) context.Request.Headers["If-None-Match"] = ifNoneMatch;
         if (ifModifiedSince is not null) context.Request.Headers["If-Modified-Since"] = ifModifiedSince;
 
@@ -150,6 +150,41 @@ public class StaleShellCacheTests : IDisposable
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         Assert.Contains("achievementbadges-bootstrap", Body(context), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/web/")]
+    [InlineData("/web/index.html")]
+    [InlineData("/jellyfin/web/")]
+    [InlineData("/jellyfin/web/index.html")]
+    [InlineData("/WEB/index.html")]
+    public async Task EveryPathTheShellIsServedAtDropsTheValidators(string path)
+    {
+        // [issue #143] The middleware runs ahead of Jellyfin's own pipeline, so
+        // a base URL is still part of the path it sees, and Jellyfin matches
+        // the /web prefix without regard to case.
+        var context = await RunAsync(ifNoneMatch: "\"on-disk\"", path: path);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Contains("achievementbadges-bootstrap", Body(context), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/DisplayPreferences/usersettings")]
+    [InlineData("/Branding/Css")]
+    [InlineData("/web/ConfigurationPage")]
+    [InlineData("/web")]
+    [InlineData("/")]
+    public async Task OtherRoutesThePrefilterLetsThroughKeepTheirValidators(string path)
+    {
+        // [issue #143] CouldBeHtmlRequest buffers every GET that might be the
+        // shell, and all of these pass it. None of them is the shell: / and
+        // /web only redirect to it. The stand-in answers 304 whenever the
+        // validators reach it, so a 304 here means they were left alone.
+        var context = await RunAsync(ifNoneMatch: "\"on-disk\"", path: path);
+
+        Assert.Equal(StatusCodes.Status304NotModified, context.Response.StatusCode);
+        Assert.Equal(string.Empty, Body(context));
     }
 
     [Theory]

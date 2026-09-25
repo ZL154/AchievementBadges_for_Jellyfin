@@ -61,8 +61,10 @@ public class SidebarInjectionMiddleware
         // itself carries the bootstrap, its validators describe a patched
         // body, and a 304 is the right answer, so those installs keep it.
         // [issue #143] Taken on the file Jellyfin serves, that is: a patch on
-        // one of the fallback copies leaves the served file without it.
-        if (!WebInjectionService.ServedIndexPatched)
+        // one of the fallback copies leaves the served file without it. And
+        // only for the shell itself: CouldBeHtmlRequest lets through every GET
+        // that might be HTML, and the other routes it passes keep their 304s.
+        if (IsShellRequest(context.Request.Path.Value) && !WebInjectionService.ServedIndexPatched)
         {
             context.Request.Headers.Remove("If-None-Match");
             context.Request.Headers.Remove("If-Modified-Since");
@@ -191,6 +193,18 @@ public class SidebarInjectionMiddleware
             }
             catch { /* nothing we can do */ }
         }
+    }
+
+    // [issue #143] The SPA shell itself, the one response whose validators can
+    // describe a page this middleware still has to inject into. Jellyfin 10.11
+    // and 12 serve it at /web/ and /web/index.html, behind the base URL when
+    // one is set, so the match is on the end of the path. / and /web, which
+    // CouldBeHtmlRequest also lets through, only redirect there.
+    private static bool IsShellRequest(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return false;
+        return path.EndsWith("/web/", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("/web/index.html", StringComparison.OrdinalIgnoreCase);
     }
 
     // Broad prefilter: buffer anything that MIGHT be Jellyfin's SPA shell HTML.
