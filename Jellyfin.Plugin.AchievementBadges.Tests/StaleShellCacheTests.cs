@@ -31,11 +31,21 @@ public class StaleShellCacheTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>The disk patch result is a static the middleware reads; set it per case.</summary>
-    private static void SetDiskPatched(bool value)
+    /// <summary>
+    /// The disk patch result is a set of statics the middleware reads; set them
+    /// per case. The path defaults are the values before any patch attempt.
+    /// </summary>
+    private static void SetDiskPatched(bool value, string webPath = "not set", string patchedPath = "none")
+    {
+        SetStatic(nameof(WebInjectionService.DiagIndexPatched), value);
+        SetStatic(nameof(WebInjectionService.DiagWebPath), webPath);
+        SetStatic(nameof(WebInjectionService.DiagPatchedPath), patchedPath);
+    }
+
+    private static void SetStatic(string name, object value)
     {
         typeof(WebInjectionService)
-            .GetProperty(nameof(WebInjectionService.DiagIndexPatched), BindingFlags.Public | BindingFlags.Static)!
+            .GetProperty(name, BindingFlags.Public | BindingFlags.Static)!
             .SetValue(null, value);
     }
 
@@ -45,11 +55,11 @@ public class StaleShellCacheTests : IDisposable
     /// otherwise. That is the behaviour that decides whether this middleware
     /// has anything to inject into.
     /// </summary>
-    private static async Task<HttpContext> RunAsync(string? ifNoneMatch, string? ifModifiedSince = null)
+    private static async Task<HttpContext> RunAsync(string? ifNoneMatch, string? ifModifiedSince = null, string path = "/web/index.html")
     {
         var context = new DefaultHttpContext();
         context.Request.Method = "GET";
-        context.Request.Path = "/web/index.html";
+        context.Request.Path = path;
         if (ifNoneMatch is not null) context.Request.Headers["If-None-Match"] = ifNoneMatch;
         if (ifModifiedSince is not null) context.Request.Headers["If-Modified-Since"] = ifModifiedSince;
 
@@ -119,12 +129,83 @@ public class StaleShellCacheTests : IDisposable
     {
         // There the file itself carries the bootstrap, so its validators
         // describe a patched body and 304 is the right answer.
-        SetDiskPatched(true);
+        SetDiskPatched(true, webPath: "/usr/share/jellyfin/web", patchedPath: "/usr/share/jellyfin/web/index.html");
 
         var context = await RunAsync(ifNoneMatch: "\"on-disk\"");
 
         Assert.Equal(StatusCodes.Status304NotModified, context.Response.StatusCode);
         Assert.Equal(string.Empty, Body(context));
+    }
+
+    [Fact]
+    public async Task APatchOnACopyJellyfinDoesNotServeStillDropsTheValidators()
+    {
+        // [issue #143] When the web path cannot be written, the patch loop
+        // moves on to its fallback paths. A copy patched there reaches no
+        // browser, the served file still has no bootstrap, and a 304 would
+        // bring #141 back.
+        SetDiskPatched(true, webPath: "/custom-web", patchedPath: "/jellyfin/jellyfin-web/index.html");
+
+        var context = await RunAsync(ifNoneMatch: "\"on-disk\"");
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Contains("achievementbadges-bootstrap", Body(context), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/web/")]
+    [InlineData("/web/index.html")]
+    [InlineData("/jellyfin/web/")]
+    [InlineData("/jellyfin/web/index.html")]
+    [InlineData("/WEB/index.html")]
+    public async Task EveryPathTheShellIsServedAtDropsTheValidators(string path)
+    {
+        // [issue #143] The middleware runs ahead of Jellyfin's own pipeline, so
+        // a base URL is still part of the path it sees, and Jellyfin matches
+        // the /web prefix without regard to case.
+        var context = await RunAsync(ifNoneMatch: "\"on-disk\"", path: path);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Contains("achievementbadges-bootstrap", Body(context), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("/DisplayPreferences/usersettings")]
+    [InlineData("/Branding/Css")]
+    [InlineData("/web/ConfigurationPage")]
+    [InlineData("/web")]
+    [InlineData("/")]
+    public async Task OtherRoutesThePrefilterLetsThroughKeepTheirValidators(string path)
+    {
+        // [issue #143] CouldBeHtmlRequest buffers every GET that might be the
+        // shell, and all of these pass it. None of them is the shell: / and
+        // /web only redirect to it. The stand-in answers 304 whenever the
+        // validators reach it, so a 304 here means they were left alone.
+        var context = await RunAsync(ifNoneMatch: "\"on-disk\"", path: path);
+
+        Assert.Equal(StatusCodes.Status304NotModified, context.Response.StatusCode);
+        Assert.Equal(string.Empty, Body(context));
+    }
+
+    [Theory]
+    [InlineData("/usr/share/jellyfin/web", "/usr/share/jellyfin/web/index.html", true)]
+    [InlineData("/usr/share/jellyfin/web/", "/usr/share/jellyfin/web/index.html", true)]
+    [InlineData("/usr/share/jellyfin/./web", "/usr/share/jellyfin/web/index.html", true)]
+    [InlineData("/custom-web", "/jellyfin/jellyfin-web/index.html", false)]
+    [InlineData("not set", "none", false)]
+    public void OnlyAPatchOnTheServedFileCounts(string webPath, string patchedPath, bool expected)
+    {
+        SetDiskPatched(true, webPath, patchedPath);
+
+        Assert.Equal(expected, WebInjectionService.ServedIndexPatched);
+    }
+
+    [Fact]
+    public void AMatchingPathWithoutAPatchDoesNotCount()
+    {
+        SetDiskPatched(false, webPath: "/usr/share/jellyfin/web", patchedPath: "/usr/share/jellyfin/web/index.html");
+
+        Assert.False(WebInjectionService.ServedIndexPatched);
     }
 
     [Fact]
@@ -137,7 +218,15 @@ public class StaleShellCacheTests : IDisposable
         // assemblies stamped .0 the Jellyfin 12 package could not be
         // uninstalled at all.
         var version = typeof(Plugin).Assembly.GetName().Version!;
-        var expected = Environment.Version.Major >= 10 ? 1 : 0;
+
+        // [issue #143] Taken from the target framework, which is what picks the
+        // build under test. The runtime can be newer: with roll-forward
+        // allowed, the net9.0 tests run on .NET 10.
+#if NET10_0_OR_GREATER
+        const int expected = 1;
+#else
+        const int expected = 0;
+#endif
 
         Assert.Equal(expected, version.Revision);
     }
@@ -145,12 +234,26 @@ public class StaleShellCacheTests : IDisposable
     [Fact]
     public void TheReleaseNamesTheZipAfterThatSameComponent()
     {
-        // The stamp above is only right while the workflow keeps naming the
-        // Jellyfin 12 zip with the same fourth component.
-        var workflow = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "release.yml"));
+        // The stamp above is only right while the packaging keeps naming the
+        // Jellyfin 12 zip with the same fourth component. [issue #143] That
+        // packaging is the script the release and CI both run.
+        var script = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "scripts", "build-packages.sh"));
 
-        Assert.Contains("ZIPVER12=\"${ZIPVER%.*}.1\"", workflow, StringComparison.Ordinal);
-        Assert.Contains("--framework \"$TFM\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("ZIPVER12=\"${ZIPVER%.*}.1\"", script, StringComparison.Ordinal);
+        Assert.Contains("--framework \"$TFM\"", script, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("release.yml")]
+    [InlineData("ci.yml")]
+    public void TheReleaseAndCiPackageThroughTheSameScript(string workflow)
+    {
+        // [issue #143] CI used to stop at dotnet build, so the release's own
+        // publish was first exercised by a release: #142 would have broken it
+        // with every check green.
+        var text = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", workflow));
+
+        Assert.Contains("bash .github/scripts/build-packages.sh", text, StringComparison.Ordinal);
     }
 
     private static string RepoRoot()

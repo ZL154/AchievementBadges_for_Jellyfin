@@ -46,18 +46,33 @@
        image endpoint both use - matches the manifest's. With both assemblies
        stamped X.Y.Z.0 the Jellyfin 12 package showed as .0, its image 404'd
        and uninstall failed outright, which is what @Roboatlas21 reported.
-       Version stays three-part so the release workflow can read it. -->
+
+       [issue #143] Both stamps are built from Version's three numbers, so
+       Version itself stays X.Y.Z: a fourth part would clash with the one
+       each package adds. A prerelease suffix (-p:Version=2.4.2-beta) still
+       builds and shows only in the informational version. Any other shape
+       leaves AbVersionBase empty, and AbCheckVersion below stops the build
+       with a message instead of the compiler's CS7034. -->
+  <PropertyGroup>
+    <AbVersionBase>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^[0-9]+\.[0-9]+\.[0-9]+(?=[-+]|$)').Value)</AbVersionBase>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <JellyfinVersion>10.11.6</JellyfinVersion>
-    <AssemblyVersion>$(Version).0</AssemblyVersion>
-    <FileVersion>$(Version).0</FileVersion>
+    <AssemblyVersion>$(AbVersionBase).0</AssemblyVersion>
+    <FileVersion>$(AbVersionBase).0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <JellyfinVersion>12.0.0</JellyfinVersion>
-    <AssemblyVersion>$(Version).1</AssemblyVersion>
-    <FileVersion>$(Version).1</FileVersion>
+    <AssemblyVersion>$(AbVersionBase).1</AssemblyVersion>
+    <FileVersion>$(AbVersionBase).1</FileVersion>
   </PropertyGroup>
+
+  <Target Name="AbCheckVersion" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(AbVersionBase)' == ''"
+           Text="Version '$(Version)' has to be X.Y.Z, optionally with a prerelease suffix. Each package adds its own fourth part: .0 for Jellyfin 10.11, .1 for Jellyfin 12." />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)">
