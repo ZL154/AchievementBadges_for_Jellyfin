@@ -31,14 +31,14 @@
 
 A full progression, gamification and achievement system for Jellyfin that rewards users based on real viewing activity. Think Xbox Gamerscore meets Letterboxd meets Steam profile customization, built natively into your media server.
 
-> **Status:** Active development — **v2.4.0** is live: **Jellyfin 12 support** (a dedicated 12.0 build in every release, and the web side reworked for the new layout and authorization), **targeted badges** that point at one series, season, collection, playlist, album or item, **JellyEmu game achievements**, and your shop bling on the shareable card. See [What's new in v2.4.0](#-whats-new-in-v240). Before that, v2.3.1 fixed the music feature and cleaned up the leaderboards, and 2.3.0 brought friend profile cards, three shareable card skins (Console / Metro / Aurora), Tracearr history crediting, and the profile data-loss + gzip injection fixes every published build needs. Built on v2.2 "Your Screen, Your Rules", the v2.1 "Open Library" expansion, and v2.0 "Choose Your Loadout".
+> **Status:** Active development — **v2.4.1** is live: everything reported against 2.4.0, including **two faults that made a correct install look broken on Jellyfin 12** (an uninstall that failed outright, and a page that only worked in a private window), plus a **targeted badge cap you can raise** to 1000, a **top-center toast placement** with a server default, an option to **keep login-hidden accounts out of other users' views**, and a fix for a collision that had been **breaking your server's whole API document** since 2.1.0. See [What's new in v2.4.1](#-whats-new-in-v241--what-240-got-wrong-and-a-cap-you-can-raise). v2.4.0 brought **Jellyfin 12 support** (a dedicated 12.0 build in every release, and the web side reworked for the new layout and authorization), **targeted badges** that point at one series, season, collection, playlist, album or item, **JellyEmu game achievements**, and your shop bling on the shareable card. Before that, v2.3.1 fixed the music feature and cleaned up the leaderboards, and 2.3.0 brought friend profile cards, three shareable card skins (Console / Metro / Aurora), Tracearr history crediting, and the profile data-loss + gzip injection fixes every published build needs. Built on v2.2 "Your Screen, Your Rules", the v2.1 "Open Library" expansion, and v2.0 "Choose Your Loadout".
 
 ---
 
 ## 📑 Table of contents
 
 - [Overview](#-overview)
-- [What's new in v2.4.0 — Jellyfin 12, targeted badges, games](#-whats-new-in-v240--jellyfin-12-targeted-badges-games) — a 12.0 build in every release, avatar-menu entry, badges that point at one thing, JellyEmu games, shop bling on the card
+- [What's new in v2.4.1 — what 2.4.0 got wrong, and a cap you can raise](#-whats-new-in-v241--what-240-got-wrong-and-a-cap-you-can-raise) — the two Jellyfin 12 faults, a targeted badge cap up to 1000, top-center toasts, login-hidden accounts, and the API document fix
 - [Core features](#-core-features)
   - [Badge system](#-badge-system) — 200+ achievements, 35+ categories, 6 rarities
   - [Rank system](#-rank-system) — 10 tiers from Rookie to Immortal
@@ -65,7 +65,7 @@ A full progression, gamification and achievement system for Jellyfin that reward
 - [API endpoints](#-api-endpoints)
 - [Screenshots](#-screenshots)
 - [Release history](#-release-history)
-- [Previous release notes](#-previous-release-notes) — full v2.2.0 / v2.1.3 / v2.1.0 notes
+- [Previous release notes](#-previous-release-notes) — full v2.4.0 / v2.3.x / v2.2.0 / v2.1.x notes
 - [Support the project](#-support-the-project)
 - [Credits & thanks](#-credits--thanks)
 - [License](#-license)
@@ -80,48 +80,38 @@ Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin
 
 ---
 
-## 🚀 What's new in v2.4.0 — Jellyfin 12, targeted badges, games
+## 🚀 What's new in v2.4.1 — what 2.4.0 got wrong, and a cap you can raise
 
-Achievement Badges runs on Jellyfin 12, gains the first badges that can point at one specific thing in your library, learns to count games, and finally shows the bling you bought in the shop to everyone else. **Drop-in upgrade from v2.3.x — no schema breakage or manual migration.** Full notes in [docs/release-notes/v2.4.0.md](docs/release-notes/v2.4.0.md).
+Everything reported against 2.4.0, including two faults that made a correct install look broken on Jellyfin 12, plus a cap the people who author targeted badges by the hundred can now raise. **Drop-in upgrade from v2.4.0 — no schema change, no migration.** Full notes in [docs/release-notes/v2.4.1.md](docs/release-notes/v2.4.1.md).
 
-### 🟣 Jellyfin 12 (#109, #117, #122)
+### 🟣 The two Jellyfin 12 faults (#140, #141)
 
-- **Two packages per release.** `x.y.z.0` is the Jellyfin 10.11 build (.NET 9) and `x.y.z.1` the Jellyfin 12 build (.NET 10). The plugin catalog picks the right one for your server; upgrading the server from 10.11 to 12 offers the `.1` build as a plugin update afterwards.
-- **The Achievements entry moved to the avatar menu.** Jellyfin 12's modern layout hides the old drawer and header, so the entry now sits right below **Profile** in the avatar menu and the equipped-badge strip sits in the toolbar beside the avatar. The legacy layouts (desktop-legacy, mobile-legacy, TV) keep the drawer entry.
-- **Every call sends the `Authorization` header 12 requires.** Jellyfin 12 switches legacy authorization off, so the old `X-Emby-Token` alone answers 401 — which made every earlier version's page dead on a 12 server. Both headers are sent now; 10.11 accepts either.
-- The Revamp admin page fits inside the MUI dashboard, links use `#/` routes, and the tab is named *Achievements* while the page is open.
+- **Uninstall failed outright, and the plugin's image 404'd.** Each release ships two packages from one source tree, and both assemblies were stamped `x.y.z.0`. Jellyfin then read two different numbers for one install — the dashboard shows the assembly's version, uninstall and the image endpoint resolve through the manifest's — so on Jellyfin 12 the plugin installed as `2.4.0.1`, displayed as `2.4.0.0`, and could not be removed. Each package now stamps the version it ships as. **Stuck on 2.4.0.1?** Updating through the catalogue is enough; the restart that loads the new build deletes the old folder.
+- **The page worked in a private window and nowhere else.** A browser that cached Jellyfin's page *before* the plugin was installed revalidates it, Jellyfin answers `304 Not Modified` from the file on disk, and there is no page body for the plugin to inject into — so the browser keeps using a copy with no plugin in it, forever. Worst on servers with a read-only web directory, where the on-disk patch can never take either. The middleware now forces a full page while the on-disk patch has not taken. **Nobody needs to clear their browsing data** — a normal reload after updating is enough.
 
-### 🎯 Targeted badges (#107)
+### 🎯 A targeted badge cap you can raise (#129)
 
-- Two new metrics point a badge at **one** thing: `ContainerCompletionPercent` (played items over total in one series, season, collection, playlist or album — 100 means you finished it) and `ItemPlayCount` (Jellyfin's own play count for a single movie, episode or track — 1 is "watched it", 3005 is the Childish Gambino badge).
-- A **library picker** in the admin page finds the target by name; the stored reference keeps the id and the name together, so the badge survives both a rename and a delete-and-re-add.
-- **Retroactive on creation** — anyone who already finished the target unlocks it immediately, no scan — and it moves on Jellyfin's played flag, so marking a season watched by hand counts.
-- Arbitrary groupings ("One Piece: Alabasta") go through a Jellyfin collection. See [Targeted badges](#targeted-badges).
+- **The cap is now a setting**, under *Custom badges* → **Targeted badge cap** (1 to 1000, default unchanged at 50). The page shows how many distinct targets your enabled badges reference against the cap, and **names the ones past it** so you can see what is not being computed.
+- **The per-play check no longer grows with the number of targets.** Series, seasons and folders are tested against the played item's ancestors in one lookup; collections and playlists use a member list cached per target and refreshed when the container changes. Hundreds of targets are fine on any server.
 
-### 🎮 Game achievements (#115)
+### 🎨 Fixes reported against 2.4.0
 
-- Games played through **JellyEmu** now earn achievements. JellyEmu reports each session to Jellyfin as a playback session; the plugin now measures those on their own terms (session length, floored and capped, both configurable) instead of dropping them as runtime-less books.
-- **Nine built-in badges** under a new Games category (sessions, distinct games, hours, platforms) and **three custom-badge metrics** (distinct games on a platform, distinct games by a developer, hours in one specific game via the picker). See [Game achievements](#game-achievements-jellyemu).
+- **The Revamp style reached the rest of Jellyfin (#133).** With **UI: Revamp** selected, the plugin was restyling Jellyfin's own controls and every other plugin's settings page — checkboxes went invisible, text inputs lost their border and height, text selection changed colour everywhere. Twelve rules named generic elements while keying only on an attribute that lives on `<body>`; they are now anchored to the plugin's own two surfaces, and a test refuses any new rule of that shape.
+- **A Custom Tab that rendered nothing (#131).** With themes that ship their own copy of Jellyfin's home page (Abyss's Spotlight), Custom Tabs' server-side panel injection silently fails to match, leaving the tab button with no panel behind it — a blank Achievements page. The plugin now builds the missing panel itself.
+- **Toasts gain a top-center placement, and a server default (#136).** Top-center joins the five existing placements, and an admin can set the default for everyone who has not picked one; a user's own choice still wins. Two bugs turned up underneath it: the **default UI style from #43 was never actually stored**, and **every main config save silently switched the page integrations back off**.
+- **Login-hidden accounts can be kept out of other users' views (#138).** Off by default. When on, an account with Jellyfin's *Hide this user from login screens* is visible only to itself, administrators, other hidden accounts, and accounts it is already mutual friends with. Note that Jellyfin ticks that box for accounts it creates, so on a server that keeps the default every account is hidden and the option changes nothing.
 
-### 🪪 Everything you equip shows on your cards (#42)
+### 📄 The plugin was breaking your server's API document
 
-- Your **custom title, badge frame, profile theme, profile border, animated background and avatar** now all show on the shareable profile card (all three skins) and on the card that opens when someone clicks your name in the friends drawer — under the same privacy toggles as the equipped badges. Animated backgrounds play the actual video loop behind the card.
-- Two things that never worked on the achievements page itself are fixed on the way: profile **borders** never showed under the Revamp style, and badge **frames** applied only to one row of one tab — they now ring the showcase pills, the header strip and the drawer showcase.
-- **"Pastel has un-hidden elements"** (TsunamicFlame's report in #42) was real: every gradient theme let Jellyfin's own page show through the top of the achievements page. Fixed for all 14 themes.
+Found while testing this release, not reported by anyone, and present since **2.1.0** on both Jellyfin 10.11 and 12: `GET /api-docs/openapi.json` answered **500 for the whole server**.
 
-### 🩺 Diagnostics for #97
+Jellyfin builds one OpenAPI document from itself and every installed plugin, and each schema in it is keyed by the bare type name. This plugin's media-type enum was called `MediaType`, which is also the name of one of Jellyfin's own enums — and a duplicate name is not resolved, it throws, taking the entire document down. Swagger UI, the dashboard's API browser and every generator that reads the spec were all broken, by a plugin that started cleanly and logged nothing about it.
 
-- Admin-page errors now **name the request that failed** (`Request failed: 400 (GET users/…/summary)`), and a failed reload is no longer reported as a failed reset or scan.
-- **Reset** answers 400 for a malformed id and 404 for an account Jellyfin doesn't know, instead of 200 for anything.
-- A **watch-history scan that finds nothing** says so and points at the account's library access, in all 8 languages.
+The enum is now `BadgeMediaType`. Its numbers and the property carrying it are unchanged, so **there is nothing to migrate**. With the collision gone the document builds, and this plugin's 126 routes appear in it for the first time. A test now walks the plugin's public types against Jellyfin's and fails on any shared name, because nothing else could catch this: the break was in the host's document, not in this plugin's.
 
-### 🧱 Fixes
+> If your API docs page is still broken after updating, another plugin is colliding the same way — the server log names both types.
 
-- Toast position never applied under Revamp — all five positions rendered top-right (#116, @camarigor).
-- The Revamp stylesheet was cached under a stale token in three places, so stylesheet changes could reach browsers a day late.
-- ~25 `Users/Me` requests fired on the login page; the admin hero announced "v1.9.2 / ABI 10.11.0.0" forever; the shop's "Auto-unlock at N score" pill was clipped.
-
-Big thanks to **[@camarigor](https://github.com/camarigor)** for the Jellyfin 12 build and web-client work (#117, #122), targeted badges (#108), game achievements (#120), the shop cosmetics on the card (#119), the toast fix (#118) and the dependency round (#128); to **[@Lyxon1337](https://github.com/Lyxon1337)** for the Jellyfin 12 report; to **[@unknownTGG](https://github.com/unknownTGG)** for the targeted-badges request; and to **[@TsunamicFlame](https://github.com/TsunamicFlame)** for #42, #115, #116 and the field testing behind them.
+Big thanks to **[@camarigor](https://github.com/camarigor)** for the cap and the per-play rework (#130), the Custom Tabs repair (#132), the Revamp scoping (#134), the toast work (#137), the hidden-accounts option (#139), and for catching what the first pass at #140/#141 got wrong (#144); to **[@Roboatlas21](https://github.com/Roboatlas21)** for diagnosing both Jellyfin 12 faults from his logs (#140, #141); to **[@Tschiyo](https://github.com/Tschiyo)** for the cap request (#129); to **[@Borededdy](https://github.com/Borededdy)** for the blank Custom Tab (#131); to **[@clarjon1](https://github.com/clarjon1)** for the Revamp leak (#133); to **[@Verdancy-Rin](https://github.com/Verdancy-Rin)** for the top-center placement (#136); and to **[@Digital-Yeti](https://github.com/Digital-Yeti)** for the hidden-accounts request (#138).
 
 ---
 
@@ -520,6 +510,8 @@ Nested example — *"(finish 5 horror series OR 10h of audiobooks) AND watch 25 
 | `DELETE` | `/Plugins/AchievementBadges/custom-badges/{id}`   | Delete |
 | `GET`    | `/Plugins/AchievementBadges/custom-badges/export` | Export all as JSON |
 | `POST`   | `/Plugins/AchievementBadges/custom-badges/import` | Bulk import (fresh ids) |
+| `GET`    | `/Plugins/AchievementBadges/custom-badges/targets` | Targeted badge cap: configured value, applied cap, bounds, targets observed, and the names past it (#129) |
+| `POST`   | `/Plugins/AchievementBadges/custom-badges/targets` | Set the cap (1-1000, clamped); answers with the fresh summary (#129) |
 
 ### All metrics
 
@@ -700,6 +692,19 @@ nixpkgs.overlays = [
 ```
 
 The plugin DLL serves the JS files from embedded resources — the three `<script>` tags just tell the browser to load them. Rebuild your NixOS config after adding the overlay and restart Jellyfin.
+
+### The dashboard's API docs page is blank (`/api-docs/openapi.json` returns 500)
+
+Jellyfin builds **one** OpenAPI document from the server and every installed plugin, and each type in it is keyed by its bare class name. If two loaded types want the same name the document does not pick one — it fails, and the whole document 500s. Badges keep working, nothing is logged by the plugin, and the only visible symptom is the API docs page.
+
+This plugin caused it from 2.1.0 to 2.4.0 (`MediaType`, colliding with Jellyfin's own) and no longer does. If the page is still broken on **v2.4.1+**, another plugin is colliding — the server log names both types:
+
+```text
+Can't use schemaId "$PluginConfiguration" for type "$Jellyfin.Plugin.A.PluginConfiguration".
+The same schemaId is already used for type "$Jellyfin.Plugin.B.Configuration.PluginConfiguration"
+```
+
+`PluginConfiguration` is the usual culprit, since most plugins name their config class that. Report it to whichever plugin appears there; there is nothing to change on your server.
 
 ### Video backgrounds don't play
 
@@ -907,6 +912,7 @@ Full per-version notes and signed binaries live on the GitHub Releases page:
 
 Highlights:
 
+- **v2.4.1** — what 2.4.0 got wrong, and a cap you can raise: the Jellyfin 12 package now reports the version it shipped as, so uninstall and the plugin image work (#140); a browser that cached Jellyfin's page before the install gets the plugin instead of a stale copy (#141); a **targeted badge cap** settable to 1000 with the overflow named (#129); the Revamp style no longer restyles Jellyfin's own controls (#133); a Custom Tab under a page-replacing theme renders again (#131); **top-center toasts** plus a server default, and the default UI style actually persists (#136/#43); login-hidden accounts can be kept out of other users' views (#138); and a type-name collision that had been **500ing the server's whole OpenAPI document** since 2.1.0 is gone
 - **v2.4.0** — Jellyfin 12, targeted badges, games: two packages per release (`x.y.z.0` for 10.11, `x.y.z.1` for 12) with the entry in 12's avatar menu and the `Authorization` header 12 requires (#109/#117/#122); `ContainerCompletionPercent` + `ItemPlayCount` with a library picker (#107/#108); JellyEmu game achievements (#115/#120); every shop cosmetic on the shareable card and the drawer card (#42/#119); toast position under Revamp (#116/#118); Pastel page leak, invisible borders/frames, stale stylesheet token, #97 diagnostics
 - **v2.3.1** — music fixes + leaderboards: tracks stop inheriting album/artist genres so custom music badges count correctly (#94), the scan replays played music so discography badges rebuild (#96), both leaderboards show your own rank, deleted accounts are excluded + prunable, and the Blades skin becomes Aurora
 - **v2.3.0** — Friends & Foundations: hover/click friend profile cards (#76) behind a privacy-gated summary endpoint; three shareable card skins (Console / Metro / Aurora Spine) chosen per user; library completion now computes during the scan (#80) and new artist discography completion (#81, #24); Tracearr history crediting (#77/#84/#85); watch-time carry across restarts and file replacements (#87/#89/#91/#92); admin-set default UI style + lock (#43); plus the profile data-loss (#59/#60) and gzip injection (#46) fixes for published builds
@@ -928,6 +934,53 @@ Highlights:
 ## 🗂️ Previous release notes
 
 Full notes for earlier versions, newest first.
+
+## 🚀 What's new in v2.4.0 — Jellyfin 12, targeted badges, games
+
+Achievement Badges runs on Jellyfin 12, gains the first badges that can point at one specific thing in your library, learns to count games, and finally shows the bling you bought in the shop to everyone else. **Drop-in upgrade from v2.3.x — no schema breakage or manual migration.** Full notes in [docs/release-notes/v2.4.0.md](docs/release-notes/v2.4.0.md).
+
+### 🟣 Jellyfin 12 (#109, #117, #122)
+
+- **Two packages per release.** `x.y.z.0` is the Jellyfin 10.11 build (.NET 9) and `x.y.z.1` the Jellyfin 12 build (.NET 10). The plugin catalog picks the right one for your server; upgrading the server from 10.11 to 12 offers the `.1` build as a plugin update afterwards.
+- **The Achievements entry moved to the avatar menu.** Jellyfin 12's modern layout hides the old drawer and header, so the entry now sits right below **Profile** in the avatar menu and the equipped-badge strip sits in the toolbar beside the avatar. The legacy layouts (desktop-legacy, mobile-legacy, TV) keep the drawer entry.
+- **Every call sends the `Authorization` header 12 requires.** Jellyfin 12 switches legacy authorization off, so the old `X-Emby-Token` alone answers 401 — which made every earlier version's page dead on a 12 server. Both headers are sent now; 10.11 accepts either.
+- The Revamp admin page fits inside the MUI dashboard, links use `#/` routes, and the tab is named *Achievements* while the page is open.
+
+### 🎯 Targeted badges (#107)
+
+- Two new metrics point a badge at **one** thing: `ContainerCompletionPercent` (played items over total in one series, season, collection, playlist or album — 100 means you finished it) and `ItemPlayCount` (Jellyfin's own play count for a single movie, episode or track — 1 is "watched it", 3005 is the Childish Gambino badge).
+- A **library picker** in the admin page finds the target by name; the stored reference keeps the id and the name together, so the badge survives both a rename and a delete-and-re-add.
+- **Retroactive on creation** — anyone who already finished the target unlocks it immediately, no scan — and it moves on Jellyfin's played flag, so marking a season watched by hand counts.
+- Arbitrary groupings ("One Piece: Alabasta") go through a Jellyfin collection. See [Targeted badges](#targeted-badges).
+
+### 🎮 Game achievements (#115)
+
+- Games played through **JellyEmu** now earn achievements. JellyEmu reports each session to Jellyfin as a playback session; the plugin now measures those on their own terms (session length, floored and capped, both configurable) instead of dropping them as runtime-less books.
+- **Nine built-in badges** under a new Games category (sessions, distinct games, hours, platforms) and **three custom-badge metrics** (distinct games on a platform, distinct games by a developer, hours in one specific game via the picker). See [Game achievements](#game-achievements-jellyemu).
+
+### 🪪 Everything you equip shows on your cards (#42)
+
+- Your **custom title, badge frame, profile theme, profile border, animated background and avatar** now all show on the shareable profile card (all three skins) and on the card that opens when someone clicks your name in the friends drawer — under the same privacy toggles as the equipped badges. Animated backgrounds play the actual video loop behind the card.
+- Two things that never worked on the achievements page itself are fixed on the way: profile **borders** never showed under the Revamp style, and badge **frames** applied only to one row of one tab — they now ring the showcase pills, the header strip and the drawer showcase.
+- **"Pastel has un-hidden elements"** (TsunamicFlame's report in #42) was real: every gradient theme let Jellyfin's own page show through the top of the achievements page. Fixed for all 14 themes.
+
+### 🩺 Diagnostics for #97
+
+- Admin-page errors now **name the request that failed** (`Request failed: 400 (GET users/…/summary)`), and a failed reload is no longer reported as a failed reset or scan.
+- **Reset** answers 400 for a malformed id and 404 for an account Jellyfin doesn't know, instead of 200 for anything.
+- A **watch-history scan that finds nothing** says so and points at the account's library access, in all 8 languages.
+
+### 🧱 Fixes
+
+- Toast position never applied under Revamp — all five positions rendered top-right (#116, @camarigor).
+- The Revamp stylesheet was cached under a stale token in three places, so stylesheet changes could reach browsers a day late.
+- ~25 `Users/Me` requests fired on the login page; the admin hero announced "v1.9.2 / ABI 10.11.0.0" forever; the shop's "Auto-unlock at N score" pill was clipped.
+
+Big thanks to **[@camarigor](https://github.com/camarigor)** for the Jellyfin 12 build and web-client work (#117, #122), targeted badges (#108), game achievements (#120), the shop cosmetics on the card (#119), the toast fix (#118) and the dependency round (#128); to **[@Lyxon1337](https://github.com/Lyxon1337)** for the Jellyfin 12 report; to **[@unknownTGG](https://github.com/unknownTGG)** for the targeted-badges request; and to **[@TsunamicFlame](https://github.com/TsunamicFlame)** for #42, #115, #116 and the field testing behind them.
+
+---
+
+---
 
 ## 🚀 What's new in v2.3.1
 
