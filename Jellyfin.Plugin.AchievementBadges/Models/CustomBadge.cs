@@ -50,7 +50,7 @@ public class CustomBadge
 
     /// <summary>Which media tab the badge appears under in the user UI.
     /// <c>Multi</c> for badges whose criteria span media types.</summary>
-    public MediaType Media { get; set; } = MediaType.Multi;
+    public BadgeMediaType Media { get; set; } = BadgeMediaType.Multi;
 
     /// <summary>If set, badge participates in the M1/M6
     /// time-window-skip-during-backfill machinery. Defaults to null

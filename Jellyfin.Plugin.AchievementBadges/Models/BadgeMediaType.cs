@@ -12,7 +12,7 @@ namespace Jellyfin.Plugin.AchievementBadges.Models;
 /// <see cref="Film"/> so v2.0.x built-in definitions deserialize cleanly
 /// without migration.
 /// </summary>
-public enum MediaType
+public enum BadgeMediaType
 {
     Film = 0,
     TV = 1,

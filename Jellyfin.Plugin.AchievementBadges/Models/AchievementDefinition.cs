@@ -34,11 +34,11 @@ public class AchievementDefinition
 
     /// <summary>[v2.1.0 "Open Library"] Which media type the badge tracks.
     /// Used to route playback events to the right counter pipeline + to
-    /// group badges in the user-facing UI. Defaults to <see cref="MediaType.Film"/>
+    /// group badges in the user-facing UI. Defaults to <see cref="BadgeMediaType.Film"/>
     /// so v2.0.x built-in definitions keep their existing classification
     /// without per-row migration. M2 (Music) and M3 (Book) tracks emit
     /// definitions with Music / Book / Anime explicitly.</summary>
-    public MediaType Media { get; set; } = MediaType.Film;
+    public BadgeMediaType Media { get; set; } = BadgeMediaType.Film;
 
     /// <summary>[v2.1.0 "Open Library"] Marks the badge as evaluated
     /// against a bounded time window (daily / weekly / monthly).

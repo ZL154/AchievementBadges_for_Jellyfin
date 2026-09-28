@@ -88,7 +88,7 @@ public class GameSessionTests
     public void GameIsAppendedToMediaTypeAndTheCountersRoundTrip()
     {
         // MediaType is stored by ordinal on every badge definition.
-        Assert.Equal(6, (int)MediaType.Game);
+        Assert.Equal(6, (int)BadgeMediaType.Game);
 
         var counters = new UserAchievementCounters();
         Assert.Equal(0, counters.UniqueGamesPlayed);
