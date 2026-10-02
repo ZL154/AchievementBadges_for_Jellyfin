@@ -471,6 +471,7 @@ public class WatchHistoryBackfillService
                     ProductionLocations = movie.ProductionLocations,
                     OriginalLanguage = GetOriginalLanguage(movie),
                     Genres = movie.Genres,
+                    Tags = movie.Tags,
                     RunTimeTicks = movie.RunTimeTicks,
                     Directors = moviesDirectors,
                     Actors = moviesActors,
@@ -587,10 +588,28 @@ public class WatchHistoryBackfillService
             episodesWatched = episodes.Count;
 
             var episodesBySeries = new Dictionary<Guid, List<BaseItem>>();
+            var seriesCache = new Dictionary<Guid, BaseItem?>();
 
             foreach (var episode in episodes)
             {
                 var seriesId = GetSeriesId(episode);
+                BaseItem? series = null;
+                if (seriesId != Guid.Empty && !seriesCache.TryGetValue(seriesId, out series))
+                {
+                    try
+                    {
+                        series = _libraryManager.GetItemById(seriesId);
+                    }
+                    catch (Exception ex)
+                    {
+                        // The episode then keeps only its own genres, tags
+                        // and studios, as the backfill always did.
+                        _logger.LogDebug(ex, "[AchievementBadges] Could not load series {SeriesId} for the watch-history backfill.", seriesId);
+                        series = null;
+                    }
+
+                    seriesCache[seriesId] = series;
+                }
 
                 var libraryName = GetLibraryName(episode);
                 if (!string.IsNullOrEmpty(libraryName))
@@ -614,12 +633,13 @@ public class WatchHistoryBackfillService
                     ProductionYear = episode.ProductionYear,
                     ProductionLocations = episode.ProductionLocations,
                     OriginalLanguage = GetOriginalLanguage(episode),
-                    Genres = episode.Genres,
+                    Genres = StringLists.Union(episode.Genres, series?.Genres),
+                    Tags = StringLists.Union(episode.Tags, series?.Tags),
                     RunTimeTicks = episode.RunTimeTicks,
                     Directors = epDirectors,
                     Actors = epActors,
                     // v1.9.3 — Studio specialists + pilot/completer tracking.
-                    Studios = episode.Studios,
+                    Studios = StringLists.Union(episode.Studios, series?.Studios),
                     SeriesId = seriesId != Guid.Empty ? seriesId.ToString("D") : null,
                     SeasonNumber = episode.ParentIndexNumber,
                     EpisodeNumber = episode.IndexNumber,

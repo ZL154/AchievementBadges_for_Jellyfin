@@ -598,7 +598,7 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
                 // v1.9.3 — populate studio + series-position fields so the
                 // achievement service can credit Studio specialists and
                 // pilot/completer behavior badges.
-                Studios = item.Studios,
+                Studios = GetEffectiveStudios(item, inheritFromParent: !(isMusic || isAudiobook)),
                 SeriesId = isEpisode ? GetSeriesIdString(item) : null,
                 SeasonNumber = isEpisode ? item.ParentIndexNumber : null,
                 EpisodeNumber = isEpisode ? item.IndexNumber : null
@@ -799,7 +799,7 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
         if (!inheritFromParent) return own;
 
         var parent = TryGetSeriesProperty<string[]>(item, "Genres");
-        return UnionStrings(own, parent);
+        return StringLists.Union(own, parent);
     }
 
     /// <summary>[v2.1.0 "Open Library", issue #25] Same pattern as
@@ -811,7 +811,21 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
         if (!inheritFromParent) return own;
 
         var parent = TryGetSeriesProperty<string[]>(item, "Tags");
-        return UnionStrings(own, parent);
+        return StringLists.Union(own, parent);
+    }
+
+    /// <summary>Same pattern as <see cref="GetEffectiveGenres"/> and
+    /// <see cref="GetEffectiveTags"/> but for Studios. In Jellyfin, Episode
+    /// items do not carry studios directly; studios reside on the parent Series.
+    /// Inherits studios from the parent Series so TV episodes credit studio
+    /// specialist badges (e.g. HBO, BBC, Netflix).</summary>
+    private static IReadOnlyList<string>? GetEffectiveStudios(BaseItem item, bool inheritFromParent = true)
+    {
+        var own = item.Studios;
+        if (!inheritFromParent) return own;
+
+        var parent = TryGetSeriesProperty<string[]>(item, "Studios");
+        return StringLists.Union(own, parent);
     }
 
     /// <summary>[v2.1.0 "Open Library", M2] Safe reflection read of a
@@ -867,6 +881,9 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
     {
         try
         {
+            // Episode.Series resolves the parent through SeriesId and the
+            // library manager (Jellyfin 10.11 and 12), so a null here means
+            // there is no series to read.
             var seriesProp = item.GetType().GetProperty("Series");
             if (seriesProp is null) return null;
             var series = seriesProp.GetValue(item);
@@ -878,19 +895,6 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
         {
             return null;
         }
-    }
-
-    /// <summary>[v2.1.0 "Open Library"] Combine two possibly-null string
-    /// arrays, de-dupe case-insensitively, and return a list. Returns null
-    /// if both sources are empty so PlaybackContext.Tags / Genres can keep
-    /// its v2.0.x nullable shape for callers that gate on null.</summary>
-    private static IReadOnlyList<string>? UnionStrings(IReadOnlyList<string>? a, string[]? b)
-    {
-        if ((a is null || a.Count == 0) && (b is null || b.Length == 0)) return null;
-        var set = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        if (a is not null) foreach (var s in a) if (!string.IsNullOrWhiteSpace(s)) set.Add(s);
-        if (b is not null) foreach (var s in b) if (!string.IsNullOrWhiteSpace(s)) set.Add(s);
-        return set.Count == 0 ? null : new System.Collections.Generic.List<string>(set);
     }
 
     // v1.9.3 — Read Episode.SeriesId via reflection to stay version-agnostic
