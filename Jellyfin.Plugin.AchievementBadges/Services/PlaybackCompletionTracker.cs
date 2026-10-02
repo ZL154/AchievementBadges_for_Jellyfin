@@ -793,25 +793,25 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
     /// is what Daemon-Network reported. Episodes still inherit: that is the
     /// case this was written for, where the classification sits on the Series
     /// and the episode carries none of its own.</param>
-    private IReadOnlyList<string>? GetEffectiveGenres(BaseItem item, bool inheritFromParent = true)
+    private static IReadOnlyList<string>? GetEffectiveGenres(BaseItem item, bool inheritFromParent = true)
     {
         var own = item.Genres;
         if (!inheritFromParent) return own;
 
         var parent = TryGetSeriesProperty<string[]>(item, "Genres");
-        return UnionStrings(own, parent);
+        return StringLists.Union(own, parent);
     }
 
     /// <summary>[v2.1.0 "Open Library", issue #25] Same pattern as
     /// <see cref="GetEffectiveGenres"/> but for Tags. v2.0.x didn't read Tags
     /// at all; many users tag rather than genre-classify their anime.</summary>
-    private IReadOnlyList<string>? GetEffectiveTags(BaseItem item, bool inheritFromParent = true)
+    private static IReadOnlyList<string>? GetEffectiveTags(BaseItem item, bool inheritFromParent = true)
     {
         var own = item.Tags;
         if (!inheritFromParent) return own;
 
         var parent = TryGetSeriesProperty<string[]>(item, "Tags");
-        return UnionStrings(own, parent);
+        return StringLists.Union(own, parent);
     }
 
     /// <summary>Same pattern as <see cref="GetEffectiveGenres"/> and
@@ -819,13 +819,13 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
     /// items do not carry studios directly; studios reside on the parent Series.
     /// Inherits studios from the parent Series so TV episodes credit studio
     /// specialist badges (e.g. HBO, BBC, Netflix).</summary>
-    private IReadOnlyList<string>? GetEffectiveStudios(BaseItem item, bool inheritFromParent = true)
+    private static IReadOnlyList<string>? GetEffectiveStudios(BaseItem item, bool inheritFromParent = true)
     {
         var own = item.Studios;
         if (!inheritFromParent) return own;
 
         var parent = TryGetSeriesProperty<string[]>(item, "Studios");
-        return UnionStrings(own, parent);
+        return StringLists.Union(own, parent);
     }
 
     /// <summary>[v2.1.0 "Open Library", M2] Safe reflection read of a
@@ -877,20 +877,16 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
     /// Returns null if the item isn't an Episode, the Series accessor
     /// isn't present, or any access throws — anime detection just
     /// falls back to the item's own value in that case.</summary>
-    private T? TryGetSeriesProperty<T>(BaseItem item, string propertyName) where T : class
+    private static T? TryGetSeriesProperty<T>(BaseItem item, string propertyName) where T : class
     {
         try
         {
+            // Episode.Series resolves the parent through SeriesId and the
+            // library manager (Jellyfin 10.11 and 12), so a null here means
+            // there is no series to read.
             var seriesProp = item.GetType().GetProperty("Series");
-            object? series = seriesProp?.GetValue(item);
-            if (series is null)
-            {
-                var seriesIdProp = item.GetType().GetProperty("SeriesId");
-                if (seriesIdProp?.GetValue(item) is Guid g && g != Guid.Empty)
-                {
-                    series = _libraryManager.GetItemById(g);
-                }
-            }
+            if (seriesProp is null) return null;
+            var series = seriesProp.GetValue(item);
             if (series is null) return null;
             var targetProp = series.GetType().GetProperty(propertyName);
             return targetProp?.GetValue(series) as T;
@@ -899,19 +895,6 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
         {
             return null;
         }
-    }
-
-    /// <summary>[v2.1.0 "Open Library"] Combine two possibly-null string
-    /// arrays, de-dupe case-insensitively, and return a list. Returns null
-    /// if both sources are empty so PlaybackContext.Tags / Genres can keep
-    /// its v2.0.x nullable shape for callers that gate on null.</summary>
-    private static IReadOnlyList<string>? UnionStrings(IReadOnlyList<string>? a, string[]? b)
-    {
-        if ((a is null || a.Count == 0) && (b is null || b.Length == 0)) return null;
-        var set = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        if (a is not null) foreach (var s in a) if (!string.IsNullOrWhiteSpace(s)) set.Add(s);
-        if (b is not null) foreach (var s in b) if (!string.IsNullOrWhiteSpace(s)) set.Add(s);
-        return set.Count == 0 ? null : new System.Collections.Generic.List<string>(set);
     }
 
     // v1.9.3 — Read Episode.SeriesId via reflection to stay version-agnostic
