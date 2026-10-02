@@ -2164,8 +2164,16 @@ public class AchievementBadgeService : IDisposable
                 counters.LanguagesWatched.Add(context.OriginalLanguage.Trim().ToLowerInvariant());
             }
 
+            // Follow-up to #154: the genre and studio badges are credited once
+            // per item, before the per-name counters below take this item.
+            var badgeTargets = context.Genres is { Count: > 0 } || context.Studios is { Count: > 0 }
+                ? CollectBadgeTargets(counters)
+                : default;
+
             if (context.Genres is { Count: > 0 })
             {
+                CreditTargets(counters.GenreTargetCounts, counters.GenreItemCounts, badgeTargets.Genres, context.Genres, IsVideoGenreMatch, GenreHistoryBaseline);
+
                 foreach (var genre in context.Genres)
                 {
                     if (string.IsNullOrWhiteSpace(genre)) continue;
@@ -2362,6 +2370,8 @@ public class AchievementBadgeService : IDisposable
             // GetMetricValue(StudioItemsWatched, parameter) can answer.
             if (context.Studios is { Count: > 0 })
             {
+                CreditTargets(counters.StudioTargetCounts, counters.StudioItemCounts, badgeTargets.Studios, context.Studios, IsStudioMatch, StudioHistoryBaseline);
+
                 foreach (var s in context.Studios)
                 {
                     if (string.IsNullOrWhiteSpace(s)) continue;
@@ -3389,23 +3399,90 @@ public class AchievementBadgeService : IDisposable
 
     private static readonly char[] GenreDelimiters = ['&', '/', ',', ';'];
 
-    private static int LookupVideoGenreCount(Dictionary<string, int> dict, string targetGenre)
+    // Follow-up to #154. GenreItemsWatched and StudioItemsWatched match names
+    // loosely, and one item often carries several names for the same badge
+    // ("Action" and "Action & Adventure", or "HBO" and "HBO Documentary
+    // Films"). The per-name counters only keep a total per name, so the
+    // match runs when the playback is recorded and credits each badge target
+    // once per item (GenreTargetCounts / StudioTargetCounts). A target with
+    // no count yet, from a profile older than this or a badge created later,
+    // starts from the per-name history: see the two baselines below.
+    private static string TargetKey(string target) => target.Trim().ToLowerInvariant();
+
+    // Every genre and studio a badge can ask about: the catalogue, legacy
+    // custom badges and challenges, the criteria of the custom badges, and
+    // any target already counted, so a target keeps its count up to date
+    // while no badge uses it.
+    private (HashSet<string> Genres, HashSet<string> Studios) CollectBadgeTargets(UserAchievementCounters counters)
     {
-        if (dict.Count == 0 || string.IsNullOrWhiteSpace(targetGenre)) return 0;
+        var genres = new HashSet<string>(counters.GenreTargetCounts.Keys, StringComparer.Ordinal);
+        var studios = new HashSet<string>(counters.StudioTargetCounts.Keys, StringComparer.Ordinal);
 
-        var total = 0;
-        var matched = false;
-
-        foreach (var kv in dict)
+        void Add(AchievementMetric? metric, string? parameter)
         {
-            if (IsVideoGenreMatch(kv.Key, targetGenre))
-            {
-                total += kv.Value;
-                matched = true;
-            }
+            if (string.IsNullOrWhiteSpace(parameter)) return;
+            if (metric == AchievementMetric.GenreItemsWatched) genres.Add(TargetKey(parameter));
+            else if (metric == AchievementMetric.StudioItemsWatched) studios.Add(TargetKey(parameter));
         }
 
-        return matched ? total : 0;
+        void Walk(CustomBadgeCriteria? criteria)
+        {
+            if (criteria is null) return;
+            Add(criteria.Metric, criteria.MetricParameter);
+            if (criteria.Children is null) return;
+            foreach (var child in criteria.Children) Walk(child);
+        }
+
+        foreach (var def in GetActiveDefinitions()) Add(def.Metric, def.MetricParameter);
+        if (_customBadges is not null)
+        {
+            foreach (var custom in _customBadges.GetEnabled()) Walk(custom.Criteria);
+        }
+
+        return (genres, studios);
+    }
+
+    // Seeds each target this profile has not counted yet from the per-name
+    // history, then adds one for every target this item matches, however
+    // many of its names match it. Called before the per-name counters take
+    // this item, so a seed is history only.
+    private static void CreditTargets(
+        Dictionary<string, int> targetCounts,
+        Dictionary<string, int> perName,
+        IEnumerable<string> targets,
+        IReadOnlyList<string> names,
+        Func<string, string, bool> isMatch,
+        Func<Dictionary<string, int>, string, int> historyBaseline)
+    {
+        foreach (var target in targets)
+        {
+            if (!targetCounts.TryGetValue(target, out var count))
+            {
+                count = historyBaseline(perName, target);
+            }
+
+            if (names.Any(name => !string.IsNullOrWhiteSpace(name) && isMatch(name.Trim(), target)))
+            {
+                count++;
+            }
+
+            targetCounts[target] = count;
+        }
+    }
+
+    // History for a genre target: the sum of every matching name. A plain
+    // genre and its composite come from different providers (TMDb gives
+    // movies "Action" and series "Action & Adventure"), so they rarely sit
+    // on the same item and adding them up is close to exact.
+    private static int GenreHistoryBaseline(Dictionary<string, int> perName, string target)
+    {
+        var total = 0;
+        foreach (var kv in perName)
+        {
+            if (IsVideoGenreMatch(kv.Key, target)) total += kv.Value;
+        }
+
+        return total;
     }
 
     private static bool IsVideoGenreMatch(string candidateGenre, string targetGenre)
@@ -3445,23 +3522,20 @@ public class AchievementBadgeService : IDisposable
         return false;
     }
 
-    private static int LookupStudioCount(Dictionary<string, int> dict, string targetStudio)
+    // History for a studio target: the largest matching name. A company's
+    // labels usually sit on the same item ("Walt Disney Pictures" with "Walt
+    // Disney Animation Studios"), so adding them up would count those items
+    // twice; the largest one never does, and is never below the exact-name
+    // count this badge read before.
+    private static int StudioHistoryBaseline(Dictionary<string, int> perName, string target)
     {
-        if (dict.Count == 0 || string.IsNullOrWhiteSpace(targetStudio)) return 0;
-
-        var total = 0;
-        var matched = false;
-
-        foreach (var kv in dict)
+        var largest = 0;
+        foreach (var kv in perName)
         {
-            if (IsStudioMatch(kv.Key, targetStudio))
-            {
-                total += kv.Value;
-                matched = true;
-            }
+            if (kv.Value > largest && IsStudioMatch(kv.Key, target)) largest = kv.Value;
         }
 
-        return matched ? total : 0;
+        return largest;
     }
 
     private static bool IsStudioMatch(string candidateStudio, string targetStudio)
@@ -3564,9 +3638,15 @@ public class AchievementBadgeService : IDisposable
             return counters.DayOfWeekItemCounts.TryGetValue(parameter, out var dow) ? dow : 0;
         }
 
+        // Genre specialists: counted once per item when the playback is
+        // recorded; a target with no count yet reads its history. See
+        // CollectBadgeTargets.
         if (metric == AchievementMetric.GenreItemsWatched && !string.IsNullOrWhiteSpace(parameter))
         {
-            return LookupVideoGenreCount(counters.GenreItemCounts, parameter!);
+            var key = TargetKey(parameter!);
+            return counters.GenreTargetCounts.TryGetValue(key, out var g)
+                ? g
+                : GenreHistoryBaseline(counters.GenreItemCounts, key);
         }
 
         // [issue #24] Parametrized MUSIC-genre metrics. Case-insensitive so a
@@ -3582,12 +3662,16 @@ public class AchievementBadgeService : IDisposable
             return (int)(LookupGenreCountCaseInsensitive(counters.MusicGenreListeningSeconds, parameter!) / 3600);
         }
 
-        // Studio specialists. Parameter is the studio name (supports case-insensitive
-        // matching, aliases such as "Walt Disney *" -> "Disney", "HBO Max" -> "HBO",
-        // and whole-word matching against studio counter keys).
+        // Studio specialists. The parameter matches a studio name whole-word and
+        // case-insensitively, plus a few aliases (see IsStudioMatch), so "Walt
+        // Disney Pictures" counts for "Disney" and "HBO Max" for "HBO". Counted
+        // once per item like the genres above.
         if (metric == AchievementMetric.StudioItemsWatched && !string.IsNullOrWhiteSpace(parameter))
         {
-            return LookupStudioCount(counters.StudioItemCounts, parameter!);
+            var key = TargetKey(parameter!);
+            return counters.StudioTargetCounts.TryGetValue(key, out var s)
+                ? s
+                : StudioHistoryBaseline(counters.StudioItemCounts, key);
         }
 
         if (metric == AchievementMetric.PersonItemsWatched && !string.IsNullOrWhiteSpace(parameter))
