@@ -3387,6 +3387,133 @@ public class AchievementBadgeService : IDisposable
         return 0;
     }
 
+    private static readonly char[] GenreDelimiters = ['&', '/', ',', ';'];
+
+    private static int LookupVideoGenreCount(Dictionary<string, int> dict, string targetGenre)
+    {
+        if (dict.Count == 0 || string.IsNullOrWhiteSpace(targetGenre)) return 0;
+
+        var total = 0;
+        var matched = false;
+
+        foreach (var kv in dict)
+        {
+            if (IsVideoGenreMatch(kv.Key, targetGenre))
+            {
+                total += kv.Value;
+                matched = true;
+            }
+        }
+
+        return matched ? total : 0;
+    }
+
+    private static bool IsVideoGenreMatch(string candidateGenre, string targetGenre)
+    {
+        if (string.IsNullOrWhiteSpace(candidateGenre) || string.IsNullOrWhiteSpace(targetGenre))
+            return false;
+
+        if (string.Equals(candidateGenre, targetGenre, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (string.Equals(targetGenre, "Science Fiction", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(candidateGenre, "Sci-Fi", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(candidateGenre, "Sci Fi", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Check compound genres: split by '&', '/', ',', ';'
+        var parts = candidateGenre.Split(GenreDelimiters, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 1)
+        {
+            foreach (var part in parts)
+            {
+                var trimmed = part.Trim();
+                if (string.Equals(trimmed, targetGenre, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                if (string.Equals(targetGenre, "Science Fiction", StringComparison.OrdinalIgnoreCase) &&
+                    (string.Equals(trimmed, "Sci-Fi", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(trimmed, "Sci Fi", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static int LookupStudioCount(Dictionary<string, int> dict, string targetStudio)
+    {
+        if (dict.Count == 0 || string.IsNullOrWhiteSpace(targetStudio)) return 0;
+
+        var total = 0;
+        var matched = false;
+
+        foreach (var kv in dict)
+        {
+            if (IsStudioMatch(kv.Key, targetStudio))
+            {
+                total += kv.Value;
+                matched = true;
+            }
+        }
+
+        return matched ? total : 0;
+    }
+
+    private static bool IsStudioMatch(string candidateStudio, string targetStudio)
+    {
+        if (string.IsNullOrWhiteSpace(candidateStudio) || string.IsNullOrWhiteSpace(targetStudio))
+            return false;
+
+        if (string.Equals(candidateStudio, targetStudio, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (ContainsWord(candidateStudio, targetStudio))
+            return true;
+
+        if (string.Equals(targetStudio, "HBO", StringComparison.OrdinalIgnoreCase) &&
+            ContainsWord(candidateStudio, "Home Box Office"))
+        {
+            return true;
+        }
+
+        if (string.Equals(targetStudio, "BBC", StringComparison.OrdinalIgnoreCase) &&
+            ContainsWord(candidateStudio, "British Broadcasting Corporation"))
+        {
+            return true;
+        }
+
+        if ((string.Equals(targetStudio, "Studio Ghibli", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(targetStudio, "Ghibli", StringComparison.OrdinalIgnoreCase)) &&
+            ContainsWord(candidateStudio, "Ghibli"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsWord(string text, string word)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(word))
+            return false;
+
+        var index = 0;
+        while ((index = text.IndexOf(word, index, StringComparison.OrdinalIgnoreCase)) >= 0)
+        {
+            var end = index + word.Length;
+            var startOk = index == 0 || !char.IsLetterOrDigit(text[index - 1]);
+            var endOk = end == text.Length || !char.IsLetterOrDigit(text[end]);
+            if (startOk && endOk) return true;
+            index += word.Length;
+        }
+        return false;
+    }
+
     private static int GetMetricValue(UserAchievementCounters counters, AchievementMetric metric, string? parameter = null, UserAchievementProfile? profile = null)
     {
         if (metric == AchievementMetric.PrestigeLevel)
@@ -3439,7 +3566,7 @@ public class AchievementBadgeService : IDisposable
 
         if (metric == AchievementMetric.GenreItemsWatched && !string.IsNullOrWhiteSpace(parameter))
         {
-            return counters.GenreItemCounts.TryGetValue(parameter, out var g) ? g : 0;
+            return LookupVideoGenreCount(counters.GenreItemCounts, parameter!);
         }
 
         // [issue #24] Parametrized MUSIC-genre metrics. Case-insensitive so a
@@ -3455,12 +3582,12 @@ public class AchievementBadgeService : IDisposable
             return (int)(LookupGenreCountCaseInsensitive(counters.MusicGenreListeningSeconds, parameter!) / 3600);
         }
 
-        // v1.9.3 — Studio specialists. Parameter is the studio name as it
-        // appears in BaseItem.Studios (case-sensitive match against the
-        // counter dictionary keys, which were Trim()'d on insert).
+        // Studio specialists. Parameter is the studio name (supports case-insensitive
+        // matching, aliases such as "Walt Disney *" -> "Disney", "HBO Max" -> "HBO",
+        // and whole-word matching against studio counter keys).
         if (metric == AchievementMetric.StudioItemsWatched && !string.IsNullOrWhiteSpace(parameter))
         {
-            return counters.StudioItemCounts.TryGetValue(parameter, out var s) ? s : 0;
+            return LookupStudioCount(counters.StudioItemCounts, parameter!);
         }
 
         if (metric == AchievementMetric.PersonItemsWatched && !string.IsNullOrWhiteSpace(parameter))

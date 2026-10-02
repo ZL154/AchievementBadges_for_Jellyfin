@@ -598,7 +598,7 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
                 // v1.9.3 — populate studio + series-position fields so the
                 // achievement service can credit Studio specialists and
                 // pilot/completer behavior badges.
-                Studios = item.Studios,
+                Studios = GetEffectiveStudios(item, inheritFromParent: !(isMusic || isAudiobook)),
                 SeriesId = isEpisode ? GetSeriesIdString(item) : null,
                 SeasonNumber = isEpisode ? item.ParentIndexNumber : null,
                 EpisodeNumber = isEpisode ? item.IndexNumber : null
@@ -793,7 +793,7 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
     /// is what Daemon-Network reported. Episodes still inherit: that is the
     /// case this was written for, where the classification sits on the Series
     /// and the episode carries none of its own.</param>
-    private static IReadOnlyList<string>? GetEffectiveGenres(BaseItem item, bool inheritFromParent = true)
+    private IReadOnlyList<string>? GetEffectiveGenres(BaseItem item, bool inheritFromParent = true)
     {
         var own = item.Genres;
         if (!inheritFromParent) return own;
@@ -805,12 +805,26 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
     /// <summary>[v2.1.0 "Open Library", issue #25] Same pattern as
     /// <see cref="GetEffectiveGenres"/> but for Tags. v2.0.x didn't read Tags
     /// at all; many users tag rather than genre-classify their anime.</summary>
-    private static IReadOnlyList<string>? GetEffectiveTags(BaseItem item, bool inheritFromParent = true)
+    private IReadOnlyList<string>? GetEffectiveTags(BaseItem item, bool inheritFromParent = true)
     {
         var own = item.Tags;
         if (!inheritFromParent) return own;
 
         var parent = TryGetSeriesProperty<string[]>(item, "Tags");
+        return UnionStrings(own, parent);
+    }
+
+    /// <summary>Same pattern as <see cref="GetEffectiveGenres"/> and
+    /// <see cref="GetEffectiveTags"/> but for Studios. In Jellyfin, Episode
+    /// items do not carry studios directly; studios reside on the parent Series.
+    /// Inherits studios from the parent Series so TV episodes credit studio
+    /// specialist badges (e.g. HBO, BBC, Netflix).</summary>
+    private IReadOnlyList<string>? GetEffectiveStudios(BaseItem item, bool inheritFromParent = true)
+    {
+        var own = item.Studios;
+        if (!inheritFromParent) return own;
+
+        var parent = TryGetSeriesProperty<string[]>(item, "Studios");
         return UnionStrings(own, parent);
     }
 
@@ -863,13 +877,20 @@ public class PlaybackCompletionTracker : IHostedService, IDisposable
     /// Returns null if the item isn't an Episode, the Series accessor
     /// isn't present, or any access throws — anime detection just
     /// falls back to the item's own value in that case.</summary>
-    private static T? TryGetSeriesProperty<T>(BaseItem item, string propertyName) where T : class
+    private T? TryGetSeriesProperty<T>(BaseItem item, string propertyName) where T : class
     {
         try
         {
             var seriesProp = item.GetType().GetProperty("Series");
-            if (seriesProp is null) return null;
-            var series = seriesProp.GetValue(item);
+            object? series = seriesProp?.GetValue(item);
+            if (series is null)
+            {
+                var seriesIdProp = item.GetType().GetProperty("SeriesId");
+                if (seriesIdProp?.GetValue(item) is Guid g && g != Guid.Empty)
+                {
+                    series = _libraryManager.GetItemById(g);
+                }
+            }
             if (series is null) return null;
             var targetProp = series.GetType().GetProperty(propertyName);
             return targetProp?.GetValue(series) as T;
