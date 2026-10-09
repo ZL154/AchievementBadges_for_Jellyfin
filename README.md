@@ -119,7 +119,7 @@ Big thanks to **[@mattsigal](https://github.com/mattsigal)** for the genre and s
 - **Hidden/secret badges** displayed as `???` until unlocked
 - **Library completion milestones** that auto-scale to any library structure
 - **Per-person tracking** — Director and Actor affinity badges
-- **Per-genre tracking** — unique genre counters with dedicated badges
+- **Per-genre tracking** — unique genre counters with dedicated badges. Since v2.4.2 TMDb's composite genres count for each part ("Action & Adventure" for *Action Hero*, "Sci-Fi & Fantasy" for *Sci-Fi Scholar* and *Fantasy Forever*), "Sci-Fi" counts as "Science Fiction", and an item counts once per badge however many of its genres match
 - **Era / country / language** breakdowns via item metadata
 - **Watch streaks** — current and best streak badges
 - **Daily login streak** — loyalty rewards for consistent visits
@@ -127,7 +127,7 @@ Big thanks to **[@mattsigal](https://github.com/mattsigal)** for the genre and s
 Standout sub-collections:
 
 - **🎌 Anime tier (5 badges)** — Genre-tag detection (any genre containing `"anime"`, case-insensitive). *Anime Curious / Anime Fan / Otaku / Anime Veteran / All-Otaku* at 5 / 15 / 50 / 200 / 500 anime items.
-- **🎬 Studio specialists (6 badges)** — Letterboxd-style "I watch a lot of A24" badges, parameterised by `BaseItem.Studios`:
+- **🎬 Studio specialists (6 badges)** — Letterboxd-style "I watch a lot of A24" badges, parameterised by `BaseItem.Studios`. Since v2.4.2 (#154) a studio matches as a whole word, so "Walt Disney Pictures" counts for Disney and "HBO Max" for HBO (plus "Home Box Office", "British Broadcasting Corporation" and "Ghibli"), **TV episodes count with their series' studios**, and an item counts once per badge. Episode plays from before v2.4.2 recorded no studio, so TV credit starts from that update:
 
 | Badge | Studio | Threshold |
 |---|---|---|
@@ -211,6 +211,7 @@ Standout sub-collections:
 - **Privacy toggles** in user settings: *Appear offline to friends* (always shows you as offline), *Hide what I'm watching* (still online, but the series/episode is hidden), and *Hide my last watched when offline*. Enforced server-side in `FriendsService.BuildFriendRow` — can't be bypassed by client tampering
 - **Compact request rows** — Accept / Decline / Cancel buttons are icon-only with tooltips, so the Requests tab doesn't visually bloat
 - Drawer follows the Classic/Revamp toggle — sets `body[data-ab-style="revamp"]` so the same tokens apply globally
+- **Phone-safe (v2.4.2, #147)** — the drawer takes the height that is actually visible, so the chat's message box no longer slides behind Android's navigation bar while the address bar shows, and the drawer and the Friends button both keep clear of the status and gesture bars (`env(safe-area-inset-*)`)
 
 ### 💬 Messaging
 
@@ -901,7 +902,7 @@ Full per-version notes and signed binaries live on the GitHub Releases page:
 
 Highlights:
 
-- **v2.4.2** — genre and studio badges that count what you watched: episodes credit studio badges, TMDb composite genres ("Action & Adventure") count for each part, studio aliases and whole-word names ("Walt Disney Pictures", "HBO Max") count for their studio, each item once per badge (#154); the Friends chat's message box stays above a phone's navigation bar (#147); a plugin card image that survives the catalogue's crop (#146)
+- **v2.4.2** — genre and studio badges that count what you watched: episodes credit studio badges, TMDb composite genres ("Action & Adventure") count for each part, studio aliases and whole-word names ("Walt Disney Pictures", "HBO Max") count for their studio, each item once per badge (#154, @mattsigal, his first PR, with @camarigor); the Friends chat's message box stays above a phone's navigation bar (#147); a plugin card image that survives the catalogue's crop (#146)
 - **v2.4.1** — what 2.4.0 got wrong, and a cap you can raise: the Jellyfin 12 package now reports the version it shipped as, so uninstall and the plugin image work (#140); a browser that cached Jellyfin's page before the install gets the plugin instead of a stale copy (#141); a **targeted badge cap** settable to 1000 with the overflow named (#129); the Revamp style no longer restyles Jellyfin's own controls (#133); a Custom Tab under a page-replacing theme renders again (#131); **top-center toasts** plus a server default, and the default UI style actually persists (#136/#43); login-hidden accounts can be kept out of other users' views (#138); and a type-name collision that had been **500ing the server's whole OpenAPI document** since 2.1.0 is gone
 - **v2.4.0** — Jellyfin 12, targeted badges, games: two packages per release (`x.y.z.0` for 10.11, `x.y.z.1` for 12) with the entry in 12's avatar menu and the `Authorization` header 12 requires (#109/#117/#122); `ContainerCompletionPercent` + `ItemPlayCount` with a library picker (#107/#108); JellyEmu game achievements (#115/#120); every shop cosmetic on the shareable card and the drawer card (#42/#119); toast position under Revamp (#116/#118); Pastel page leak, invisible borders/frames, stale stylesheet token, #97 diagnostics
 - **v2.3.1** — music fixes + leaderboards: tracks stop inheriting album/artist genres so custom music badges count correctly (#94), the scan replays played music so discography badges rebuild (#96), both leaderboards show your own rank, deleted accounts are excluded + prunable, and the Blades skin becomes Aurora
@@ -1141,7 +1142,9 @@ Not expected, just appreciated. Contributions — issues, PRs, translation fixes
 ## 🙏 Credits & thanks
 
 - **[@frenchyx24](https://github.com/frenchyx24)** — **full French translation of all 171 built-in badges** (hand-translated titles + descriptions, merged in v1.7.2 from [issue #5](https://github.com/ZL154/AchievementBadges_for_Jellyfin/issues/5)). Also filed the original multi-language feature request and the deactivate-equipped-badges / quest-customization / Xbox-logo bug reports that shaped v1.6.1 → v1.7.x. Merci beaucoup !
-- **[@camarigor](https://github.com/camarigor)** — the v2.4.0 Jellyfin 12 build and web-client rework (#117/#122), targeted badges (#108), JellyEmu game achievements (#120), the shop cosmetics on the shareable card (#119) and the toast-position fix (#118); before that the v2.3.0 friend profile cards and public-summary endpoint (#76), Tracearr history integration (#77/#84/#85), library + artist completion wiring (#80/#81), the watch-time carry reliability work (#87/#89/#91/#92), the music fixes in v2.3.1 (#94/#96), and the profile data-loss (#59/#60) and gzip-injection (#46) fixes.
+- **[@camarigor](https://github.com/camarigor)** — in v2.4.2 the review and once-per-item counting on @mattsigal's genre and studio fixes (#154), the phone-safe Friends drawer (#149) and the new plugin card art (#148); in v2.4.1 the targeted badge cap and per-play rework (#130), the Custom Tabs panel repair (#132), the Revamp style scoping (#134), top-center toasts with the server default (#137), the hidden-accounts option (#139) and the correction to the #140/#141 fixes (#144); the v2.4.0 Jellyfin 12 build and web-client rework (#117/#122), targeted badges (#108), JellyEmu game achievements (#120), the shop cosmetics on the shareable card (#119) and the toast-position fix (#118); before that the v2.3.0 friend profile cards and public-summary endpoint (#76), Tracearr history integration (#77/#84/#85), library + artist completion wiring (#80/#81), the watch-time carry reliability work (#87/#89/#91/#92), the music fixes in v2.3.1 (#94/#96), and the profile data-loss (#59/#60) and gzip-injection (#46) fixes.
+- **[@mattsigal](https://github.com/mattsigal)** — the genre and studio badge fixes in v2.4.2 (#154): TV episodes crediting their series' studios, TMDb composite genres, and the studio name aliases, which on a real server unlocked genre badges people had earned long before. His first PR here.
+- **[@Roboatlas21](https://github.com/Roboatlas21)** — diagnosed both Jellyfin 12 faults fixed in v2.4.1 from his own logs (#140, #141), and reported the cropped plugin card (#146) and the phone chat box (#147) fixed in v2.4.2.
 - **[@Daemon-Network](https://github.com/Daemon-Network)** — the original Music & Books request (#24), and thorough real-music-library testing of 2.3.0 that surfaced the three music bugs fixed in v2.3.1.
 - **[@TsunamicFlame](https://github.com/TsunamicFlame)** — the Custom Tabs / Plugin Pages request (#37), the friend profile cards and shop-cosmetics-on-the-card request (#42), the JellyEmu game achievements request (#115), the toast-position report (#116), and the field testing behind all of them.
 - **[@unknownTGG](https://github.com/unknownTGG)** — the targeted-badges request (#107) that became `ContainerCompletionPercent` and `ItemPlayCount`.
