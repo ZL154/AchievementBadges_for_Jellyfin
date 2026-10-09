@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <!--
+    Plugin card for Jellyfin's Plugins page (#146), rendered to plugin-card.png.
+
+    Jellyfin 12 draws this image with background-size: cover in a card whose
+    image area runs from about 1.5:1 (desktop grid) to 2.7:1 (a phone's full
+    width), so it is always cropped. Everything that matters sits inside the
+    region both ends keep: the central 84% of the width and 66% of the height
+    (x 150 to 1770, y 183 to 897). No text, since the card prints the plugin's
+    name under the image.
+
+    The colours and the sphere shading come from the unlock toast
+    (achievement-animated.svg). The trophy, star and verified-user glyphs are
+    Material Icons (Apache License 2.0).
+  -->
+  <defs>
+    <radialGradient id="backdrop" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#2453b8"/>
+      <stop offset="100%" stop-color="#0f2560"/>
+    </radialGradient>
+    <radialGradient id="sphere" cx="34%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="30%" stop-color="#ffffff" stop-opacity="0.1"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- SVG 1.1 drop shadow, so renderers without feDropShadow draw it too. -->
+    <filter id="lift" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="22"/>
+      <feOffset dy="18" result="offset"/>
+      <feFlood flood-color="#000000" flood-opacity="0.45"/>
+      <feComposite in2="offset" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#backdrop)"/>
+
+  <!-- Badges: the two smaller ones first, the trophy badge in front of them. -->
+  <g filter="url(#lift)">
+    <circle cx="560" cy="560" r="190" fill="#15347c"/>
+    <circle cx="560" cy="560" r="190" fill="url(#sphere)"/>
+    <circle cx="560" cy="560" r="190" fill="none" stroke="#000000" stroke-opacity="0.18" stroke-width="7.6"/>
+
+    <circle cx="1360" cy="560" r="190" fill="#15347c"/>
+    <circle cx="1360" cy="560" r="190" fill="url(#sphere)"/>
+    <circle cx="1360" cy="560" r="190" fill="none" stroke="#000000" stroke-opacity="0.18" stroke-width="7.6"/>
+
+    <circle cx="960" cy="540" r="270" fill="#193e91"/>
+    <circle cx="960" cy="540" r="270" fill="url(#sphere)"/>
+    <circle cx="960" cy="540" r="270" fill="none" stroke="#000000" stroke-opacity="0.18" stroke-width="10.8"/>
+  </g>
+
+  <!-- Glyphs: each 24x24 icon is scaled around the centre of its badge. -->
+  <g fill="#ffffff">
+    <!-- star -->
+    <path fill-opacity="0.85" transform="translate(450,450) scale(9.1667)"
+          d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+    <!-- verified user -->
+    <path fill-opacity="0.85" transform="translate(1250,450) scale(9.1667)"
+          d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+    <!-- trophy (emoji_events) -->
+    <path transform="translate(810,390) scale(12.5)"
+          d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+  </g>
+</svg>
