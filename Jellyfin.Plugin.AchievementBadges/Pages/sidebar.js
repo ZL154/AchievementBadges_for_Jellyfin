@@ -667,6 +667,15 @@
         });
     }
 
+    // [issue #147] Offsets the button from a screen edge plus that edge's
+    // safe-area inset, so a gesture bar or a notch never covers it. The
+    // plain value goes first: a browser without env() rejects the second
+    // assignment and keeps it.
+    function setSafeOffset(el, side, base){
+        el.style[side] = base;
+        el.style[side] = 'calc(' + base + ' + env(safe-area-inset-' + side + ', 0px))';
+    }
+
     function applyCorner(corner){
         var btn = document.getElementById('abFriendsBtn');
         var drawer = document.getElementById('abFriendsDrawer');
@@ -674,10 +683,10 @@
         btn.style.left = 'auto'; btn.style.right = 'auto';
         btn.style.top = 'auto'; btn.style.bottom = 'auto';
         var slideFromLeft = corner.indexOf('left') >= 0;
-        if (corner === 'top-left') { btn.style.left = '1em'; btn.style.top = '1.2em'; btn.style.bottom = 'auto'; }
-        else if (corner === 'top-right') { btn.style.right = '1em'; btn.style.top = '1.2em'; btn.style.bottom = 'auto'; }
-        else if (corner === 'bottom-right') { btn.style.right = '1em'; btn.style.bottom = '1.2em'; btn.style.top = 'auto'; }
-        else { btn.style.left = '1em'; btn.style.bottom = '1.2em'; btn.style.top = 'auto'; } // bottom-left default
+        if (corner === 'top-left') { setSafeOffset(btn, 'left', '1em'); setSafeOffset(btn, 'top', '1.2em'); btn.style.bottom = 'auto'; }
+        else if (corner === 'top-right') { setSafeOffset(btn, 'right', '1em'); setSafeOffset(btn, 'top', '1.2em'); btn.style.bottom = 'auto'; }
+        else if (corner === 'bottom-right') { setSafeOffset(btn, 'right', '1em'); setSafeOffset(btn, 'bottom', '1.2em'); btn.style.top = 'auto'; }
+        else { setSafeOffset(btn, 'left', '1em'); setSafeOffset(btn, 'bottom', '1.2em'); btn.style.top = 'auto'; } // bottom-left default
         if (drawer) {
             // Slide direction matches the button's horizontal anchor.
             drawer.style.left = slideFromLeft ? '0' : 'auto';
@@ -823,12 +832,25 @@
             var fst = document.createElement('style');
             fst.id = 'ab-friends-styles';
             fst.textContent =
-                '#abFriendsBtn{position:fixed;left:1em;bottom:1.2em;width:52px;height:52px;border-radius:16px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;box-shadow:0 8px 22px rgba(102,126,234,0.45),inset 0 0 0 1px rgba(255,255,255,0.1);cursor:pointer;z-index:9999998;display:flex;align-items:center;justify-content:center;transition:transform 0.15s,box-shadow 0.15s;}' +
+                // [issue #147] Where the button sits until applyCorner()
+                // places it, with the same safe-area offset. The plain value
+                // comes first so a browser without env() still has one.
+                '#abFriendsBtn{position:fixed;left:1em;left:calc(1em + env(safe-area-inset-left,0px));bottom:1.2em;bottom:calc(1.2em + env(safe-area-inset-bottom,0px));width:52px;height:52px;border-radius:16px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;box-shadow:0 8px 22px rgba(102,126,234,0.45),inset 0 0 0 1px rgba(255,255,255,0.1);cursor:pointer;z-index:9999998;display:flex;align-items:center;justify-content:center;transition:transform 0.15s,box-shadow 0.15s;}' +
                 '#abFriendsBtn:hover{transform:scale(1.08);box-shadow:0 12px 28px rgba(102,126,234,0.6),inset 0 0 0 1px rgba(255,255,255,0.2);}' +
                 '#abFriendsBtn .material-icons{font-size:1.6em;}' +
                 '#abFriendsBadge{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:0.7em;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(10,12,18,0.92);}' +
                 '#abFriendsBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:9999997;opacity:0;transition:opacity 0.22s;}' +
-                '#abFriendsDrawer{display:none;position:fixed;top:0;left:0;width:min(360px,92vw);height:100vh;background:linear-gradient(170deg,#1a1f2e 0%,#0d1017 100%);border-right:1px solid rgba(255,255,255,0.08);box-shadow:10px 0 40px rgba(0,0,0,0.6);z-index:9999999;flex-direction:column;transform:translateX(-100%);transition:transform 0.28s cubic-bezier(.22,.9,.3,1);color:#fff;font-family:inherit;}' +
+                // [issue #147] This was height:100vh, which on a phone is the
+                // height with the address bar hidden: while the bar was on
+                // screen, the bottom of the drawer (the chat's message box
+                // with it) ran past the visible area, behind the navigation
+                // bar. 100% of a fixed box is the height actually visible.
+                // The padding keeps the content clear of the system bars the
+                // page may draw under (Jellyfin's viewport uses
+                // viewport-fit=cover), and the side inset follows the edge
+                // applyCorner() anchors the drawer to.
+                '#abFriendsDrawer{display:none;position:fixed;top:0;left:0;width:min(360px,92vw);height:100%;box-sizing:border-box;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);background:linear-gradient(170deg,#1a1f2e 0%,#0d1017 100%);border-right:1px solid rgba(255,255,255,0.08);box-shadow:10px 0 40px rgba(0,0,0,0.6);z-index:9999999;flex-direction:column;transform:translateX(-100%);transition:transform 0.28s cubic-bezier(.22,.9,.3,1);color:#fff;font-family:inherit;}' +
+                '#abFriendsDrawer[data-ab-slide-dir="right"]{padding-left:0;padding-right:env(safe-area-inset-right,0px);}' +
                 '.ab-fd-header{padding:1.1em 1.2em 0.9em;display:flex;align-items:center;gap:0.6em;border-bottom:1px solid rgba(255,255,255,0.06);background:linear-gradient(90deg,rgba(102,126,234,0.1),transparent);}' +
                 '.ab-fd-ico{background:linear-gradient(135deg,#667eea,#764ba2);width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1em;color:#fff;}' +
                 '.ab-fd-title{font-weight:800;font-size:1.05em;flex:1;letter-spacing:0.2px;}' +

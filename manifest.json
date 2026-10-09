@@ -6,7 +6,7 @@
         "overview": "Unlockable viewing achievement badges for Jellyfin users.",
         "owner": "ZL154",
         "category": "General",
-        "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/achievement.png",
+        "imageUrl": "https://raw.githubusercontent.com/ZL154/AchievementBadges_for_Jellyfin/main/assets/plugin-card.png",
         "versions": [
             {
                 "version": "2.4.1.1",
