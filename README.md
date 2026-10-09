@@ -31,14 +31,14 @@
 
 A full progression, gamification and achievement system for Jellyfin that rewards users based on real viewing activity. Think Xbox Gamerscore meets Letterboxd meets Steam profile customization, built natively into your media server.
 
-> **Status:** Active development — **v2.4.1** is live: everything reported against 2.4.0, including **two faults that made a correct install look broken on Jellyfin 12** (an uninstall that failed outright, and a page that only worked in a private window), plus a **targeted badge cap you can raise** to 1000, a **top-center toast placement** with a server default, an option to **keep login-hidden accounts out of other users' views**, and a fix for a collision that had been **breaking your server's whole API document** since 2.1.0. See [What's new in v2.4.1](#-whats-new-in-v241--what-240-got-wrong-and-a-cap-you-can-raise). v2.4.0 brought **Jellyfin 12 support** (a dedicated 12.0 build in every release, and the web side reworked for the new layout and authorization), **targeted badges** that point at one series, season, collection, playlist, album or item, **JellyEmu game achievements**, and your shop bling on the shareable card. Before that, v2.3.1 fixed the music feature and cleaned up the leaderboards, and 2.3.0 brought friend profile cards, three shareable card skins (Console / Metro / Aurora), Tracearr history crediting, and the profile data-loss + gzip injection fixes every published build needs. Built on v2.2 "Your Screen, Your Rules", the v2.1 "Open Library" expansion, and v2.0 "Choose Your Loadout".
+> **Status:** Active development — **v2.4.2** is live: **genre and studio badges finally count what you watched** — TV episodes now credit studio badges, TMDb's composite genres ("Action & Adventure", "Sci-Fi & Fantasy") count for each part, and a studio's other names ("Walt Disney Pictures", "HBO Max") count for it, once per item — plus the Friends chat on phones and a plugin card image that survives the catalogue's crop. See [What's new in v2.4.2](#-whats-new-in-v242--genre-and-studio-badges-that-count-what-you-watched). v2.4.1 fixed what 2.4.0 got wrong on Jellyfin 12 (an uninstall that failed outright, a page that only worked in a private window), made the targeted badge cap a setting, added top-center toasts and the hidden-accounts option, and stopped the plugin breaking the server's API document. v2.4.0 brought **Jellyfin 12 support**, **targeted badges**, **JellyEmu game achievements** and your shop bling on the shareable card. Built on 2.3's friend profile cards and card skins, v2.2 "Your Screen, Your Rules", the v2.1 "Open Library" expansion, and v2.0 "Choose Your Loadout".
 
 ---
 
 ## 📑 Table of contents
 
 - [Overview](#-overview)
-- [What's new in v2.4.1 — what 2.4.0 got wrong, and a cap you can raise](#-whats-new-in-v241--what-240-got-wrong-and-a-cap-you-can-raise) — the two Jellyfin 12 faults, a targeted badge cap up to 1000, top-center toasts, login-hidden accounts, and the API document fix
+- [What's new in v2.4.2 — genre and studio badges that count what you watched](#-whats-new-in-v242--genre-and-studio-badges-that-count-what-you-watched) — episodes credit studio badges, composite genres and studio aliases count once per item, the Friends chat on phones, a new plugin card
 - [Core features](#-core-features)
   - [Badge system](#-badge-system) — 200+ achievements, 35+ categories, 6 rarities
   - [Rank system](#-rank-system) — 10 tiers from Rookie to Immortal
@@ -65,7 +65,7 @@ A full progression, gamification and achievement system for Jellyfin that reward
 - [API endpoints](#-api-endpoints)
 - [Screenshots](#-screenshots)
 - [Release history](#-release-history)
-- [Previous release notes](#-previous-release-notes) — full v2.4.0 / v2.3.x / v2.2.0 / v2.1.x notes
+- [Previous release notes](#-previous-release-notes) — full v2.4.1 / v2.4.0 / v2.3.x / v2.2.0 / v2.1.x notes
 - [Support the project](#-support-the-project)
 - [Credits & thanks](#-credits--thanks)
 - [License](#-license)
@@ -80,38 +80,25 @@ Designed to integrate cleanly with modern Jellyfin setups and themes like NetFin
 
 ---
 
-## 🚀 What's new in v2.4.1 — what 2.4.0 got wrong, and a cap you can raise
+## 🚀 What's new in v2.4.2 — genre and studio badges that count what you watched
 
-Everything reported against 2.4.0, including two faults that made a correct install look broken on Jellyfin 12, plus a cap the people who author targeted badges by the hundred can now raise. **Drop-in upgrade from v2.4.0 — no schema change, no migration.** Full notes in [docs/release-notes/v2.4.1.md](docs/release-notes/v2.4.1.md).
+Genre and studio badges now count episodes, the composite genres TMDb gives TV shows, and the many names one studio goes by. On a real server this upgrade unlocked badges people had earned long ago and never received. **Drop-in upgrade from v2.4.x — no migration.** Full notes in [docs/release-notes/v2.4.2.md](docs/release-notes/v2.4.2.md).
 
-### 🟣 The two Jellyfin 12 faults (#140, #141)
+### 🏷️ Genre and studio badges (#154)
 
-- **Uninstall failed outright, and the plugin's image 404'd.** Each release ships two packages from one source tree, and both assemblies were stamped `x.y.z.0`. Jellyfin then read two different numbers for one install — the dashboard shows the assembly's version, uninstall and the image endpoint resolve through the manifest's — so on Jellyfin 12 the plugin installed as `2.4.0.1`, displayed as `2.4.0.0`, and could not be removed. Each package now stamps the version it ships as. **Stuck on 2.4.0.1?** Updating through the catalogue is enough; the restart that loads the new build deletes the old folder.
-- **The page worked in a private window and nowhere else.** A browser that cached Jellyfin's page *before* the plugin was installed revalidates it, Jellyfin answers `304 Not Modified` from the file on disk, and there is no page body for the plugin to inject into — so the browser keeps using a copy with no plugin in it, forever. Worst on servers with a read-only web directory, where the on-disk patch can never take either. The middleware now forces a full page while the on-disk patch has not taken. **Nobody needs to clear their browsing data** — a normal reload after updating is enough.
+- **TV episodes count toward studio badges.** Jellyfin keeps studios on the series, not its episodes, so *It's Not TV*, *Auntie Beeb* and *Netflix and Watch* only ever saw movies. Episodes now take their series' studios, live and in the watch-history scan.
+- **Composite genres count for each part.** TMDb gives shows "Action & Adventure" and "Sci-Fi & Fantasy", which *Action Hero*, *Sci-Fi Scholar* and *Fantasy Forever* never matched. "Sci-Fi" now counts as "Science Fiction" too.
+- **A studio's other names count.** Studio badges match the studio as a whole word — "Walt Disney Pictures" counts for Disney, "HBO Max" for HBO, "BBC Film" for BBC — plus "Home Box Office", "British Broadcasting Corporation" and "Ghibli".
+- **One item counts once per badge**, however many of its names match.
 
-### 🎯 A targeted badge cap you can raise (#129)
+**What changes when you update:** watches already in your history start counting, so progress jumps and badges can unlock on the spot. On our own server the upgrade unlocked 11 genre badges across 23 profiles, and no one's progress went down. **Custom badges match the same way**, so a custom "War" badge now counts "War & Politics" shows. Episode plays from before this update stored no studio, so the TV side of the studio badges counts from now on.
 
-- **The cap is now a setting**, under *Custom badges* → **Targeted badge cap** (1 to 1000, default unchanged at 50). The page shows how many distinct targets your enabled badges reference against the cap, and **names the ones past it** so you can see what is not being computed.
-- **The per-play check no longer grows with the number of targets.** Series, seasons and folders are tested against the played item's ancestors in one lookup; collections and playlists use a member list cached per target and refreshed when the container changes. Hundreds of targets are fine on any server.
+### 📱 Smaller fixes
 
-### 🎨 Fixes reported against 2.4.0
+- **The Friends chat's message box no longer sits behind a phone's navigation bar (#147).** The drawer takes the height that is actually visible and keeps clear of the status and gesture bars.
+- **A plugin card image that survives the catalogue's crop (#146).** Jellyfin cropped the README banner down to its middle, cutting the text and losing the trophy; the card now has its own artwork.
 
-- **The Revamp style reached the rest of Jellyfin (#133).** With **UI: Revamp** selected, the plugin was restyling Jellyfin's own controls and every other plugin's settings page — checkboxes went invisible, text inputs lost their border and height, text selection changed colour everywhere. Twelve rules named generic elements while keying only on an attribute that lives on `<body>`; they are now anchored to the plugin's own two surfaces, and a test refuses any new rule of that shape.
-- **A Custom Tab that rendered nothing (#131).** With themes that ship their own copy of Jellyfin's home page (Abyss's Spotlight), Custom Tabs' server-side panel injection silently fails to match, leaving the tab button with no panel behind it — a blank Achievements page. The plugin now builds the missing panel itself.
-- **Toasts gain a top-center placement, and a server default (#136).** Top-center joins the five existing placements, and an admin can set the default for everyone who has not picked one; a user's own choice still wins. Two bugs turned up underneath it: the **default UI style from #43 was never actually stored**, and **every main config save silently switched the page integrations back off**.
-- **Login-hidden accounts can be kept out of other users' views (#138).** Off by default. When on, an account with Jellyfin's *Hide this user from login screens* is visible only to itself, administrators, other hidden accounts, and accounts it is already mutual friends with. Note that Jellyfin ticks that box for accounts it creates, so on a server that keeps the default every account is hidden and the option changes nothing.
-
-### 📄 The plugin was breaking your server's API document
-
-Found while testing this release, not reported by anyone, and present since **2.1.0** on both Jellyfin 10.11 and 12: `GET /api-docs/openapi.json` answered **500 for the whole server**.
-
-Jellyfin builds one OpenAPI document from itself and every installed plugin, and each schema in it is keyed by the bare type name. This plugin's media-type enum was called `MediaType`, which is also the name of one of Jellyfin's own enums — and a duplicate name is not resolved, it throws, taking the entire document down. Swagger UI, the dashboard's API browser and every generator that reads the spec were all broken, by a plugin that started cleanly and logged nothing about it.
-
-The enum is now `BadgeMediaType`. Its numbers and the property carrying it are unchanged, so **there is nothing to migrate**. With the collision gone the document builds, and this plugin's 126 routes appear in it for the first time. A test now walks the plugin's public types against Jellyfin's and fails on any shared name, because nothing else could catch this: the break was in the host's document, not in this plugin's.
-
-> If your API docs page is still broken after updating, another plugin is colliding the same way — the server log names both types.
-
-Big thanks to **[@camarigor](https://github.com/camarigor)** for the cap and the per-play rework (#130), the Custom Tabs repair (#132), the Revamp scoping (#134), the toast work (#137), the hidden-accounts option (#139), and for catching what the first pass at #140/#141 got wrong (#144); to **[@Roboatlas21](https://github.com/Roboatlas21)** for diagnosing both Jellyfin 12 faults from his logs (#140, #141); to **[@Tschiyo](https://github.com/Tschiyo)** for the cap request (#129); to **[@Borededdy](https://github.com/Borededdy)** for the blank Custom Tab (#131); to **[@clarjon1](https://github.com/clarjon1)** for the Revamp leak (#133); to **[@Verdancy-Rin](https://github.com/Verdancy-Rin)** for the top-center placement (#136); and to **[@Digital-Yeti](https://github.com/Digital-Yeti)** for the hidden-accounts request (#138).
+Big thanks to **[@mattsigal](https://github.com/mattsigal)** for the genre and studio fixes in his first PR here (#154), to **[@camarigor](https://github.com/camarigor)** for reviewing and testing it and for the once-per-item counting on top, and for the phone (#149) and card (#148) fixes; and to **[@Roboatlas21](https://github.com/Roboatlas21)** for #146 and #147.
 
 ---
 
@@ -541,6 +528,8 @@ Every value `AchievementMetric` exposes, 71 of them. Entries marked \* accept a 
 
 Parameterized metrics match their parameter case-insensitively. `GenreItemsWatched` with `metricParameter` of `"horror"` counts only horror items; `LibraryCompletionPercent` with `"Movies"` reads that one library, and without a parameter it reads whichever library the user is furthest through. The same applies to `ArtistCompletionPercent`, which without a parameter reads the user's best artist.
 
+Since v2.4.2 two of them match more loosely, and count each item once per badge however many of its names match. `GenreItemsWatched` counts a composite genre such as "Action & Adventure" or "Sci-Fi & Fantasy" for each part, and "Sci-Fi" for "Science Fiction". `StudioItemsWatched` matches the studio as a whole word, so "Disney" counts "Walt Disney Pictures" and "HBO" counts "HBO Max", and an episode counts with its series' studios.
+
 ---
 
 ## 📡 Tracearr integration
@@ -912,6 +901,7 @@ Full per-version notes and signed binaries live on the GitHub Releases page:
 
 Highlights:
 
+- **v2.4.2** — genre and studio badges that count what you watched: episodes credit studio badges, TMDb composite genres ("Action & Adventure") count for each part, studio aliases and whole-word names ("Walt Disney Pictures", "HBO Max") count for their studio, each item once per badge (#154); the Friends chat's message box stays above a phone's navigation bar (#147); a plugin card image that survives the catalogue's crop (#146)
 - **v2.4.1** — what 2.4.0 got wrong, and a cap you can raise: the Jellyfin 12 package now reports the version it shipped as, so uninstall and the plugin image work (#140); a browser that cached Jellyfin's page before the install gets the plugin instead of a stale copy (#141); a **targeted badge cap** settable to 1000 with the overflow named (#129); the Revamp style no longer restyles Jellyfin's own controls (#133); a Custom Tab under a page-replacing theme renders again (#131); **top-center toasts** plus a server default, and the default UI style actually persists (#136/#43); login-hidden accounts can be kept out of other users' views (#138); and a type-name collision that had been **500ing the server's whole OpenAPI document** since 2.1.0 is gone
 - **v2.4.0** — Jellyfin 12, targeted badges, games: two packages per release (`x.y.z.0` for 10.11, `x.y.z.1` for 12) with the entry in 12's avatar menu and the `Authorization` header 12 requires (#109/#117/#122); `ContainerCompletionPercent` + `ItemPlayCount` with a library picker (#107/#108); JellyEmu game achievements (#115/#120); every shop cosmetic on the shareable card and the drawer card (#42/#119); toast position under Revamp (#116/#118); Pastel page leak, invisible borders/frames, stale stylesheet token, #97 diagnostics
 - **v2.3.1** — music fixes + leaderboards: tracks stop inheriting album/artist genres so custom music badges count correctly (#94), the scan replays played music so discography badges rebuild (#96), both leaderboards show your own rank, deleted accounts are excluded + prunable, and the Blades skin becomes Aurora
@@ -934,6 +924,41 @@ Highlights:
 ## 🗂️ Previous release notes
 
 Full notes for earlier versions, newest first.
+
+## 🚀 What's new in v2.4.1 — what 2.4.0 got wrong, and a cap you can raise
+
+Everything reported against 2.4.0, including two faults that made a correct install look broken on Jellyfin 12, plus a cap the people who author targeted badges by the hundred can now raise. **Drop-in upgrade from v2.4.0 — no schema change, no migration.** Full notes in [docs/release-notes/v2.4.1.md](docs/release-notes/v2.4.1.md).
+
+### 🟣 The two Jellyfin 12 faults (#140, #141)
+
+- **Uninstall failed outright, and the plugin's image 404'd.** Each release ships two packages from one source tree, and both assemblies were stamped `x.y.z.0`. Jellyfin then read two different numbers for one install — the dashboard shows the assembly's version, uninstall and the image endpoint resolve through the manifest's — so on Jellyfin 12 the plugin installed as `2.4.0.1`, displayed as `2.4.0.0`, and could not be removed. Each package now stamps the version it ships as. **Stuck on 2.4.0.1?** Updating through the catalogue is enough; the restart that loads the new build deletes the old folder.
+- **The page worked in a private window and nowhere else.** A browser that cached Jellyfin's page *before* the plugin was installed revalidates it, Jellyfin answers `304 Not Modified` from the file on disk, and there is no page body for the plugin to inject into — so the browser keeps using a copy with no plugin in it, forever. Worst on servers with a read-only web directory, where the on-disk patch can never take either. The middleware now forces a full page while the on-disk patch has not taken. **Nobody needs to clear their browsing data** — a normal reload after updating is enough.
+
+### 🎯 A targeted badge cap you can raise (#129)
+
+- **The cap is now a setting**, under *Custom badges* → **Targeted badge cap** (1 to 1000, default unchanged at 50). The page shows how many distinct targets your enabled badges reference against the cap, and **names the ones past it** so you can see what is not being computed.
+- **The per-play check no longer grows with the number of targets.** Series, seasons and folders are tested against the played item's ancestors in one lookup; collections and playlists use a member list cached per target and refreshed when the container changes. Hundreds of targets are fine on any server.
+
+### 🎨 Fixes reported against 2.4.0
+
+- **The Revamp style reached the rest of Jellyfin (#133).** With **UI: Revamp** selected, the plugin was restyling Jellyfin's own controls and every other plugin's settings page — checkboxes went invisible, text inputs lost their border and height, text selection changed colour everywhere. Twelve rules named generic elements while keying only on an attribute that lives on `<body>`; they are now anchored to the plugin's own two surfaces, and a test refuses any new rule of that shape.
+- **A Custom Tab that rendered nothing (#131).** With themes that ship their own copy of Jellyfin's home page (Abyss's Spotlight), Custom Tabs' server-side panel injection silently fails to match, leaving the tab button with no panel behind it — a blank Achievements page. The plugin now builds the missing panel itself.
+- **Toasts gain a top-center placement, and a server default (#136).** Top-center joins the five existing placements, and an admin can set the default for everyone who has not picked one; a user's own choice still wins. Two bugs turned up underneath it: the **default UI style from #43 was never actually stored**, and **every main config save silently switched the page integrations back off**.
+- **Login-hidden accounts can be kept out of other users' views (#138).** Off by default. When on, an account with Jellyfin's *Hide this user from login screens* is visible only to itself, administrators, other hidden accounts, and accounts it is already mutual friends with. Note that Jellyfin ticks that box for accounts it creates, so on a server that keeps the default every account is hidden and the option changes nothing.
+
+### 📄 The plugin was breaking your server's API document
+
+Found while testing this release, not reported by anyone, and present since **2.1.0** on both Jellyfin 10.11 and 12: `GET /api-docs/openapi.json` answered **500 for the whole server**.
+
+Jellyfin builds one OpenAPI document from itself and every installed plugin, and each schema in it is keyed by the bare type name. This plugin's media-type enum was called `MediaType`, which is also the name of one of Jellyfin's own enums — and a duplicate name is not resolved, it throws, taking the entire document down. Swagger UI, the dashboard's API browser and every generator that reads the spec were all broken, by a plugin that started cleanly and logged nothing about it.
+
+The enum is now `BadgeMediaType`. Its numbers and the property carrying it are unchanged, so **there is nothing to migrate**. With the collision gone the document builds, and this plugin's 126 routes appear in it for the first time. A test now walks the plugin's public types against Jellyfin's and fails on any shared name, because nothing else could catch this: the break was in the host's document, not in this plugin's.
+
+> If your API docs page is still broken after updating, another plugin is colliding the same way — the server log names both types.
+
+Big thanks to **[@camarigor](https://github.com/camarigor)** for the cap and the per-play rework (#130), the Custom Tabs repair (#132), the Revamp scoping (#134), the toast work (#137), the hidden-accounts option (#139), and for catching what the first pass at #140/#141 got wrong (#144); to **[@Roboatlas21](https://github.com/Roboatlas21)** for diagnosing both Jellyfin 12 faults from his logs (#140, #141); to **[@Tschiyo](https://github.com/Tschiyo)** for the cap request (#129); to **[@Borededdy](https://github.com/Borededdy)** for the blank Custom Tab (#131); to **[@clarjon1](https://github.com/clarjon1)** for the Revamp leak (#133); to **[@Verdancy-Rin](https://github.com/Verdancy-Rin)** for the top-center placement (#136); and to **[@Digital-Yeti](https://github.com/Digital-Yeti)** for the hidden-accounts request (#138).
+
+---
 
 ## 🚀 What's new in v2.4.0 — Jellyfin 12, targeted badges, games
 
