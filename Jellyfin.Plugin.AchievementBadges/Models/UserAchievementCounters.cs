@@ -118,6 +118,15 @@ public class UserAchievementCounters
     // studio name, value = number of finished items credited to that studio.
     public Dictionary<string, int> StudioItemCounts { get; set; } = new();
 
+    // Follow-up to #154. Genre and studio badges match names loosely
+    // ("Action & Adventure" for an Action badge, "Walt Disney Pictures" for
+    // Disney), and one item often carries several names that match the same
+    // badge. These count each badge target (the badge's genre or studio,
+    // lower-cased) once per item; the per-name counters above stay as they
+    // were for the recap and the distinct-genre badges.
+    public Dictionary<string, int> GenreTargetCounts { get; set; } = new();
+    public Dictionary<string, int> StudioTargetCounts { get; set; } = new();
+
     // v1.9.3 — Per-series pilot tracking. SeriesPilotsWatched holds the set
     // of series IDs whose S1E1 has been watched. SeriesContinuedPastPilot
     // adds the series ID once any episode AFTER S1E1 (same series, different
