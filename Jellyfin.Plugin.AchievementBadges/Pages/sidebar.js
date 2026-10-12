@@ -6,6 +6,24 @@
     var HEADER_ID='ab-header-badges';
     var USER_MENU_ID='ab-user-menu-entry';
 
+    // [issue #155] The server root as the browser resolved this script's src
+    // ({base}/Plugins/AchievementBadges/client-script/sidebar), for the
+    // requests made without ApiClient, which is usually not up yet while the
+    // page is still parsing. A root-relative /Plugins/ URL dropped the base
+    // URL Jellyfin runs under. currentScript is only set while the script
+    // first runs, so read it here. The fallback is relative to the shell at
+    // {base}/web/, the one place this script could run without a src of its
+    // own.
+    var SELF_SCRIPT = document.currentScript || document.querySelector('script[src*="client-script/sidebar"]');
+    var SERVER_ROOT = (function () {
+        try {
+            var src = SELF_SCRIPT && SELF_SCRIPT.src;
+            var at = src ? src.indexOf('Plugins/AchievementBadges/client-script/') : -1;
+            if (at >= 0) return src.slice(0, at);
+        } catch (_) {}
+        return '../';
+    })();
+
     /* v1.8.54: propagate the user's Classic/Revamp preference globally so the
        Friends drawer (mounted on body, on every Jellyfin page) follows the
        same toggle the standalone /achievements page exposes. Reads
@@ -45,16 +63,17 @@
                 // script is still executing synchronously).
                 var __abCssBust = (function () {
                     try {
-                        var tag = document.currentScript || document.querySelector('script[src*="client-script/sidebar"]');
-                        var m = tag && /[?&](v=[^&#"']+)/.exec(tag.getAttribute('src') || '');
+                        var m = SELF_SCRIPT && /[?&](v=[^&#"']+)/.exec(SELF_SCRIPT.getAttribute('src') || '');
                         if (m) return m[1];
                     } catch (e) {}
                     return 'v=' + Date.now();
                 })();
+                // [issue #155] ApiClient is usually not up yet at this point,
+                // so the sheet mostly comes from SERVER_ROOT.
                 var __abApi = window.ApiClient || window.apiClient;
                 var __abUrl = (__abApi && typeof __abApi.getUrl === 'function')
                     ? __abApi.getUrl('Plugins/AchievementBadges/client-script/styles-revamp')
-                    : '/Plugins/AchievementBadges/client-script/styles-revamp';
+                    : SERVER_ROOT + 'Plugins/AchievementBadges/client-script/styles-revamp';
                 var __abLink = document.createElement('link');
                 __abLink.id = 'abSaRevampCss';
                 __abLink.rel = 'stylesheet';
@@ -103,7 +122,7 @@
         try{if(typeof api.getCurrentUserId==='function'){var id=api.getCurrentUserId();if(id)return id;}
         if(api._serverInfo&&api._serverInfo.UserId)return api._serverInfo.UserId;}catch(e){}return '';
     }
-    function buildUrl(p){var api=getApi();var c=p.replace(/^\/+/,'');return(api&&typeof api.getUrl==='function')?api.getUrl(c):'/'+c;}
+    function buildUrl(p){var api=getApi();var c=p.replace(/^\/+/,'');return(api&&typeof api.getUrl==='function')?api.getUrl(c):SERVER_ROOT+c;}
     // [Jellyfin 12] Legacy authorization (X-Emby-Token, X-MediaBrowser-Token,
     // api_key in the query) is switched off by a 12.0 migration, so every
     // authenticated call answered 401. Send the current form; the legacy

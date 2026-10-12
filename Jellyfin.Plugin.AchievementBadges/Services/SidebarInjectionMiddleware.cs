@@ -15,21 +15,15 @@ public class SidebarInjectionMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<SidebarInjectionMiddleware> _logger;
 
-    // Marker + three external scripts. Keep in sync with WebInjectionService.ScriptBlock.
+    // Marker + three external scripts: the block WebInjectionService patches
+    // into index.html on disk, shared so the two cannot drift apart.
     // sidebar.js handles nav injection AND equipped-showcase gating (respects
     // admin ForceHideEquippedShowcase + per-user ShowEquippedShowcase).
     // Previously this middleware shipped a bloated inline script that created
     // the showcase UI unconditionally, which ignored both flags — the disk
     // patch (WebInjectionService) was correctly gated but middleware-only
     // installs saw header dots / sidebar pills even when disabled.
-    private static readonly string VerTag = ClientAssetVersion.QueryTag;
-
-    private static readonly string InjectionScript =
-        "<!-- achievementbadges-bootstrap -->" +
-        "<script src=\"/Plugins/AchievementBadges/client-script/sidebar" + VerTag + "\"></script>" +
-        "<script src=\"/Plugins/AchievementBadges/client-script/standalone" + VerTag + "\" defer></script>" +
-        "<script src=\"/Plugins/AchievementBadges/client-script/enhance" + VerTag + "\" defer></script>" +
-        "<!-- /achievementbadges-bootstrap -->";
+    private static readonly string InjectionScript = WebInjectionService.ScriptBlock;
 
     public SidebarInjectionMiddleware(RequestDelegate next, ILogger<SidebarInjectionMiddleware> logger)
     {
