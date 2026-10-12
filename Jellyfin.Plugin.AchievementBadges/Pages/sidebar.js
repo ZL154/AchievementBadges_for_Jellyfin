@@ -1,4 +1,8 @@
 (function(){
+    // Guard against a second copy of this script in the same page (double
+    // bootstrap): every timer, observer and poll below would run twice.
+    if (window.__abSidebarLoaded) return;
+    window.__abSidebarLoaded = true;
     try { console.log('[AchievementBadges] sidebar.js loaded'); } catch(e){}
     function escapeHtml(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
     var SIDEBAR_ID='ab-sidebar-entry';
@@ -175,8 +179,18 @@
     // tentatively allow injection so the UI appears quickly, and hide after
     // if the config says otherwise.
     var _showcaseEnabled = null;
+    // tryInject() runs on every (throttled) DOM mutation; while the flag is
+    // still null each call used to start its own public-config + preferences
+    // pair. Share the request that is already in flight instead.
+    var _showcaseResolving = null;
     function resolveShowcaseEnabled(){
         if (_showcaseEnabled !== null) return Promise.resolve(_showcaseEnabled);
+        if (_showcaseResolving) return _showcaseResolving;
+        _showcaseResolving = _resolveShowcaseEnabledNow();
+        _showcaseResolving.then(function(){ _showcaseResolving = null; }, function(){ _showcaseResolving = null; });
+        return _showcaseResolving;
+    }
+    function _resolveShowcaseEnabledNow(){
         // Track whether EITHER fetch actually succeeded — when both fail
         // (e.g. on page refresh before auth / ApiClient mounts), we must
         // NOT fall through to `_showcaseEnabled = true` because a failed
@@ -703,6 +717,11 @@
 
     function ensureFriendsDrawer(){
         if (_friendsMounted) return;
+        // Admin has switched Friends off: tryInject() calls us on every DOM
+        // mutation, and re-resolving here meant a public-config + preferences
+        // pair each time, forever. The 15s reconcile below re-checks the flag
+        // and mounts the button if the admin turns the feature back on.
+        if (_friendsAdminEnabled === false) return;
         // If a button already exists in the DOM (e.g. sidebar.js was
         // loaded twice due to the upgrade cache-bust serving both
         // versions in-flight), mark mounted and bail so we don't stack
@@ -712,7 +731,7 @@
         // call during the config fetch can't race in and spawn a duplicate.
         _friendsMounted = true;
         resolveFriendsConfig().then(function(cfg){
-            if (!cfg.enabled) { _friendsMounted = false; return; }
+            if (!cfg.enabled) { _friendsMounted = false; _friendsAdminEnabled = false; return; }
             _friendsSimpleMode = cfg.simple;
             _actuallyMount();
             applyCorner(cfg.corner);
