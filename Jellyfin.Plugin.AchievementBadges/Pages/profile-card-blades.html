@@ -47,7 +47,9 @@
   .av{ width:58px; height:58px; border-radius:14px; flex:0 0 auto; position:relative; overflow:hidden;
     background:rgba(255,255,255,.06); border:1px solid var(--line); }
   .av .ini{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:23px; font-weight:700; color:#e9edf3; }
-  .av .img{ position:absolute; inset:0; background-image:url('/Users/{{userId}}/Images/Primary?width=144&quality=90'); background-size:cover; background-position:center; }
+  /* [issue #155] From the server root relative to this card, like the back
+     link below, so both keep the base URL Jellyfin runs under. */
+  .av .img{ position:absolute; inset:0; background-image:url('{{root}}Users/{{userId}}/Images/Primary?width=144&quality=90'); background-size:cover; background-position:center; }
   .id{ flex:1; min-width:0; }
   .id .nm{ font-size:21px; font-weight:800; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .id .sub{ font-size:12.5px; color:var(--dim); margin-top:3px; }
@@ -117,8 +119,7 @@
 </head>
 <body class="{{bodyClass}}">
 {{bgLayerHtml}}
-  <a class="ab-back-btn" href="/web/index.html#/achievements" aria-label="Back to Jellyfin"
-     onclick="try{if(document.referrer&&window.history.length>1){window.history.back();return false;}}catch(e){}return true;">
+  <a class="ab-back-btn" href="{{root}}web/index.html#/achievements" aria-label="Back to Jellyfin">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
   </a>
 

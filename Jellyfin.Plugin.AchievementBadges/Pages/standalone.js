@@ -122,13 +122,30 @@
         return 'ab-r-common';
     }
 
+    // [issue #155] The server root as the browser resolved this script's src
+    // ({base}/Plugins/AchievementBadges/client-script/standalone), for the
+    // requests made without ApiClient: on the standalone page, which has no
+    // Jellyfin client, and before Jellyfin's client is up. A bare '/' dropped
+    // the base URL Jellyfin runs under. currentScript is only set while the
+    // script first runs, so read it here. The fallback is relative to the
+    // shell at {base}/web/, the one place this script could run without a
+    // src of its own: the standalone page always loads it by its src.
+    var SERVER_ROOT = (function () {
+        try {
+            var src = document.currentScript && document.currentScript.src;
+            var at = src ? src.indexOf('Plugins/AchievementBadges/client-script/') : -1;
+            if (at >= 0) return src.slice(0, at);
+        } catch (_) {}
+        return '../';
+    })();
+
     function getApiClient() { return window.ApiClient || window.apiClient || null; }
 
     function buildUrl(path) {
         var clean = String(path || '').replace(/^\/+/, '');
         var api = getApiClient();
         if (api && typeof api.getUrl === 'function') return api.getUrl(clean);
-        return '/' + clean;
+        return SERVER_ROOT + clean;
     }
 
     // [Jellyfin 12] Legacy authorization (X-Emby-Token, X-MediaBrowser-Token,
@@ -1193,7 +1210,10 @@
                        toggle. Persists via the same `ab-style-pref` localStorage
                        key so the user's choice is shared across both surfaces. */
                     '<button type="button" id="abSaStyleToggleBtn" class="abSaStyleToggleBtn" aria-pressed="false" title="Toggle Revamp / Classic UI" data-i18n="ui.toggle.classic">UI: Classic</button>' +
-                    '<a class="ab-back" href="/web/index.html#/home">\u2190 <span data-i18n="achievements.back_home">Back Home</span></a>' +
+                    /* [issue #155] Starts at the server root this script came
+                       from, so it keeps the base URL Jellyfin runs under. A
+                       root-relative /web/... left it out. */
+                    '<a class="ab-back" href="' + SERVER_ROOT + 'web/index.html#/home">\u2190 <span data-i18n="achievements.back_home">Back Home</span></a>' +
                 '</div>' +
                 '<div class="ab-hero">' +
                     /* v1.8.52: hero arc donut on the right side. Hidden in Classic

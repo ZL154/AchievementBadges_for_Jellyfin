@@ -546,13 +546,22 @@ font-size:0.88em;
         // in isolation): fall back to a per-load token rather than a stale one.
         return 'v=' + Date.now();
     })();
+    // [issue #155] The server root from the address of the shell this page
+    // runs in ({base}/web/...), for the URLs built without ApiClient, so they
+    // keep the base URL Jellyfin runs under. A root-relative /Plugins/ path
+    // dropped it.
+    function serverRoot() {
+        var p = window.location.pathname || '';
+        var idx = p.lastIndexOf('/web/');
+        return idx >= 0 ? p.substring(0, idx + 1) : '/';
+    }
     function cssUrl() {
         var ac = getApi();
         var base;
         if (ac && typeof ac.getUrl === 'function') {
             base = ac.getUrl('Plugins/AchievementBadges/client-script/styles-revamp');
         } else {
-            base = '/Plugins/AchievementBadges/client-script/styles-revamp';
+            base = serverRoot() + 'Plugins/AchievementBadges/client-script/styles-revamp';
         }
         return base + (base.indexOf('?') >= 0 ? '&' : '?') + CSS_BUST;
     }
@@ -881,7 +890,7 @@ font-size:0.88em;
     }
     function heroMetaUrl(path) {
         var ac = getApi();
-        return (ac && typeof ac.getUrl === 'function') ? ac.getUrl(path) : '/' + path;
+        return (ac && typeof ac.getUrl === 'function') ? ac.getUrl(path) : serverRoot() + path;
     }
     function loadHeroMeta(onChange) {
         if (heroMetaLoaded) return;
@@ -2688,13 +2697,22 @@ font-size:0.88em;
         return window.ApiClient || window.apiClient || null;
     }
 
+    // [issue #155] The server root from the address of the shell this page
+    // runs in ({base}/web/...), so a URL built without ApiClient keeps the
+    // base URL Jellyfin runs under. A bare '/' dropped it.
+    function serverRoot() {
+        var p = window.location.pathname || '';
+        var idx = p.lastIndexOf('/web/');
+        return idx >= 0 ? p.substring(0, idx + 1) : '/';
+    }
+
     function buildUrl(path) {
         var cleanPath = String(path || '').replace(/^\/+/, '');
         var apiClient = getApiClient();
         if (apiClient && typeof apiClient.getUrl === 'function') {
             return apiClient.getUrl(cleanPath);
         }
-        return '/' + cleanPath;
+        return serverRoot() + cleanPath;
     }
 
     function getAuthHeaders() {

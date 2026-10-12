@@ -2,6 +2,24 @@
     if (window.__abEnhanceLoaded) return;
     window.__abEnhanceLoaded = true;
 
+    // [issue #155] The server root as the browser resolved this script's src
+    // ({base}/Plugins/AchievementBadges/client-script/enhance), for the
+    // plugin's other assets and the requests made without ApiClient, so they
+    // keep the base URL Jellyfin runs under (https://example.com/jellyfin
+    // behind a reverse proxy, say). A root-relative /Plugins/ URL dropped
+    // that prefix. currentScript is only set while the script first runs, so
+    // read it here. The fallback is relative to the shell at {base}/web/, the
+    // one place this script could run without a src of its own.
+    var SERVER_ROOT = (function () {
+        try {
+            var src = document.currentScript && document.currentScript.src;
+            var at = src ? src.indexOf('Plugins/AchievementBadges/client-script/') : -1;
+            if (at >= 0) return src.slice(0, at);
+        } catch (_) {}
+        return '../';
+    })();
+    var CLIENT_SCRIPT_BASE = SERVER_ROOT + 'Plugins/AchievementBadges/client-script/';
+
     var TOAST_ID = 'ab-toast-container';
     var HOME_ID = 'ab-home-widget';
     var DETAIL_ID = 'ab-detail-ribbon';
@@ -105,7 +123,7 @@
 
     function buildUrl(p) {
         var api = getApi(); var c = p.replace(/^\/+/, '');
-        return (api && typeof api.getUrl === 'function') ? api.getUrl(c) : '/' + c;
+        return (api && typeof api.getUrl === 'function') ? api.getUrl(c) : SERVER_ROOT + c;
     }
 
     // [Jellyfin 12] Legacy authorization (X-Emby-Token, X-MediaBrowser-Token,
@@ -834,7 +852,7 @@
             // Diamond spritesheet for legendary/mythic — hides trophy, shows brilliant
             '.ab-xb-diamond .ab-xb-hide-trophy{display:none;}' +
             '.ab-xb-brilliant-wrap{display:block;height:75px;width:75px;border-radius:50%;overflow:hidden;z-index:101;position:absolute;top:0;left:0;opacity:0;}' +
-            '.ab-xb-brilliant{height:75px;width:75px;background-image:url(/Plugins/AchievementBadges/client-script/spritesheet);background-size:11025px 75px;background-position:right;}' +
+            '.ab-xb-brilliant{height:75px;width:75px;background-image:url("' + CLIENT_SCRIPT_BASE + 'spritesheet");background-size:11025px 75px;background-position:right;}' +
             '.ab-xb-play .ab-xb-brilliant-wrap{animation:abXbBrilliantWrap 10.5s forwards;}' +
             '.ab-xb-play .ab-xb-brilliant{animation:abXbBrilliantPlay 7.4s steps(147) 2s forwards;}' +
             '@keyframes abXbBrilliantWrap{0%,20%{opacity:0;}20.001%{opacity:1;}88%{opacity:1;}93%,100%{opacity:0;}}' +
