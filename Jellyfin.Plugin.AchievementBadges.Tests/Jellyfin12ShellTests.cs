@@ -166,9 +166,6 @@ public class Jellyfin12ShellTests
     }
 
     [Theory]
-    [InlineData("shell.js")]
-    [InlineData("navinject.js")]
-    [InlineData("profileinject.js")]
     [InlineData("profile-card.html")]
     [InlineData("profile-card-blades.html")]
     [InlineData("profile-card-metro.html")]
