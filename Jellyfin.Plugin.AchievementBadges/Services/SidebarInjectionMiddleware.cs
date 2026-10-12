@@ -118,20 +118,14 @@ public class SidebarInjectionMiddleware
                     html = await reader.ReadToEndAsync();
                 }
 
-                // v1.9.0: marker fast-path. The injection marker
-                // <!-- achievementbadges-bootstrap --> is always emitted
-                // immediately before </body>, so on a typical Jellyfin SPA
-                // index (~80KB) we'd previously scan the whole document
-                // string on every page request to look for it. Sample only
-                // the last 4KB — the entire end-of-body region — and fall
-                // through to "not injected yet" if it's not there. Safe
-                // because: (a) the marker only appears at the bottom of the
-                // document by construction, (b) if the marker is somehow
-                // present mid-document via an unrelated injection, double-
-                // injecting near </body> is harmless (scripts are idempotent).
-                var tailLen = Math.Min(4096, html.Length);
-                var tail = tailLen == html.Length ? html : html.Substring(html.Length - tailLen);
-                if (tail.Contains("achievementbadges-bootstrap", StringComparison.Ordinal))
+                // Already injected? Look in the whole document, not just the last
+                // 4KB (v1.9.0 fast-path): the on-disk patch (WebInjectionService)
+                // does not always land near </body>. When other plugins inject
+                // their own scripts after it, the marker sits tens of KB above
+                // </body>, a tail check misses it and every page ended up with the
+                // bootstrap twice, so sidebar.js and standalone.js ran twice per
+                // page. An ordinal search over a ~100KB SPA shell is cheap.
+                if (html.Contains("achievementbadges-bootstrap", StringComparison.Ordinal))
                 {
                     buffer.Seek(0, SeekOrigin.Begin);
                     context.Response.Body = originalBody;
