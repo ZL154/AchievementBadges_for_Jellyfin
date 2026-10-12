@@ -1497,6 +1497,10 @@ public class AchievementBadgesController : ControllerBase
         // keeps 'unsafe-inline' because the embedded <style> block uses
         // per-render template variables ({{tierColor}}) and migrating to a
         // nonce-based allowlist is a deferred follow-up.
+        // [issue #157] Without 'unsafe-inline', script-src also blocks
+        // inline event handlers (onclick="..."). The back button's onclick
+        // had been dead since v1.9.7, so the templates carry none and the
+        // button follows its href.
         Response.Headers["Content-Security-Policy"] =
             "default-src 'self'; " +
             "script-src 'self'; " +
