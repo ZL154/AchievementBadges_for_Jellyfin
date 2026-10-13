@@ -1,4 +1,8 @@
 (function(){
+    // Guard against a second copy of this script in the same page (double
+    // bootstrap): every timer, observer and poll below would run twice.
+    if (window.__abSidebarLoaded) return;
+    window.__abSidebarLoaded = true;
     try { console.log('[AchievementBadges] sidebar.js loaded'); } catch(e){}
     function escapeHtml(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
     var SIDEBAR_ID='ab-sidebar-entry';
@@ -171,27 +175,86 @@
 
     // Cached flag: should we show the equipped-badge showcase UI at all?
     // Resolved from (a) admin force-hide config and (b) per-user preference.
-    // Starts as null; once resolved becomes true/false. While null we
-    // tentatively allow injection so the UI appears quickly, and hide after
-    // if the config says otherwise.
+    // Starts as null and stays null until the first answer; after that it
+    // holds the last answer, and a re-check replaces it only with a newer
+    // one. While it is null nothing showcase-related is injected, so a
+    // showcase the config hides never flashes.
     var _showcaseEnabled = null;
+    // The user that answer belongs to: logging in or switching users asks
+    // again instead of keeping the previous user's preference.
+    var _showcaseFor = null;
+    // tryInject() runs on every (throttled) DOM mutation; while the flag is
+    // still null each call used to start its own public-config + preferences
+    // pair. Share the request that is already in flight instead.
+    var _showcaseResolving = null;
+    // After a check where both requests fail, wait before the next one (1s,
+    // doubling up to 30s). Retrying on the next DOM mutation kept a downed
+    // server busy with a new pair every 250ms per tab.
+    var _showcaseFailures = 0;
+    var _showcaseRetryAt = 0;
+    // A request that never answers (a dead keep-alive socket, a proxy
+    // holding it) would otherwise hold every caller of the shared one.
+    var SHOWCASE_FETCH_TIMEOUT_MS = 10000;
     function resolveShowcaseEnabled(){
-        if (_showcaseEnabled !== null) return Promise.resolve(_showcaseEnabled);
+        if (_showcaseEnabled !== null && _showcaseFor === getUserId()) return Promise.resolve(_showcaseEnabled);
+        return refreshShowcaseEnabled();
+    }
+    // Asks the server again and keeps the current answer until a newer one
+    // arrives; resolves to that answer (null while there is none).
+    function refreshShowcaseEnabled(){
+        if (_showcaseResolving) return _showcaseResolving;
+        if (performance.now() < _showcaseRetryAt) return Promise.resolve(_showcaseEnabled);
+        var pending = _resolveShowcaseEnabledNow();
+        var done = function(){ _showcaseResolving = null; };
+        _showcaseResolving = pending;
+        pending.then(done, done);
+        return pending;
+    }
+    // GETs a plugin JSON endpoint. Resolves to null on an error, a non-2xx
+    // answer or no answer within SHOWCASE_FETCH_TIMEOUT_MS; onOk runs when
+    // the server answered 2xx.
+    function fetchShowcaseJson(path, onOk){
+        var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+        var timer = null;
+        var gaveUp = new Promise(function(resolve){
+            timer = setTimeout(function(){
+                if (ctl) { try { ctl.abort(); } catch(e) {} }
+                resolve(null);
+            }, SHOWCASE_FETCH_TIMEOUT_MS);
+        });
+        var init = { headers: authHeaders(), credentials: 'include' };
+        if (ctl) init.signal = ctl.signal;
+        var answer = fetch(buildUrl(path), init)
+            .then(function(r){ if (r.ok) { onOk(); return r.json(); } return null; }).catch(function(){ return null; });
+        return Promise.race([answer, gaveUp]).then(function(v){ clearTimeout(timer); return v; });
+    }
+    function _resolveShowcaseEnabledNow(){
         // Track whether EITHER fetch actually succeeded — when both fail
         // (e.g. on page refresh before auth / ApiClient mounts), we must
         // NOT fall through to `_showcaseEnabled = true` because a failed
-        // call doesn't mean the admin hasn't force-hidden. Keep the flag
-        // `null` so the periodic re-resolve retries.
+        // call doesn't mean the admin hasn't force-hidden.
         var anySucceeded = false;
-        var pubPromise = fetch(buildUrl('Plugins/AchievementBadges/public-config'), { headers: authHeaders(), credentials: 'include' })
-            .then(function(r){ if (r.ok) { anySucceeded = true; return r.json(); } return null; }).catch(function(){ return null; });
-        var prefPromise = (function(){
-            var uid = getUserId(); if (!uid) return Promise.resolve(null);
-            return fetch(buildUrl('Plugins/AchievementBadges/users/' + uid + '/preferences'), { headers: authHeaders(), credentials: 'include' })
-                .then(function(r){ if (r.ok) { anySucceeded = true; return r.json(); } return null; }).catch(function(){ return null; });
-        })();
+        var succeeded = function(){ anySucceeded = true; };
+        var uid = getUserId();
+        var pubPromise = fetchShowcaseJson('Plugins/AchievementBadges/public-config', succeeded);
+        var prefPromise = uid
+            ? fetchShowcaseJson('Plugins/AchievementBadges/users/' + uid + '/preferences', succeeded)
+            : Promise.resolve(null);
         return Promise.all([pubPromise, prefPromise]).then(function(results){
             var pub = results[0], prefs = results[1];
+            // If BOTH fetches failed, keep the last answer (null until the
+            // first one) and back off. Don't assume the showcase should be
+            // on: that was the root cause of "force-hide broken on refresh",
+            // where public-config 401'd before ApiClient mounted, both fell
+            // to null, and the fallback flipped the flag to true.
+            if (!anySucceeded) {
+                _showcaseFailures++;
+                _showcaseRetryAt = performance.now() + Math.min(30000, 1000 * Math.pow(2, _showcaseFailures - 1));
+                return _showcaseEnabled;
+            }
+            _showcaseFailures = 0;
+            _showcaseRetryAt = 0;
+            _showcaseFor = uid;
             // [#42 follow-up] Which friend-popover the VIEWER sees: our
             // reimagined card (default) or camarigor's compact #76 one.
             if (prefs) {
@@ -199,15 +262,6 @@
             }
             if (pub && pub.ForceHideEquippedShowcase) { _showcaseEnabled = false; installShowcaseWatchdog(); return false; }
             if (prefs && prefs.ShowEquippedShowcase === false) { _showcaseEnabled = false; installShowcaseWatchdog(); return false; }
-            // If BOTH fetches failed, keep _showcaseEnabled null so the
-            // next pass retries. Don't assume the showcase should be on
-            // — that was the root cause of "force-hide broken on refresh":
-            // public-config fetch 401'd before ApiClient mounted, both
-            // fell to null, and the fallback flipped the flag to true.
-            if (!anySucceeded) {
-                _showcaseEnabled = null;
-                return null;
-            }
             _showcaseEnabled = true;
             restoreShowcaseCss();
             return true;
@@ -273,9 +327,27 @@
         } catch(e) {}
     }
 
+    function addShowcaseStrip(entry){
+        var showcase = document.createElement('div');
+        showcase.id = SHOWCASE_ID;
+        showcase.style.cssText = 'display:flex;gap:4px;padding:2px 12px 8px 42px;flex-wrap:wrap;';
+        if(entry.nextSibling){ entry.parentNode.insertBefore(showcase, entry.nextSibling); }
+        else { entry.parentNode.appendChild(showcase); }
+    }
+
     function injectSidebar(){
         try {
-            if(document.getElementById(SIDEBAR_ID)){ return; }
+            var existingEntry = document.getElementById(SIDEBAR_ID);
+            if(existingEntry){
+                // The strip waits for an answer, which can come after the
+                // entry: the first check failed, or the showcase was off and
+                // got switched back on.
+                if(_showcaseEnabled === true && existingEntry.parentNode && !document.getElementById(SHOWCASE_ID)){
+                    addShowcaseStrip(existingEntry);
+                    refreshShowcases();
+                }
+                return;
+            }
             var allItems = document.querySelectorAll('.navMenuOption');
             var anchorItem = null;
             var anchorPlacement = 'after';
@@ -329,23 +401,18 @@
             }
 
             // Only add the equipped-showcase strip if enabled (admin override +
-            // per-user pref). If still resolving, tentatively skip — the strip
-            // gets added later on the next inject pass if allowed.
-            if (_showcaseEnabled !== false) {
-                var showcase = document.createElement('div');
-                showcase.id = SHOWCASE_ID;
-                showcase.style.cssText = 'display:flex;gap:4px;padding:2px 12px 8px 42px;flex-wrap:wrap;';
-                if(a.nextSibling){ parent.insertBefore(showcase, a.nextSibling); }
-                else { parent.appendChild(showcase); }
+            // per-user pref). With no answer yet, skip it: a later inject pass
+            // adds it once the answer allows it.
+            if (_showcaseEnabled === true) {
+                addShowcaseStrip(a);
+                refreshShowcases();
             }
-
-            refreshShowcases();
         } catch(e) { console.error('[AchievementBadges] injectSidebar error:', e); }
     }
 
     function injectHeader(){
         try {
-            if (_showcaseEnabled === false) return; // admin or user disabled
+            if (_showcaseEnabled !== true) return; // disabled, or no answer yet
             var legacyRight=document.querySelector('.headerRight')||document.querySelector('.skinHeader .headerButton:last-child');
             // [Jellyfin 12] The modern layout keeps .skinHeader in the DOM
             // but hidden, and .headerRight is still inside it, so "found
@@ -479,9 +546,11 @@
 
     function tryInject(){
         // Resolve showcase flag on first pass; if disabled, ensure any
-        // previously-injected showcase DOM is cleaned up.
+        // previously-injected showcase DOM is cleaned up. No answer yet is
+        // not "disabled": nothing was injected, and removing here made the
+        // next pass re-create the header while the server was down.
         resolveShowcaseEnabled().then(function (enabled) {
-            if (!enabled) removeShowcaseDom();
+            if (enabled === false) removeShowcaseDom();
             injectSidebar();
             injectHeader();
             injectUserMenu();
@@ -511,28 +580,32 @@
             // hasn't landed yet and the server still returns the OLD state.
             if (ev && ev.detail && typeof ev.detail.show === 'boolean') {
                 _showcaseEnabled = ev.detail.show;
+                _showcaseFor = getUserId();
                 if (!ev.detail.show) {
                     installShowcaseWatchdog();
                     removeShowcaseDom();
+                } else {
+                    // Turned back on: without this the force-hide rule kept
+                    // the re-created header hidden until the next poll.
+                    restoreShowcaseCss();
                 }
                 tryInject();
                 return;
             }
-            _showcaseEnabled = null;
-            tryInject();
+            forceResolveShowcase();
         });
     } catch (e) {}
 
     // Re-resolve the showcase flag on every meaningful navigation event +
     // a frequent timer, so an ADMIN toggling ForceHideEquippedShowcase
-    // propagates to every open client within ~15s (admin can't broadcast
-    // to other users' tabs cross-origin). Resetting _showcaseEnabled to
-    // null forces resolveShowcaseEnabled to re-fetch public-config + prefs
-    // from the server.
+    // propagates to every open client within ~30s (admin can't broadcast
+    // to other users' tabs cross-origin). refreshShowcaseEnabled() asks the
+    // server again and keeps the current answer until a newer one arrives,
+    // so a failed check leaves the page as it was.
     function forceResolveShowcase(){
-        _showcaseEnabled = null;
-        resolveShowcaseEnabled().then(function(enabled){
-            if (!enabled) removeShowcaseDom();
+        refreshShowcaseEnabled().then(function(enabled){
+            if (enabled === false) removeShowcaseDom();
+            else if (enabled === true) { injectSidebar(); injectHeader(); }
         });
     }
     // Install the watchdog unconditionally on script load. It's idempotent
@@ -701,8 +774,29 @@
         _friendsCornerApplied = corner;
     }
 
+    // Mounts the button and drawer, then starts the background unread-count
+    // poll so the button's red dot lights up even when the drawer is closed
+    // (20s cadence keeps traffic trivial). ensureFriendsDrawer() and the 15s
+    // reconcile both mount through here: when Friends was off as the page
+    // loaded, the reconcile is the only path that mounts once the admin
+    // turns it back on, and it used to skip the poll.
+    function mountFriends(cfg){
+        _friendsMounted = true;
+        _friendsSimpleMode = cfg.simple;
+        _actuallyMount();
+        applyCorner(cfg.corner);
+        if (_chatUnreadPollTimer) clearInterval(_chatUnreadPollTimer);
+        refreshUnreadCounts();
+        _chatUnreadPollTimer = setInterval(refreshUnreadCounts, 20000);
+    }
+
     function ensureFriendsDrawer(){
         if (_friendsMounted) return;
+        // Admin has switched Friends off: tryInject() calls us on every DOM
+        // mutation, and re-resolving here meant a public-config + preferences
+        // pair each time, forever. The 15s reconcile below re-checks the flag
+        // and mounts the button if the admin turns the feature back on.
+        if (_friendsAdminEnabled === false) return;
         // If a button already exists in the DOM (e.g. sidebar.js was
         // loaded twice due to the upgrade cache-bust serving both
         // versions in-flight), mark mounted and bail so we don't stack
@@ -712,16 +806,8 @@
         // call during the config fetch can't race in and spawn a duplicate.
         _friendsMounted = true;
         resolveFriendsConfig().then(function(cfg){
-            if (!cfg.enabled) { _friendsMounted = false; return; }
-            _friendsSimpleMode = cfg.simple;
-            _actuallyMount();
-            applyCorner(cfg.corner);
-            // Kick off background unread-count poll so the button's red
-            // dot lights up even when the drawer is closed. 20s cadence
-            // keeps traffic trivial.
-            if (_chatUnreadPollTimer) clearInterval(_chatUnreadPollTimer);
-            refreshUnreadCounts();
-            _chatUnreadPollTimer = setInterval(refreshUnreadCounts, 20000);
+            if (!cfg.enabled) { _friendsMounted = false; _friendsAdminEnabled = false; return; }
+            mountFriends(cfg);
         }).catch(function(){ _friendsMounted = false; });
     }
 
@@ -744,10 +830,7 @@
             }
             if (!_friendsMounted) {
                 if (document.getElementById('abFriendsBtn')) { _friendsMounted = true; return; }
-                _friendsSimpleMode = cfg.simple;
-                _friendsMounted = true;
-                _actuallyMount();
-                applyCorner(cfg.corner);
+                mountFriends(cfg);
             } else {
                 // Re-run the context-aware visibility check — don't
                 // unconditionally clear display here (that was overriding
@@ -815,6 +898,9 @@
         });
         _friendsMounted = false;
         _friendsOpen = false;
+        // The unread poll belongs to the mounted button; mountFriends()
+        // starts it again if Friends comes back.
+        if (_chatUnreadPollTimer) { clearInterval(_chatUnreadPollTimer); _chatUnreadPollTimer = null; }
     }
     function _actuallyMount(){
         // Remove any stale older-version button/drawer/backdrop so we
