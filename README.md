@@ -572,7 +572,7 @@ Nothing is required on the Tracearr side. It uses the existing public v2 API.
 - **Embedded resource cache** in `client-script` + `asset` routes — one read per process
 - **`Cache-Control: public, max-age=86400, immutable`** on assets with version-only cache busting; video backgrounds use HTTP Range so the browser only streams the bytes it needs to start playing
 - **`Cache-Control: no-cache, must-revalidate`** on translations (v2.0) so users always get fresh strings after a plugin update without hard-refreshing
-- Middleware marker fast-path (last-4KB scan instead of full body)
+- **Sidebar checks that back off**: the showcase check shares one in-flight request, waits 1s to 30s after a failed check instead of retrying on every page change, and slows from 5s to 30s after the first minute
 
 ---
 
