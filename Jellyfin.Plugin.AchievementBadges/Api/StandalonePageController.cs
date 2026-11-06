@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -71,6 +72,11 @@ public class StandalonePageController : ControllerBase
 
         // The HTML loads ONLY the AB page fragment + the standalone.js
         // bundle. No Jellyfin shell, no sidebar, no top bar.
+        // [issue #155] The bundle's source starts at the server root relative
+        // to this page, so it keeps the base URL Jellyfin runs under and the
+        // scheme the browser actually used. Built from the server's own
+        // scheme and host, it left the base URL out.
+        var root = ServerRoot.RelativeFrom(Request.Path.Value);
         var html = $@"<!DOCTYPE html>
 <html lang=""en"">
 <head>
@@ -99,7 +105,7 @@ public class StandalonePageController : ControllerBase
 </head>
 <body>
   <div id=""achievement-root""></div>
-  <script src=""{origin}/Plugins/AchievementBadges/client-script/standalone""></script>
+  <script src=""{root}Plugins/AchievementBadges/client-script/standalone""></script>
 </body>
 </html>";
 
