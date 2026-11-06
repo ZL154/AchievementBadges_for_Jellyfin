@@ -1,5 +1,8 @@
+using System;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Jellyfin.Plugin.AchievementBadges.Services;
@@ -151,5 +154,31 @@ public class WebInjectionTests
     public void CanRoundTrip_OnlyClaimsWhatItHandles(string? encoding, bool expected)
     {
         Assert.Equal(expected, ResponseCompression.CanRoundTrip(encoding));
+    }
+
+    // [issue #155] With a base URL (https://example.com/jellyfin) Jellyfin
+    // serves the shell at {base}/web/ and the plugin at {base}/Plugins/, and a
+    // reverse proxy in front typically forwards that prefix and nothing else.
+    // The injected tags pointed at /Plugins/..., which drops the prefix, so
+    // none of the client scripts loaded there. Resolved the way the browser
+    // resolves them, they now land under whatever base the shell is under.
+    [Theory]
+    [InlineData("https://example.com/jellyfin/web/index.html")]
+    [InlineData("https://example.com/jellyfin/web/")]
+    [InlineData("https://example.com/web/")]
+    public async Task Injected_scripts_resolve_under_the_shell_base_url(string shellUrl)
+    {
+        var (body, enc) = await RunAsync(null);
+        var html = Decode(body, enc);
+        var srcs = Regex.Matches(html, "<script src=\"([^\"]+)\"").Select(m => m.Groups[1].Value).ToList();
+        var shell = new Uri(shellUrl);
+        var basePath = new Uri(shell, "../").AbsolutePath;
+
+        Assert.Equal(3, srcs.Count);
+        foreach (var name in new[] { "sidebar", "standalone", "enhance" })
+        {
+            var src = Assert.Single(srcs, s => s.Contains("client-script/" + name + "?", StringComparison.Ordinal));
+            Assert.Equal(basePath + "Plugins/AchievementBadges/client-script/" + name, new Uri(shell, src).AbsolutePath);
+        }
     }
 }

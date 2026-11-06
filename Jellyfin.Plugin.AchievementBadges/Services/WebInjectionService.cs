@@ -35,12 +35,20 @@ public class WebInjectionService : IHostedService
     // Include the compiled module id as well as the release version. Multiple
     // test builds can legitimately share one release version; the client-script
     // endpoint is immutable-cached, so a version-only URL can keep stale JS.
+    // SidebarInjectionMiddleware injects this same block at request time.
+    //
+    // [issue #155] The sources are relative to the shell, which Jellyfin
+    // serves at {base}/web/ or {base}/web/index.html, so "../Plugins/" lands
+    // under the base URL Jellyfin runs with (https://example.com/jellyfin
+    // behind a reverse proxy, say) and at /Plugins/ without one. A
+    // root-relative /Plugins/ path dropped that prefix, and a proxy that only
+    // forwards /jellyfin/ answered 404 for all three scripts.
     private static readonly string VerTag = ClientAssetVersion.QueryTag;
-    private static readonly string ScriptBlock =
+    internal static readonly string ScriptBlock =
         MarkerStart +
-        "<script src=\"/Plugins/AchievementBadges/client-script/sidebar" + VerTag + "\"></script>" +
-        "<script src=\"/Plugins/AchievementBadges/client-script/standalone" + VerTag + "\" defer></script>" +
-        "<script src=\"/Plugins/AchievementBadges/client-script/enhance" + VerTag + "\" defer></script>" +
+        "<script src=\"../Plugins/AchievementBadges/client-script/sidebar" + VerTag + "\"></script>" +
+        "<script src=\"../Plugins/AchievementBadges/client-script/standalone" + VerTag + "\" defer></script>" +
+        "<script src=\"../Plugins/AchievementBadges/client-script/enhance" + VerTag + "\" defer></script>" +
         MarkerEnd;
 
     // Embedded plugin-version stamp. When it changes across upgrades we
