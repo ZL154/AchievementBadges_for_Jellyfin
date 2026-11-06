@@ -262,6 +262,17 @@ public class AchievementBadgesController : ControllerBase
         return Array.IndexOf(typeof(AchievementBadgesController).Assembly.GetManifestResourceNames(), resourceName) >= 0;
     }
 
+    /// <summary>The profile card's animated background: the looping video for
+    /// an already HTML-encoded background id, and the overlay above it.</summary>
+    /// <remarks>[issue #155] <paramref name="root"/> is the card's
+    /// <see cref="ServerRoot.RelativeFrom"/>, so the video keeps the base URL
+    /// Jellyfin runs under.</remarks>
+    public static string ProfileCardBackgroundLayer(string root, string encodedBackgroundId)
+    {
+        return "<video class=\"bgv\" autoplay muted loop playsinline disableremoteplayback aria-hidden=\"true\" src=\"" + root + "Plugins/AchievementBadges/asset/" + encodedBackgroundId + "\"></video>" +
+            "<div class=\"bgo\" aria-hidden=\"true\"></div>";
+    }
+
     private static byte[]? GetCachedEmbeddedBytes(string resourceName)
     {
         return _embeddedBytesCache.GetOrAdd(resourceName, key =>
@@ -1551,6 +1562,12 @@ public class AchievementBadgesController : ControllerBase
         var content = ResourceReader.ReadEmbeddedText(templateResource)
             ?? "<html><body>Profile card template missing.</body></html>";
 
+        // [issue #155] What the card loads from the server (the avatar, the
+        // background video, the back button's target) starts at {{root}},
+        // relative to the card itself, so it keeps the base URL Jellyfin runs
+        // under. A root-relative /Users/... left it out.
+        var root = ServerRoot.RelativeFrom(Request.Path.Value);
+
         // Pre-fetch all the data server-side so the rendered HTML works without
         // needing the client to make authenticated fetches (which fail because
         // the tab has no X-Emby-Token).
@@ -1609,9 +1626,7 @@ public class AchievementBadgesController : ControllerBase
             var bgLayerHtml = string.Empty;
             if (bgClass.Length > 0 && HasEmbeddedResource("Jellyfin.Plugin.AchievementBadges.Pages.assets." + bgClass + ".mp4"))
             {
-                bgLayerHtml =
-                    "<video class=\"bgv\" autoplay muted loop playsinline disableremoteplayback aria-hidden=\"true\" src=\"/Plugins/AchievementBadges/asset/" + bgClass + "\"></video>" +
-                    "<div class=\"bgo\" aria-hidden=\"true\"></div>";
+                bgLayerHtml = ProfileCardBackgroundLayer(root, bgClass);
             }
 
             var recap = _recapService.GetRecap(userId, "month");
@@ -1623,7 +1638,10 @@ public class AchievementBadgesController : ControllerBase
             var streakData = _badgeService.GetStreakCalendar(userId, 53);
             int currentStreak = (int)(streakData.GetType().GetProperty("CurrentStreak")?.GetValue(streakData) ?? 0);
 
+            // {{root}} goes first, before any value that came from a user
+            // can carry the token into the page.
             content = content
+                .Replace("{{root}}", root)
                 .Replace("{{userId}}", System.Net.WebUtility.HtmlEncode(userId))
                 .Replace("{{userName}}", System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(cardUserName) ? "Jellyfin user" : cardUserName))
                 .Replace("{{userInitial}}", System.Net.WebUtility.HtmlEncode(
