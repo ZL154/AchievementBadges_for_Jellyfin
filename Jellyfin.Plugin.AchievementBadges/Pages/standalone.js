@@ -1,4 +1,7 @@
 (function () {
+    // Same guard as enhance.js: run once per page even if the bootstrap is doubled.
+    if (window.__abStandaloneLoaded) return;
+    window.__abStandaloneLoaded = true;
     var ROUTE_MATCH = "/achievements";
     var ROOT_ID = "achievementBadgesStandaloneRoot";
 
