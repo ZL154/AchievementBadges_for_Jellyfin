@@ -25,10 +25,10 @@ from that codepen are redistributed with this plugin.
 Material Icons referenced in the UI are provided by Jellyfin's own web
 client and are licensed under Apache 2.0 by Google.
 
-Two pieces of artwork in `assets/` embed Material Icons glyphs directly,
-under the same Apache 2.0 license: the unlock toast
-(`achievement-animated.svg`, the trophy) and the plugin card
-(`plugin-card.svg` and its PNG, the trophy, star and verified user).
+The artwork in `assets/` embeds a Material Icons glyph directly, under the
+same Apache 2.0 license: the trophy in the unlock toast
+(`achievement-animated.svg`), and in the banner and plugin card that show
+it (`achievement.png`, `plugin-card.png`).
 
 ## License summary
 
