@@ -311,7 +311,7 @@ A gear icon on the achievements page opens a full settings panel with auto-save:
 
 ### 🌍 Languages
 
-- **8 languages** — English, Français, Español, Deutsch, Italiano, Português, 中文 (简体), 日本語
+- **8 languages** — English, Français, Español, Deutsch, Italiano, Nederlands, Português, 中文 (简体), 日本語
 - **~2,200 UI keys** translated across every tab (achievements profile, stats, heatmap, streak calendar, prestige leaderboard, notification prefs, server stats, compare, leaderboards, recap, quests, admin page, and every v2.0 Loadout surface)
 - **All 200+ built-in badges** translated — titles + descriptions per language, with hand-tailored cultural references (the *Spirited Away* badge is *Le Voyage de Chihiro* / *El Viaje de Chihiro* / *Chihiros Reise* / *La Città Incantata* / *A Viagem de Chihiro* / *千与千寻* / *千と千尋*)
 - **Badge categories + rarities** also localised ("Binge" → "Marathon", "Legendary" → "Légendaire", etc.)
