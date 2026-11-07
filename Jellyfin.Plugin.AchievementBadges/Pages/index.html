@@ -1625,6 +1625,7 @@ font-size:0.88em;
                                 <option value="es">Español</option>
                                 <option value="de">Deutsch</option>
                                 <option value="it">Italiano</option>
+                                <option value="nl">Nederlands</option>
                                 <option value="pt">Português</option>
                                 <option value="ja">日本語</option>
                                 <option value="zh">中文</option>
@@ -2107,6 +2108,7 @@ font-size:0.88em;
                                 <option value="es">Español</option>
                                 <option value="de">Deutsch</option>
                                 <option value="it">Italiano</option>
+                                <option value="nl">Nederlands</option>
                                 <option value="pt">Português</option>
                                 <option value="zh">中文</option>
                                 <option value="ja">日本語</option>
@@ -2444,7 +2446,7 @@ font-size:0.88em;
             if (stored) return stored;
         } catch (e) { /* ignore */ }
         var nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase().slice(0, 2);
-        var supported = ['en','fr','es','de','it','pt','zh','ja'];
+        var supported = ['en','fr','es','de','it','nl','pt','zh','ja'];
         return supported.indexOf(nav) >= 0 ? nav : 'en';
     }
     function apply(dict) {
