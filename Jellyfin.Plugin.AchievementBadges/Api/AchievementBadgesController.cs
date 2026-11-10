@@ -630,7 +630,7 @@ public class AchievementBadgesController : ControllerBase
         return Ok(new { Messages = msgs, ConversationId = conv.Id });
     }
 
-    public class SendMessageRequest { public string Text { get; set; } = string.Empty; public string? AttachmentId { get; set; } }
+    public class SendMessageRequest { public string Text { get; set; } = string.Empty; public string? AttachmentId { get; set; } public string? ItemId { get; set; } }
     public class EditMessageRequest { public string Text { get; set; } = string.Empty; }
     public class CreateGroupRequest { public string? Title { get; set; } public List<string> ParticipantIds { get; set; } = new(); }
     public class RenameGroupRequest { public string? Title { get; set; } }
@@ -650,7 +650,7 @@ public class AchievementBadgesController : ControllerBase
                        ?? User.Identity?.Name
                        ?? string.Empty;
         var conv = _messagingService.GetOrCreateDm(userId, otherUserId);
-        var (ok, err, msg) = _messagingService.SendToConversation(userId, fromName, conv.Id, body?.Text ?? string.Empty, body?.AttachmentId);
+        var (ok, err, msg) = _messagingService.SendToConversation(userId, fromName, conv.Id, body?.Text ?? string.Empty, body?.AttachmentId, body?.ItemId);
         return Ok(new { Success = ok, Message = err, Sent = msg, ConversationId = conv.Id });
     }
 
@@ -724,7 +724,7 @@ public class AchievementBadgesController : ControllerBase
                        ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
                        ?? User.Identity?.Name
                        ?? string.Empty;
-        var (ok, err, msg) = _messagingService.SendToConversation(userId, fromName, convId, body?.Text ?? string.Empty, body?.AttachmentId);
+        var (ok, err, msg) = _messagingService.SendToConversation(userId, fromName, convId, body?.Text ?? string.Empty, body?.AttachmentId, body?.ItemId);
         return Ok(new { Success = ok, Message = err, Sent = msg });
     }
 
