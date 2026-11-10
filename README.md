@@ -220,6 +220,7 @@ Xbox-Guide-style chat built into the Friends drawer. No external service, no Web
 - **Messages tab** next to Friends / Requests / Find, with threads newest-first, avatars, last-message preview + timestamp, and a per-conversation unread count
 - **1:1 DMs** and **group chats** (2–20 participants, named, rename + leave + members list)
 - **Image attachments** — PNG / JPEG / GIF / WebP up to 8 MB, server-side magic-byte verification so nobody can smuggle a `.exe` renamed to `.png`. Click-to-zoom lightbox
+- **Recommend to a friend (#175)**: an envelope in the button row of an item's page opens the Friends drawer with that title attached. Open a chat with a friend, or a group in the Messages tab, add a note if you like, and send; your friend gets a card that opens the item. The server only accepts a title the sender can see, and the card asks Jellyfin for the item with the reader's own account, so someone who cannot see it (a library they have no access to, a parental rating above theirs) gets "Not available in your library" without the title or the poster. The envelope shows once you have a friend
 - **Read receipts** — single green ✓ for delivered, double green ✓✓ for read. Per-participant `readBy` map so group receipts work too
 - **Edit and delete** your own messages via WhatsApp-style dropdown — click anywhere on your own bubble to open the menu, 24-hour edit window
 - **Clear conversation** button in the chat gear menu (wipes both sides, confirm dialog)

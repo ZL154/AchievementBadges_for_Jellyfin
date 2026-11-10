@@ -29,6 +29,14 @@ public class Message
     [JsonPropertyName("editedAt")]    public DateTime? EditedAt  { get; set; }
     /// <summary>Optional image attachment ID. Look up via Attachments store.</summary>
     [JsonPropertyName("attachmentId")] public string? AttachmentId { get; set; }
+    /// <summary>
+    /// [issue #175] Optional library item the sender recommends, as Jellyfin's
+    /// 32-digit item id. Stored only after the server checked that Jellyfin
+    /// shows the item to the sender. Each reader's client asks Jellyfin for
+    /// the item with its own session, so a reader without access to it
+    /// learns nothing about it.
+    /// </summary>
+    [JsonPropertyName("itemId")]      public string? ItemId     { get; set; }
 }
 
 /// <summary>
@@ -70,6 +78,8 @@ public class ConversationSummary
     [JsonPropertyName("lastAt")]         public DateTime LastAt         { get; set; }
     [JsonPropertyName("unreadCount")]    public int      UnreadCount    { get; set; }
     [JsonPropertyName("hasAttachment")]  public bool     HasAttachment  { get; set; }
+    /// <summary>[issue #175] The last message recommends a library item.</summary>
+    [JsonPropertyName("hasItem")]        public bool     HasItem        { get; set; }
 }
 
 public class ConversationParticipant

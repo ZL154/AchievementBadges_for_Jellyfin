@@ -578,6 +578,9 @@
         // is cheap to call repeatedly so the retry loop covers the case
         // where document.body wasn't ready on the first start() call.
         try { ensureFriendsDrawer(); } catch(e) {}
+        // [issue #175] Also idempotent, and off an item's page it makes no
+        // request at all.
+        try { injectRecommendButtons(); } catch(e) {}
     }
 
     // Listen for live preference changes broadcast from the achievements
@@ -717,6 +720,8 @@
 
     var _friendsMounted = false;
     var _friendsOpen = false;
+    var _openFriendsDrawer = null;  // [issue #175] open() of the mounted drawer, for the envelope on an item's page
+    var _closeFriendsDrawer = null; // [issue #175] close() of the mounted drawer
     var _friendsCachedUsers = null;
     var _friendsSimpleMode = false;
     var _friendsCornerApplied = null;
@@ -734,6 +739,7 @@
     var _chatMsgsPollTimer = null;  // messages-tab poll while that tab is active
     var _chatLastRenderHash = '';   // to suppress flicker if nothing changed
     var _chatPendingAttachment = null; // { Id, FileName, MimeType, ... } before send
+    var _recommendItem = null;      // [issue #175] { id, name, poster } picked on an item's page, until sent or dropped
     var _chatPendingPreviewUrl = null;
     var _chatAttachmentUrls = {};    // attachmentId -> authenticated blob URL
     var _chatAttachmentOrder = [];
@@ -1171,6 +1177,31 @@
                 '#abChatAttachPreview button{width:24px;height:24px;border-radius:50%;border:none;background:rgba(239,68,68,0.18);color:#fca5a5;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}' +
                 '#abChatAttachPreview button:hover{background:rgba(239,68,68,0.32);color:#fff;}' +
                 '#abChatAttachPreview button .material-icons{font-size:0.8em;}' +
+                // [issue #175] Recommend to a friend: the banner over the
+                // friends list, the title attached in the composer, and the
+                // card in a bubble. One poster box serves all three.
+                '.ab-rec-poster{width:36px;height:54px;border-radius:6px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);}' +
+                '.ab-rec-poster img{width:100%;height:100%;object-fit:cover;display:block;}' +
+                '.ab-rec-poster .material-icons{font-size:1.2em;}' +
+                '.ab-fd-recommend{display:flex;align-items:center;gap:0.65em;margin:0.6em 0.8em 0;padding:0.55em 0.65em;border-radius:12px;background:linear-gradient(135deg,rgba(102,126,234,0.18),rgba(118,75,162,0.18));border:1px solid rgba(102,126,234,0.35);}' +
+                '.ab-fd-recommend-text{flex:1;min-width:0;}' +
+                '.ab-fd-recommend-title{font-weight:700;font-size:0.88em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+                '.ab-fd-recommend-hint{font-size:0.75em;color:rgba(255,255,255,0.65);margin-top:0.15em;}' +
+                '.ab-fd-recommend-cancel{width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;}' +
+                '.ab-fd-recommend-cancel .material-icons{font-size:1em;}' +
+                '#abFriendsDrawer.ab-fd-recommending .ab-fd-act.chat{box-shadow:0 0 0 2px rgba(165,180,255,0.75);}' +
+                '#abChatItemPreview{display:flex;align-items:center;gap:0.5em;padding:0 1em 0.5em;}' +
+                '.ab-chat-item-preview-name{flex:1;min-width:0;font-size:0.85em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+                '#abChatItemPreview button{width:24px;height:24px;border-radius:50%;border:none;background:rgba(239,68,68,0.18);color:#fca5a5;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;}' +
+                '#abChatItemPreview button .material-icons{font-size:0.8em;}' +
+                '.ab-chat-item{display:flex;align-items:center;gap:0.65em;margin:0 0 0.3em;padding:0.45em;border-radius:12px;background:rgba(0,0,0,0.22);color:inherit;text-decoration:none;min-width:200px;max-width:260px;box-sizing:border-box;}' +
+                'a.ab-chat-item[href]{cursor:pointer;}' +
+                'a.ab-chat-item[href]:hover{background:rgba(0,0,0,0.32);}' +
+                '.ab-chat-item-info{display:flex;flex-direction:column;min-width:0;}' +
+                '.ab-chat-item-kicker{font-size:0.68em;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;opacity:0.7;}' +
+                '.ab-chat-item-name{font-weight:700;font-size:0.92em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+                '.ab-chat-item-sub{font-size:0.75em;opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+                '.ab-chat-item.unavailable .ab-chat-item-name{font-weight:600;font-style:italic;opacity:0.85;}' +
 
                 // Messages-tab header: sits right below the tabs row, uses the
                 // SAME visual language as the Friends / Messages tab buttons
@@ -1262,6 +1293,16 @@
                 '<button type="button" class="ab-fd-tab" data-ab-fdtab="requests" data-ab-hide-in-simple' + (_friendsSimpleMode ? ' style="display:none;"' : '') + '>' + tr('friends.tab_requests', 'Requests') + '<span id="abFriendsIncBadge" style="display:none;"></span></button>' +
                 '<button type="button" class="ab-fd-tab" data-ab-fdtab="find" data-ab-hide-in-simple' + (_friendsSimpleMode ? ' style="display:none;"' : '') + '>' + tr('friends.tab_find', 'Find') + '</button>' +
             '</div>' +
+            // [issue #175] Shown while a title picked on an item's page waits
+            // for someone to send it to.
+            '<div class="ab-fd-recommend" id="abRecommendBanner" style="display:none;">' +
+                '<span class="ab-rec-poster" id="abRecommendPoster"></span>' +
+                '<div class="ab-fd-recommend-text">' +
+                    '<div class="ab-fd-recommend-title" id="abRecommendTitle"></div>' +
+                    '<div class="ab-fd-recommend-hint">' + tr('friends.recommend_hint', 'Open a chat with a friend, or a group in Messages, to send it.') + '</div>' +
+                '</div>' +
+                '<button type="button" class="ab-fd-recommend-cancel" id="abRecommendCancel" title="' + tr('friends.cancel', 'Cancel') + '"><span class="material-icons">close</span></button>' +
+            '</div>' +
             '<div class="ab-fd-body" style="position:relative;">' +
                 '<div id="abFriendsPaneFriends"></div>' +
                 '<div id="abFriendsPaneMessages" style="display:none;"></div>' +
@@ -1299,6 +1340,11 @@
                         '<img id="abChatAttachPreviewImg" alt="attachment preview" />' +
                         '<button type="button" id="abChatAttachClear" title="'+tr('friends.remove_attachment','Remove')+'"><span class="material-icons">close</span></button>' +
                     '</div>' +
+                    '<div id="abChatItemPreview" style="display:none;">' +
+                        '<span class="ab-rec-poster" id="abChatItemPreviewPoster"></span>' +
+                        '<span class="ab-chat-item-preview-name" id="abChatItemPreviewName"></span>' +
+                        '<button type="button" id="abChatItemClear" title="'+tr('friends.remove_attachment','Remove')+'"><span class="material-icons">close</span></button>' +
+                    '</div>' +
                     '<div class="ab-chat-input-row">' +
                         '<label class="ab-chat-attach-btn" title="'+tr('friends.attach_image','Attach image')+'">' +
                             '<span class="material-icons">add_photo_alternate</span>' +
@@ -1334,6 +1380,9 @@
             // Collapse any open chat pane too so reopening the drawer
             // starts clean on the friends list.
             if (_chatOpen) closeChatPane();
+            // [issue #175] A title nobody sent is dropped, so it can never
+            // ride along with a later message.
+            clearRecommendation();
             backdrop.style.opacity='0';
             // Slide out in the direction matching the drawer's anchor so the
             // animation makes sense whether we're on the left or right side.
@@ -1341,6 +1390,9 @@
             drawer.style.transform = dir;
             setTimeout(function(){ drawer.style.display='none'; backdrop.style.display='none'; }, 280);
         }
+
+        _openFriendsDrawer = open;
+        _closeFriendsDrawer = close;
 
         btn.addEventListener('click', open);
         backdrop.addEventListener('click', close);
@@ -1888,6 +1940,13 @@
                 // is updated in the periodic resolver, but honour whichever
                 // is more authoritative here.
                 var simple = (data.SimpleMode === true) || _friendsSimpleMode;
+                // [issue #175] The envelope on an item's page waits for a
+                // friend, and this answer is as fresh as it gets.
+                _recommendHasFriendsFor = uid;
+                _recommendHasFriends = friends.length > 0;
+                _recommendHasFriendsAt = Date.now();
+                _recommendFailures = 0;
+                _recommendRetryAt = 0;
 
                 if (!friends.length) {
                     var emptyMsg = simple
@@ -2141,11 +2200,26 @@
             if (m.attachmentId) {
                 attachmentHtml = '<div class="ab-chat-attachment"><img data-ab-attachment-id="' + escapeHtml(m.attachmentId) + '" loading="lazy" alt="attachment" /></div>';
             }
+            // [issue #175] A recommended title. The card starts empty and
+            // resolveChatItemCards() fills it from Jellyfin's answer for
+            // this reader; nothing about the item is drawn from the message.
+            var itemHtml = '';
+            if (m.itemId) {
+                itemHtml = '<a class="ab-chat-item" data-ab-item-id="' + escapeHtml(m.itemId) + '">' +
+                    '<span class="ab-rec-poster"><span class="material-icons">movie</span></span>' +
+                    '<span class="ab-chat-item-info">' +
+                        '<span class="ab-chat-item-kicker">' + escapeHtml(tr('friends.recommended', 'Recommended')) + '</span>' +
+                        '<span class="ab-chat-item-name">' + escapeHtml(tr('common.loading', 'Loading...')) + '</span>' +
+                        '<span class="ab-chat-item-sub"></span>' +
+                    '</span>' +
+                '</a>';
+            }
             var textHtml = m.text ? escapeHtml(m.text).replace(/\n/g, '<br>') : '';
-            html += '<div class="ab-chat-msg ' + (fromMe ? 'me' : 'them') + (attachmentHtml && !textHtml ? ' img-only' : '') + '" data-msg-id="'+escapeHtml(m.id)+'">' +
+            html += '<div class="ab-chat-msg ' + (fromMe ? 'me' : 'them') + (attachmentHtml && !itemHtml && !textHtml ? ' img-only' : '') + '" data-msg-id="'+escapeHtml(m.id)+'">' +
                 actionsHtml +
                 authorHtml +
                 attachmentHtml +
+                itemHtml +
                 (textHtml ? '<div class="ab-chat-text">' + textHtml + editedHtml + '</div>' : '') +
                 '<span class="ab-chat-time">' + escapeHtml(formatChatTime(m.sentAt)) + receiptHtml + '</span>' +
             '</div>';
@@ -2160,6 +2234,7 @@
                 // Ignore clicks inside the menu itself or on attachments
                 if (ev.target.closest('.ab-chat-msg-menu')) return;
                 if (ev.target.closest('.ab-chat-attachment')) return; // let lightbox handle
+                if (ev.target.closest('.ab-chat-item')) return; // the card opens the item
                 ev.stopPropagation();
                 var menu = bubble.querySelector('.ab-chat-msg-menu');
                 if (!menu) return;
@@ -2191,6 +2266,15 @@
             });
         }
         resolveChatAttachmentImages(scroll);
+        scroll.querySelectorAll('.ab-chat-item').forEach(function(card){
+            card.addEventListener('click', function(ev){
+                // No link until Jellyfin answered for this reader, and none
+                // for an item it hides from them.
+                if (!card.getAttribute('href')) { ev.preventDefault(); return; }
+                if (typeof _closeFriendsDrawer === 'function') _closeFriendsDrawer();
+            });
+        });
+        resolveChatItemCards(scroll);
         scroll.querySelectorAll('.ab-chat-attachment img').forEach(function(img){
             img.addEventListener('click', function(){
                 var src = img.getAttribute('src');
@@ -2373,6 +2457,9 @@
         var send = document.getElementById('abChatSend');
         if (send) send.disabled = true;
         clearAttachmentPreview();
+        // [issue #175] A title picked on an item's page goes with the next
+        // message of whichever chat the user opened.
+        renderRecommendUi();
 
         var pane = document.getElementById('abFriendsChatPane');
         if (pane) { pane.style.display = 'flex'; void pane.offsetHeight; pane.classList.add('open'); }
@@ -2412,6 +2499,9 @@
         _chatConvType = 'dm';
         _chatParticipants = [];
         if (_chatPollTimer) { clearInterval(_chatPollTimer); _chatPollTimer = null; }
+        // [issue #175] Back on the list, a title still waiting shows its
+        // banner again, so the user can pick someone else or drop it.
+        renderRecommendUi();
         var pane = document.getElementById('abFriendsChatPane');
         if (!pane) return;
         pane.classList.remove('open');
@@ -2453,7 +2543,8 @@
         if (!input) return;
         var text = (input.value || '').trim();
         var attachmentId = _chatPendingAttachment ? _chatPendingAttachment.Id : null;
-        if (!text && !attachmentId) return;
+        var itemId = _recommendItem ? _recommendItem.id : null;
+        if (!text && !attachmentId && !itemId) return;
         var send = document.getElementById('abChatSend');
         if (send) send.disabled = true;
         hideChatError();
@@ -2463,7 +2554,7 @@
             method: 'POST',
             headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
             credentials: 'include',
-            body: JSON.stringify({ Text: text, AttachmentId: attachmentId })
+            body: JSON.stringify({ Text: text, AttachmentId: attachmentId, ItemId: itemId })
         })
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(res){
@@ -2476,6 +2567,7 @@
             autoGrowChatInput(input);
             updateChatCounter('');
             clearAttachmentPreview();
+            if (itemId && _recommendItem && _recommendItem.id === itemId) clearRecommendation();
             _chatLastRenderHash = ''; // force redraw
             loadChatMessages();
         })
@@ -2497,11 +2589,7 @@
         if (row) row.style.display = 'none';
         var img = document.getElementById('abChatAttachPreviewImg');
         if (img) img.removeAttribute('src');
-        var send = document.getElementById('abChatSend');
-        if (send) {
-            var input = document.getElementById('abChatInput');
-            send.disabled = !(input && input.value.trim());
-        }
+        refreshChatSendEnabled();
     }
 
     function attachmentFetchHeaders(){
@@ -2622,6 +2710,267 @@
         });
     }
 
+    // ── Recommend to a friend (#175) ──────────────────────────────────
+    //
+    // An envelope in Jellyfin's button row on an item's page opens the
+    // drawer with the title attached. The user opens a chat with a friend,
+    // or a group in Messages, adds a note if they like, and sends; the
+    // message carries the item id, which the server accepts only when
+    // Jellyfin shows the item to the sender. Each reader's card asks
+    // Jellyfin for the item with the reader's own session, so a library
+    // they cannot open or a rating above theirs shows nothing about it.
+
+    // Whether the signed-in user has anyone to recommend to. tryInject()
+    // runs on every throttled DOM mutation, so the answer is kept for a
+    // minute and the request in flight is shared, and a failure waits
+    // before the next try, doubling up to five minutes (#161).
+    var RECOMMEND_FRIENDS_TTL_MS = 60000;
+    var _recommendHasFriends = null;
+    var _recommendHasFriendsFor = null;
+    var _recommendHasFriendsAt = 0;
+    var _recommendHasFriendsFetch = null;
+    var _recommendFailures = 0;
+    var _recommendRetryAt = 0;
+    // "<user>|<item>" -> promise of what Jellyfin answered that user.
+    var _recommendItemCache = {};
+
+    // The item id of the details page in the route, in the 32-digit form.
+    function currentDetailItemId(){
+        var hash = window.location.hash || '';
+        var q = hash.indexOf('?');
+        if (q < 0) return null;
+        var id = '';
+        try { id = new URLSearchParams(hash.slice(q + 1)).get('id') || ''; } catch (e) { return null; }
+        id = id.replace(/-/g, '').toLowerCase();
+        return /^[0-9a-f]{32}$/.test(id) ? id : null;
+    }
+
+    function refreshRecommendHasFriends(){
+        var uid = getUserId();
+        if (!uid) return;
+        if (_recommendHasFriendsFor !== uid) {
+            _recommendHasFriendsFor = uid;
+            _recommendHasFriends = null;
+            _recommendHasFriendsAt = 0;
+            _recommendFailures = 0;
+            _recommendRetryAt = 0;
+        }
+        var now = Date.now();
+        if (_recommendHasFriendsFetch || now < _recommendRetryAt) return;
+        if (_recommendHasFriends !== null && now - _recommendHasFriendsAt < RECOMMEND_FRIENDS_TTL_MS) return;
+        _recommendHasFriendsFetch = fetch(buildUrl('Plugins/AchievementBadges/users/' + uid + '/friends'), { headers: authHeaders(), credentials: 'include' })
+            .then(function(r){
+                if (!r.ok) throw new Error('friends request failed: ' + r.status);
+                return r.json();
+            })
+            .then(function(data){
+                if (_recommendHasFriendsFor !== uid) return;
+                _recommendHasFriends = !!(data && data.Friends && data.Friends.length);
+                _recommendHasFriendsAt = Date.now();
+                _recommendFailures = 0;
+            }, function(){
+                // Keep the last answer; "unknown" never draws the button.
+                _recommendFailures++;
+                _recommendRetryAt = Date.now() + Math.min(300000, 1000 * Math.pow(2, _recommendFailures));
+            })
+            .then(function(){
+                _recommendHasFriendsFetch = null;
+                injectRecommendButtons();
+            });
+    }
+
+    // The envelope goes into Jellyfin's own row (.mainDetailButtons, the
+    // same markup in 10.11 and 12) before the "more" button. The item is
+    // read from the route when clicked, not when drawn: Jellyfin reuses a
+    // details view for the next item it shows.
+    function injectRecommendButtons(){
+        var onDetails = /^#!?\/details\?/i.test(window.location.hash || '');
+        var show = onDetails && _friendsAdminEnabled !== false && typeof _openFriendsDrawer === 'function' && !!document.getElementById('abFriendsDrawer');
+        if (show) refreshRecommendHasFriends();
+        show = show && _recommendHasFriends === true && _recommendHasFriendsFor === getUserId();
+        document.querySelectorAll('.itemDetailPage .mainDetailButtons').forEach(function(row){
+            var btn = row.querySelector('[data-ab-recommend]');
+            if (!show) {
+                if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+                return;
+            }
+            if (btn) return;
+            btn = document.createElement('button');
+            btn.type = 'button';
+            // emby-button is the class Jellyfin's button element adds when it
+            // upgrades; it carries the reset the row's other buttons get.
+            btn.className = 'button-flat detailButton emby-button';
+            btn.setAttribute('data-ab-recommend', '');
+            btn.title = tr('friends.recommend', 'Recommend to a friend');
+            btn.setAttribute('aria-label', btn.title);
+            btn.innerHTML = '<div class="detailButton-content"><span class="material-icons detailButton-icon" aria-hidden="true">forward_to_inbox</span></div>';
+            btn.addEventListener('click', function(ev){
+                ev.preventDefault();
+                ev.stopPropagation();
+                var id = currentDetailItemId();
+                if (id) startRecommendation(id);
+            });
+            row.insertBefore(btn, row.querySelector('.btnMoreCommands'));
+        });
+    }
+
+    function startRecommendation(itemId){
+        if (typeof _openFriendsDrawer !== 'function') return;
+        _recommendItem = { id: itemId, name: '', poster: '' };
+        if (_chatOpen) closeChatPane();
+        _openFriendsDrawer();
+        var tab = document.querySelector('#abFriendsDrawer [data-ab-fdtab="friends"]');
+        if (tab) tab.click();
+        renderRecommendUi();
+        fetchRecommendedItem(itemId).then(function(info){
+            if (!info.ok || !_recommendItem || _recommendItem.id !== itemId) return;
+            _recommendItem.name = info.name;
+            _recommendItem.poster = info.poster;
+            renderRecommendUi();
+        });
+    }
+
+    function clearRecommendation(){
+        _recommendItem = null;
+        renderRecommendUi();
+    }
+
+    // The banner shows over the friends list while a title waits; in a
+    // chat the title shows in the composer instead.
+    function renderRecommendUi(){
+        var it = _recommendItem;
+        var drawer = document.getElementById('abFriendsDrawer');
+        if (drawer) drawer.classList.toggle('ab-fd-recommending', !!it && !_chatOpen);
+        var label = it ? (it.name || tr('friends.recommend_this_title', 'this title')) : '';
+        var banner = document.getElementById('abRecommendBanner');
+        if (banner) {
+            banner.style.display = it && !_chatOpen ? 'flex' : 'none';
+            var title = document.getElementById('abRecommendTitle');
+            if (title) title.textContent = it ? tr('friends.recommend_banner', 'Recommend') + ' ' + label : '';
+            setRecommendPoster(document.getElementById('abRecommendPoster'), it ? it.poster : '');
+        }
+        var chip = document.getElementById('abChatItemPreview');
+        if (chip) {
+            chip.style.display = it && _chatOpen ? 'flex' : 'none';
+            var name = document.getElementById('abChatItemPreviewName');
+            if (name) name.textContent = label;
+            setRecommendPoster(document.getElementById('abChatItemPreviewPoster'), it ? it.poster : '');
+        }
+        refreshChatSendEnabled();
+    }
+
+    function setRecommendPoster(el, url, icon){
+        if (!el) return;
+        el.textContent = '';
+        if (url) {
+            var img = document.createElement('img');
+            img.alt = '';
+            img.src = url;
+            el.appendChild(img);
+            return;
+        }
+        var glyph = document.createElement('span');
+        glyph.className = 'material-icons';
+        glyph.textContent = icon || 'movie';
+        el.appendChild(glyph);
+    }
+
+    // Looks the item up as the signed-in user, through Jellyfin's own
+    // access rules: an item they may not see answers 404. A failure that
+    // says nothing about access (401 during sign-in, 5xx, no network) is
+    // not kept, so the next render asks again.
+    function fetchRecommendedItem(itemId){
+        var uid = getUserId();
+        if (!uid) return Promise.resolve({ ok: false, missing: false });
+        var key = String(uid).replace(/-/g, '').toLowerCase() + '|' + itemId;
+        if (_recommendItemCache[key]) return _recommendItemCache[key];
+        if (Object.keys(_recommendItemCache).length >= 200) _recommendItemCache = {};
+        var pending = fetch(buildUrl('Items/' + encodeURIComponent(itemId) + '?userId=' + encodeURIComponent(uid)), { headers: authHeaders(), credentials: 'include' })
+            .then(function(r){
+                if (r.status >= 400 && r.status < 500 && r.status !== 401) return { ok: false, missing: true };
+                if (!r.ok) throw new Error('item request failed: ' + r.status);
+                return r.json().then(describeRecommendedItem);
+            })
+            .catch(function(){
+                if (_recommendItemCache[key] === pending) delete _recommendItemCache[key];
+                return { ok: false, missing: false };
+            });
+        _recommendItemCache[key] = pending;
+        return pending;
+    }
+
+    // What a card shows, from Jellyfin's answer for the reader. The poster
+    // is built here and nowhere else.
+    function describeRecommendedItem(item){
+        if (!item || !item.Id) return { ok: false, missing: true };
+        var size = '/Images/Primary?fillHeight=144&fillWidth=96&quality=90&tag=';
+        var poster = '';
+        if (item.ImageTags && item.ImageTags.Primary) {
+            poster = buildUrl('Items/' + encodeURIComponent(item.Id) + size + encodeURIComponent(item.ImageTags.Primary));
+        } else if (item.SeriesId && item.SeriesPrimaryImageTag) {
+            poster = buildUrl('Items/' + encodeURIComponent(item.SeriesId) + size + encodeURIComponent(item.SeriesPrimaryImageTag));
+        } else if (item.AlbumId && item.AlbumPrimaryImageTag) {
+            poster = buildUrl('Items/' + encodeURIComponent(item.AlbumId) + size + encodeURIComponent(item.AlbumPrimaryImageTag));
+        }
+        return {
+            ok: true,
+            id: String(item.Id).replace(/-/g, '').toLowerCase(),
+            name: item.Name || '',
+            sub: [item.SeriesName, item.ProductionYear].filter(Boolean).join(' · '),
+            poster: poster,
+            serverId: item.ServerId || ''
+        };
+    }
+
+    function resolveChatItemCards(root){
+        if (!root) return;
+        root.querySelectorAll('.ab-chat-item[data-ab-item-id]').forEach(function(card){
+            var id = card.getAttribute('data-ab-item-id') || '';
+            if (!/^[0-9a-f]{32}$/.test(id)) { fillChatItemCard(card, { ok: false, missing: true }); return; }
+            fetchRecommendedItem(id).then(function(info){
+                if (card.isConnected) fillChatItemCard(card, info);
+            });
+        });
+    }
+
+    function fillChatItemCard(card, info){
+        var poster = card.querySelector('.ab-rec-poster');
+        var nameEl = card.querySelector('.ab-chat-item-name');
+        var subEl = card.querySelector('.ab-chat-item-sub');
+        if (!info.ok) {
+            card.classList.add('unavailable');
+            card.removeAttribute('href');
+            setRecommendPoster(poster, '', info.missing ? 'block' : 'error_outline');
+            if (nameEl) nameEl.textContent = info.missing
+                ? tr('friends.recommend_unavailable', 'Not available in your library')
+                : tr('friends.recommend_load_failed', 'Could not load this title');
+            if (subEl) subEl.textContent = '';
+            return;
+        }
+        card.classList.remove('unavailable');
+        card.setAttribute('href', '#/details?id=' + encodeURIComponent(info.id) + (info.serverId ? '&serverId=' + encodeURIComponent(info.serverId) : ''));
+        setRecommendPoster(poster, info.poster);
+        if (nameEl) nameEl.textContent = info.name;
+        if (subEl) subEl.textContent = info.sub;
+    }
+
+    // Send is on with text, an uploaded image or a title waiting to go.
+    function refreshChatSendEnabled(){
+        var send = document.getElementById('abChatSend');
+        if (!send) return;
+        var input = document.getElementById('abChatInput');
+        send.disabled = !((input && input.value.trim()) || _chatPendingAttachment || _recommendItem);
+    }
+
+    // The thread-list preview and the notification text. The server puts a
+    // marker, never the title, where a message has no text of its own.
+    function threadPreviewText(t){
+        var last = (t && t.lastMessage) || '';
+        if (t && t.hasAttachment && (!last || last === '[image]')) return tr('friends.sent_image', 'Sent an image');
+        if (t && t.hasItem && (!last || last === '[recommendation]')) return tr('friends.sent_recommendation', 'Recommended a title');
+        return last;
+    }
+
     // Wire up the chat pane's controls exactly once, at drawer mount time.
     function bindChatPaneControls(){
         var back = document.getElementById('abChatBack');
@@ -2635,8 +2984,7 @@
             input.addEventListener('input', function(){
                 autoGrowChatInput(input);
                 updateChatCounter(input.value);
-                var send = document.getElementById('abChatSend');
-                if (send) send.disabled = !(input.value || '').trim();
+                refreshChatSendEnabled();
             });
             input.addEventListener('keydown', function(ev){
                 // Enter = send, Shift+Enter = newline
@@ -2651,6 +2999,14 @@
             send.dataset.abBound = '1';
             send.addEventListener('click', sendChatMessage);
         }
+        // [issue #175] Dropping the title, from the banner or the composer.
+        ['abRecommendCancel', 'abChatItemClear'].forEach(function(id){
+            var el = document.getElementById(id);
+            if (el && !el.dataset.abBound) {
+                el.dataset.abBound = '1';
+                el.addEventListener('click', clearRecommendation);
+            }
+        });
 
         // Gear + menu
         var gear = document.getElementById('abChatGear');
@@ -2849,8 +3205,7 @@
                 var unread = t.unreadCount || 0;
                 var mePrefix = t.lastFromMe ? '<span class="me-prefix">' + tr('friends.you','You:') + '</span>' : '';
                 var when = t.lastAt ? formatChatTime(t.lastAt) : '';
-                var lastPreview = (t.lastMessage || '');
-                if (t.hasAttachment && (!lastPreview || lastPreview === '[image]')) lastPreview = tr('friends.sent_image','Sent an image');
+                var lastPreview = threadPreviewText(t);
                 var avStyle = isGroup ? 'background:linear-gradient(135deg,#8b5cf6,#3b82f6);' : av;
                 return '<div class="ab-msg-thread" data-ab-conv-id="' + escapeHtml(t.conversationId || '') + '" data-ab-conv-type="' + escapeHtml(t.type || 'dm') + '" data-ab-conv-title="' + escapeHtml(t.otherUserName || '') + '" data-ab-chat-open="' + escapeHtml(t.otherUserId || '') + '">' +
                     '<div class="ab-fd-avatar" style="' + avStyle + '">' + initialsHtml + '</div>' +
@@ -3357,12 +3712,12 @@
                 // Sound
                 if (prefs.MessageNotificationSound !== false) playChatChime();
                 // In-app toast
-                showToast(t.otherUserName || '', t.lastMessage || '', t.otherUserId);
+                showToast(t.otherUserName || '', threadPreviewText(t), t.otherUserId);
                 // Browser notification (when permission granted)
                 try {
                     if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
                         new Notification(t.otherUserName || 'New message', {
-                            body: t.lastMessage || '',
+                            body: threadPreviewText(t),
                             tag: 'ab-msg-' + peerKey,
                             silent: prefs.MessageNotificationSound === false
                         });

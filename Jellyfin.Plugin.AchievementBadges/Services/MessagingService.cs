@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using Jellyfin.Plugin.AchievementBadges.Models;
 using MediaBrowser.Common.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
@@ -45,6 +46,7 @@ public class MessagingService : IDisposable
     private readonly FriendsService _friends;
     private readonly AchievementBadgeService _badgeService;
     private readonly IUserManager _userManager;
+    private readonly ILibraryManager _libraryManager;
     private readonly ILogger<MessagingService> _logger;
 
     private readonly object _lock = new();
@@ -61,11 +63,13 @@ public class MessagingService : IDisposable
         FriendsService friends,
         AchievementBadgeService badgeService,
         IUserManager userManager,
+        ILibraryManager libraryManager,
         ILogger<MessagingService> logger)
     {
         _friends = friends;
         _badgeService = badgeService;
         _userManager = userManager;
+        _libraryManager = libraryManager;
         _logger = logger;
 
         var pluginDataPath = Path.Combine(applicationPaths.PluginConfigurationsPath, "achievementbadges");
@@ -270,13 +274,35 @@ public class MessagingService : IDisposable
     // Send / fetch / mark-read
     // ══════════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// [issue #175] The id of an item the sender may see, in Jellyfin's
+    /// 32-digit form, or null when the id is malformed, the item does not
+    /// exist, or Jellyfin hides it from the sender (a library they cannot
+    /// open, a parental rating above theirs).
+    /// </summary>
+    /// <remarks>
+    /// Only the lookup scoped to a resolved user checks access. Jellyfin's
+    /// GetItemById(id, Guid userId) passes a null user on when the id matches
+    /// no account, and a null user means no check at all, so the sender is
+    /// resolved here and an unknown one refused.
+    /// </remarks>
+    public static string? ResolveRecommendedItem(IUserManager users, ILibraryManager library, string senderId, string? rawItemId)
+    {
+        if (!Guid.TryParse(rawItemId?.Trim(), out var itemId) || itemId == Guid.Empty) return null;
+        if (!Guid.TryParse(senderId, out var senderGuid) || senderGuid == Guid.Empty) return null;
+        var sender = users.GetUserById(senderGuid);
+        if (sender is null) return null;
+        return library.GetItemById<BaseItem>(itemId, sender) is null ? null : itemId.ToString("N");
+    }
+
     public (bool ok, string? error, Message? message) SendToConversation(
-        string callerId, string callerName, string convId, string text, string? attachmentId)
+        string callerId, string callerName, string convId, string text, string? attachmentId, string? itemId = null)
     {
         callerId = NormalizeId(callerId);
         text = (text ?? string.Empty).Trim();
         var hasAttachment = !string.IsNullOrEmpty(attachmentId);
-        if (!hasAttachment && string.IsNullOrWhiteSpace(text)) return (false, "Message is empty.", null);
+        var hasItem = !string.IsNullOrWhiteSpace(itemId);
+        if (!hasAttachment && !hasItem && string.IsNullOrWhiteSpace(text)) return (false, "Message is empty.", null);
         if (text.Length > MaxTextLength) return (false, $"Message exceeds {MaxTextLength} character limit.", null);
 
         Conversation? conv;
@@ -307,6 +333,22 @@ public class MessagingService : IDisposable
             }
         }
 
+        // [issue #175] Checked against what Jellyfin shows the sender only:
+        // each reader's client looks the item up again with its own session.
+        string? recommendedItemId = null;
+        if (hasItem)
+        {
+            try
+            {
+                recommendedItemId = ResolveRecommendedItem(_userManager, _libraryManager, callerId, itemId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[AB] SendToConversation: looking up recommended item {Item} failed", itemId);
+            }
+            if (recommendedItemId == null) return (false, "That title isn't available to recommend.", null);
+        }
+
         var msg = new Message
         {
             ConversationId = conv.Id,
@@ -315,7 +357,8 @@ public class MessagingService : IDisposable
             ToUserId = conv.Type == "dm" ? NormalizeId(conv.ParticipantIds.First(p => NormalizeId(p) != callerId)) : string.Empty,
             Text = text,
             SentAt = DateTime.UtcNow,
-            AttachmentId = hasAttachment ? attachmentId : null
+            AttachmentId = hasAttachment ? attachmentId : null,
+            ItemId = recommendedItemId
         };
 
         lock (_lock)
@@ -423,6 +466,10 @@ public class MessagingService : IDisposable
 
                 var lastTitleText = last?.Text ?? string.Empty;
                 if (string.IsNullOrEmpty(lastTitleText) && !string.IsNullOrEmpty(last?.AttachmentId)) lastTitleText = "[image]";
+                // [issue #175] A marker, never the title: the reader may not
+                // be allowed to see the item, and its client resolves the
+                // title itself when it can.
+                if (string.IsNullOrEmpty(lastTitleText) && !string.IsNullOrEmpty(last?.ItemId)) lastTitleText = "[recommendation]";
 
                 summaries.Add(new ConversationSummary
                 {
@@ -438,7 +485,8 @@ public class MessagingService : IDisposable
                     LastFromMe = last != null && NormalizeId(last.FromUserId) == callerId,
                     LastAt = last?.SentAt ?? conv.CreatedAt,
                     UnreadCount = unread,
-                    HasAttachment = !string.IsNullOrEmpty(last?.AttachmentId)
+                    HasAttachment = !string.IsNullOrEmpty(last?.AttachmentId),
+                    HasItem = !string.IsNullOrEmpty(last?.ItemId)
                 });
             }
         }
