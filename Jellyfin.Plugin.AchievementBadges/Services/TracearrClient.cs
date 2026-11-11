@@ -290,10 +290,32 @@ public class TracearrClient
         => row.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
     private static int? ReadInt(JsonElement row, string name)
-        => row.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : null;
+    {
+        var value = ReadLong(row, name);
+        return value is long number && number is >= int.MinValue and <= int.MaxValue ? (int)number : null;
+    }
 
     private static long? ReadLong(JsonElement row, string name)
-        => row.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var l) ? l : null;
+    {
+        if (!row.TryGetProperty(name, out var value)) return null;
+        if (value.ValueKind == JsonValueKind.Number) return value.TryGetInt64(out var number) ? number : null;
+        if (value.ValueKind != JsonValueKind.String) return null;
+
+        // PostgreSQL numeric aggregates can arrive as strings. Inspect the
+        // fraction before parsing so precision rounding cannot hide a nonzero digit.
+        var raw = value.GetString().AsSpan().Trim();
+        var point = raw.IndexOf('.');
+        if (point >= 0)
+        {
+            var fraction = raw[(point + 1)..];
+            if (fraction.IsEmpty || fraction.IndexOfAnyExcept('0') >= 0) return null;
+            raw = raw[..point];
+        }
+
+        return long.TryParse(raw, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
+    }
 
     private static DateTimeOffset? ReadDate(JsonElement row, string name)
     {
