@@ -1829,6 +1829,19 @@ public class AchievementBadgeService : IDisposable
         }
     }
 
+    /// <summary>Keeps quest progress unchanged when a scan repairs its counters.</summary>
+    public void RebaseQuestsAfterHistoryBackfill(string userId, UserAchievementCounters? previous)
+    {
+        if (previous is null) return;
+        userId = NormalizeUserId(userId);
+        lock (_lock)
+        {
+            if (!_userProfiles.TryGetValue(userId, out var profile)) return;
+            QuestService.RebaseAfterHistoryBackfill(profile, previous);
+            Save();
+        }
+    }
+
     /// <summary>
     /// Carry over everything a watch-history rebuild cannot reconstruct.
     /// <para>
@@ -1851,6 +1864,35 @@ public class AchievementBadgeService : IDisposable
     private static void PreserveNonDerivedState(UserAchievementProfile previous, UserAchievementProfile profile)
     {
         profile.Preferences = previous.Preferences;
+
+        // These represent earned or purchased state, not a replayable counter.
+        profile.LifetimeScore = previous.LifetimeScore;
+        profile.LastPlaybackAt = previous.LastPlaybackAt;
+        profile.ComboCount = previous.ComboCount;
+        profile.BestComboCount = previous.BestComboCount;
+        profile.ActiveXpBoostUntil = previous.ActiveXpBoostUntil;
+        profile.DoubleCreditPending = previous.DoubleCreditPending;
+        profile.LastLoginBonusDate = previous.LastLoginBonusDate;
+        profile.CompletionMilestonesReached = new List<int>(previous.CompletionMilestonesReached);
+        profile.DailyQuestId = previous.DailyQuestId;
+        profile.DailyQuestDate = previous.DailyQuestDate;
+        profile.DailyQuestCompleted = previous.DailyQuestCompleted;
+        profile.DailyQuestStartValue = previous.DailyQuestStartValue;
+        profile.WeeklyQuestId = previous.WeeklyQuestId;
+        profile.WeeklyQuestWeek = previous.WeeklyQuestWeek;
+        profile.WeeklyQuestCompleted = previous.WeeklyQuestCompleted;
+        profile.WeeklyQuestStartValue = previous.WeeklyQuestStartValue;
+        profile.DailyQuests = previous.DailyQuests.Select(CloneQuest).ToList();
+        profile.WeeklyQuests = previous.WeeklyQuests.Select(CloneQuest).ToList();
+        profile.DailyQuestRerollsUsed = previous.DailyQuestRerollsUsed;
+        profile.DailyQuestRerollDate = previous.DailyQuestRerollDate;
+        profile.WeeklyQuestRerollsUsed = previous.WeeklyQuestRerollsUsed;
+        profile.WeeklyQuestRerollWeek = previous.WeeklyQuestRerollWeek;
+
+        static QuestState CloneQuest(QuestState quest) => new()
+        {
+            Id = quest.Id, Period = quest.Period, Completed = quest.Completed, StartValue = quest.StartValue
+        };
 
         // Deliberate presentation choices.
         profile.EquippedBadgeIds = new List<string>(previous.EquippedBadgeIds);
@@ -1922,6 +1964,7 @@ public class AchievementBadgeService : IDisposable
         {
             var profile = GetOrCreateProfile(userId);
             var counters = profile.Counters;
+            var replayingHistory = _backfillUserId.Value == userId;
             var timestamp = context.PlayedAt ?? DateTimeOffset.Now;
             var dayKey = timestamp.ToString("yyyy-MM-dd");
             var today = DateOnly.FromDateTime(timestamp.DateTime);
@@ -1937,7 +1980,7 @@ public class AchievementBadgeService : IDisposable
             // v2.0 - Consume pending Double Credit so this single playback
             // counts twice toward the main per-item counters. Multiplier is
             // 1 (normal) or 2 (DoubleCredit consumed).
-            var creditMultiplier = _powerUps?.ConsumeDoubleCreditIfPending(profile) ?? 1;
+            var creditMultiplier = replayingHistory ? 1 : (_powerUps?.ConsumeDoubleCreditIfPending(profile) ?? 1);
 
             counters.TotalItemsWatched += creditMultiplier;
             if (!skipDateCounters)
@@ -1961,7 +2004,7 @@ public class AchievementBadgeService : IDisposable
                     // gaps now spend freezes one-per-day; if there aren't
                     // enough to cover the whole gap, freezes still get spent
                     // for the days they can cover (matches Duolingo's model).
-                    if (diff >= 2)
+                    if (!replayingHistory && diff >= 2)
                     {
                         var missedDays = diff - 1;
                         var consumed = 0;
@@ -2429,28 +2472,36 @@ public class AchievementBadgeService : IDisposable
 
             // Combo multiplier: if watched within 15 minutes of last playback, extend the combo
             var comboMultiplier = 1.0;
-            if (profile.LastPlaybackAt is DateTimeOffset last &&
-                (timestamp - last).TotalMinutes > 0 &&
-                (timestamp - last).TotalMinutes < 15)
+            if (!replayingHistory)
             {
-                profile.ComboCount++;
-                if (profile.ComboCount > profile.BestComboCount)
+                if (profile.LastPlaybackAt is DateTimeOffset last &&
+                    (timestamp - last).TotalMinutes > 0 &&
+                    (timestamp - last).TotalMinutes < 15)
                 {
-                    profile.BestComboCount = profile.ComboCount;
+                    profile.ComboCount++;
+                    if (profile.ComboCount > profile.BestComboCount)
+                    {
+                        profile.BestComboCount = profile.ComboCount;
+                    }
+                    comboMultiplier = 1.0 + Math.Min(profile.ComboCount * 0.1, 1.0);
                 }
-                comboMultiplier = 1.0 + Math.Min(profile.ComboCount * 0.1, 1.0);
+                else
+                {
+                    profile.ComboCount = 1;
+                }
+                profile.LastPlaybackAt = timestamp;
             }
-            else
+            else if (context.PlayedAtIsReal && context.PlayedAt is DateTimeOffset recorded
+                && (!profile.LastPlaybackAt.HasValue || recorded > profile.LastPlaybackAt.Value))
             {
-                profile.ComboCount = 1;
+                profile.LastPlaybackAt = recorded;
             }
-            profile.LastPlaybackAt = timestamp;
 
             // Base score accrual into the bank: 5 points per watched item, scaled by combo
             var earned = (int)Math.Round(5 * comboMultiplier);
 
             // v2.0 - XP Boost doubles score for the active 60-minute window.
-            if (_powerUps?.IsXpBoostActive(profile, timestamp) == true)
+            if (!replayingHistory && _powerUps?.IsXpBoostActive(profile, timestamp) == true)
             {
                 earned = (int)Math.Round(earned * PowerUpDefinitions.XpBoostMultiplier);
             }
@@ -2459,7 +2510,7 @@ public class AchievementBadgeService : IDisposable
             // grants +10 score + a random power-up. Guarded by
             // LastLoginBonusDate so a single day can't double-claim.
             var loginBonusKey = timestamp.UtcDateTime.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-            if (_powerUps != null && profile.LastLoginBonusDate != loginBonusKey)
+            if (!replayingHistory && _powerUps != null && profile.LastLoginBonusDate != loginBonusKey)
             {
                 profile.LastLoginBonusDate = loginBonusKey;
                 earned += 10;

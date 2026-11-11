@@ -265,6 +265,7 @@ public class TracearrNumericStringTests
         Assert.Equal(recordDates && kind == BaseItemKind.Movie ? 1 : 0, counters.MoviesByDate.Count);
         Assert.Equal(recordDates && kind == BaseItemKind.Episode ? 1 : 0, counters.EpisodesByDate.Count);
         Assert.Equal(recordDates && kind != BaseItemKind.Book ? 1 : 0, counters.MinutesByDate.Count);
+        Assert.Equal(hasDate, fixture.Badges.PeekProfile(ScanFixture.UserId)!.LastPlaybackAt.HasValue);
         if (hasDate)
         {
             Assert.Contains("2021-12-25", counters.WatchDates);
@@ -284,6 +285,11 @@ public class TracearrNumericStringTests
                 Assert.Contains(fixture.Badges.PeekProfile(ScanFixture.UserId)!.Badges,
                     b => b.Id == "double-feature" && b.Unlocked && b.EarnSource == EarnSource.RealTime);
             }
+        }
+        else if (kind is BaseItemKind.Movie or BaseItemKind.Episode)
+        {
+            var badgeId = kind == BaseItemKind.Movie ? "double-feature" : "warmup";
+            Assert.Contains(fixture.Badges.PeekProfile(ScanFixture.UserId)!.Badges, b => b.Id == badgeId && b.Unlocked);
         }
     }
 
@@ -340,7 +346,7 @@ public class TracearrNumericStringTests
             b => b.Id == "double-feature" && b.Unlocked && b.EarnSource == EarnSource.RealTime);
     }
 
-    private sealed class ScanFixture : IDisposable
+    internal sealed class ScanFixture : IDisposable
     {
         public const string UserId = "11111111-1111-1111-1111-111111111111";
         private readonly string _dataDir = Path.Combine(Path.GetTempPath(), "ab-dates-" + Guid.NewGuid().ToString("N"));
@@ -350,7 +356,7 @@ public class TracearrNumericStringTests
         public AchievementBadgeService Badges { get; }
         public WatchHistoryBackfillService Scan { get; }
         private readonly TargetProgressService _targets;
-        public ScanFixture(bool skipUnreliable)
+        public ScanFixture(bool skipUnreliable, bool enablePowerUps = false)
         {
             Directory.CreateDirectory(_dataDir);
             var paths = new Mock<IApplicationPaths>();
@@ -368,7 +374,9 @@ public class TracearrNumericStringTests
             Badges = new AchievementBadgeService(paths.Object, users.Object,
                 new WebhookNotifier(NullLogger<WebhookNotifier>.Instance),
                 new AuditLogService(paths.Object, NullLogger<AuditLogService>.Instance),
-                NullLogger<AchievementBadgeService>.Instance, tracearrLedger: ledger);
+                NullLogger<AchievementBadgeService>.Instance,
+                powerUps: enablePowerUps ? new PowerUpService(NullLogger<PowerUpService>.Instance) : null,
+                tracearrLedger: ledger);
             _targets = new TargetProgressService(Library.Object, UserData.Object, users.Object,
                 new CustomBadgeService(paths.Object, NullLogger<CustomBadgeService>.Instance), Badges,
                 NullLogger<TargetProgressService>.Instance);

@@ -107,6 +107,30 @@ public class QuestService
         return new QuestTemplate(d.Id, d.Title, d.Description ?? string.Empty, d.Metric, target, reward, icon);
     }
 
+    /// <summary>Repairing historical counters must not earn a current quest.
+    /// Shift each pending quest's baseline by the same counter delta.</summary>
+    public static void RebaseAfterHistoryBackfill(UserAchievementProfile profile, UserAchievementCounters previous)
+    {
+        var daily = GetEffectiveDailyPool();
+        var weekly = GetEffectiveWeeklyPool();
+        int Shift(string? id, int start, bool completed, IReadOnlyList<QuestTemplate> pool)
+        {
+            if (completed) return start;
+            var template = pool.FirstOrDefault(t => t.Id == id);
+            if (template is null) return start;
+            var delta = (long)GetCounterValue(profile.Counters, template.Metric)
+                - GetCounterValue(previous, template.Metric);
+            return (int)Math.Clamp(start + delta, int.MinValue, int.MaxValue);
+        }
+
+        foreach (var quest in profile.DailyQuests)
+            quest.StartValue = Shift(quest.Id, quest.StartValue, quest.Completed, daily);
+        foreach (var quest in profile.WeeklyQuests)
+            quest.StartValue = Shift(quest.Id, quest.StartValue, quest.Completed, weekly);
+        profile.DailyQuestStartValue = Shift(profile.DailyQuestId, profile.DailyQuestStartValue, profile.DailyQuestCompleted, daily);
+        profile.WeeklyQuestStartValue = Shift(profile.WeeklyQuestId, profile.WeeklyQuestStartValue, profile.WeeklyQuestCompleted, weekly);
+    }
+
     public object GetOrCreate(string userId)
     {
         return new

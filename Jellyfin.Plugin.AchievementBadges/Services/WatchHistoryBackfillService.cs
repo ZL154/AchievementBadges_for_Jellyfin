@@ -762,6 +762,8 @@ public class WatchHistoryBackfillService
                 _logger.LogWarning(ex, "[AchievementBadges] Completion recompute failed for {Username}.", username);
             }
 
+            _achievementBadgeService.RebaseQuestsAfterHistoryBackfill(userId, preScanCounters);
+
             _logger.LogInformation(
                 "[AchievementBadges] Backfill done for {Username}: {Movies} movies, {Episodes} episodes, {Series} series, {Books} books, {Tracks} tracks, {Libraries} libraries.",
                 username, moviesWatched, episodesWatched, seriesCompleted, booksCompleted, tracksPlayed, librariesFound.Count);
