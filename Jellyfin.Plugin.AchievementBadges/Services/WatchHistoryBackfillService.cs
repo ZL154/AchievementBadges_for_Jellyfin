@@ -368,6 +368,7 @@ public class WatchHistoryBackfillService
                     // lands in the right day bucket and cannot manufacture a
                     // streak that never existed.
                     PlayedAt = play.StartedAt,
+                    PlayedAtIsReal = play.StartedAt.HasValue,
                     ProductionYear = play.Year,
                     RunTimeTicks = play.TotalDurationMs is long ms && ms > 0 ? ms * TimeSpan.TicksPerMillisecond : null,
                     Silent = true
@@ -398,6 +399,7 @@ public class WatchHistoryBackfillService
     private object RunBackfillForUserCore(Guid userGuid, string username)
     {
         var userId = userGuid.ToString("D");
+        using var backfill = _achievementBadgeService.BeginHistoryBackfill(userId);
         var moviesWatched = 0;
         var episodesWatched = 0;
         var seriesCompleted = 0;
@@ -466,7 +468,8 @@ public class WatchHistoryBackfillService
                     ItemId = movie.Id.ToString("D"),
                     IsMovie = true,
                     LibraryName = libraryName,
-                    PlayedAt = playedDate,
+                    PlayedAt = playedDate.Date,
+                    PlayedAtIsReal = playedDate.IsReal,
                     ProductionYear = movie.ProductionYear,
                     ProductionLocations = movie.ProductionLocations,
                     OriginalLanguage = GetOriginalLanguage(movie),
@@ -514,6 +517,7 @@ public class WatchHistoryBackfillService
                 }
 
                 creditedItemIds.Add(book.Id.ToString("D"));
+                var playedDate = GetPlayedDate(user, book);
 
                 _achievementBadgeService.RecordPlayback(new PlaybackContext
                 {
@@ -521,7 +525,8 @@ public class WatchHistoryBackfillService
                     ItemId = book.Id.ToString("D"),
                     IsBook = true,
                     LibraryName = bookLibrary,
-                    PlayedAt = GetPlayedDate(user, book),
+                    PlayedAt = playedDate.Date,
+                    PlayedAtIsReal = playedDate.IsReal,
                     ProductionYear = book.ProductionYear,
                     Genres = book.Genres,
                     Silent = true
@@ -554,6 +559,7 @@ public class WatchHistoryBackfillService
                 }
 
                 creditedItemIds.Add(track.Id.ToString("D"));
+                var playedDate = GetPlayedDate(user, track);
 
                 _achievementBadgeService.RecordPlayback(new PlaybackContext
                 {
@@ -561,7 +567,8 @@ public class WatchHistoryBackfillService
                     ItemId = track.Id.ToString("D"),
                     IsMusic = true,
                     LibraryName = trackLibrary,
-                    PlayedAt = GetPlayedDate(user, track),
+                    PlayedAt = playedDate.Date,
+                    PlayedAtIsReal = playedDate.IsReal,
                     ProductionYear = track.ProductionYear,
                     RunTimeTicks = track.RunTimeTicks,
                     // The track's OWN genres, never the album's or artist's.
@@ -629,7 +636,8 @@ public class WatchHistoryBackfillService
                     ItemId = episode.Id.ToString("D"),
                     IsEpisode = true,
                     LibraryName = libraryName,
-                    PlayedAt = playedDate,
+                    PlayedAt = playedDate.Date,
+                    PlayedAtIsReal = playedDate.IsReal,
                     ProductionYear = episode.ProductionYear,
                     ProductionLocations = episode.ProductionLocations,
                     OriginalLanguage = GetOriginalLanguage(episode),
@@ -678,7 +686,7 @@ public class WatchHistoryBackfillService
 
                         var latestDate = playedEpisodes
                             .Select(e => GetPlayedDate(user, e))
-                            .OrderByDescending(d => d)
+                            .OrderByDescending(d => d.Date)
                             .FirstOrDefault();
 
                         _achievementBadgeService.RecordPlayback(new PlaybackContext
@@ -686,7 +694,8 @@ public class WatchHistoryBackfillService
                             UserId = userId,
                             SeriesCompleted = true,
                             CompletedSeriesEpisodeCount = totalEpisodes,
-                            PlayedAt = latestDate,
+                            PlayedAt = latestDate.Date,
+                            PlayedAtIsReal = latestDate.IsReal,
                             Silent = true
                         });
                     }
@@ -752,6 +761,8 @@ public class WatchHistoryBackfillService
                 // Never lose a good rebuild over the completion extras.
                 _logger.LogWarning(ex, "[AchievementBadges] Completion recompute failed for {Username}.", username);
             }
+
+            _achievementBadgeService.RebaseQuestsAfterHistoryBackfill(userId, preScanCounters);
 
             _logger.LogInformation(
                 "[AchievementBadges] Backfill done for {Username}: {Movies} movies, {Episodes} episodes, {Series} series, {Books} books, {Tracks} tracks, {Libraries} libraries.",
@@ -907,7 +918,7 @@ public class WatchHistoryBackfillService
         return Guid.Empty;
     }
 
-    private DateTimeOffset GetPlayedDate(object user, BaseItem item)
+    private (DateTimeOffset Date, bool IsReal) GetPlayedDate(object user, BaseItem item)
     {
         try
         {
@@ -926,7 +937,7 @@ public class WatchHistoryBackfillService
                         var lastPlayed = lastPlayedProp.GetValue(userData) as DateTime?;
                         if (lastPlayed.HasValue)
                         {
-                            return new DateTimeOffset(lastPlayed.Value, TimeSpan.Zero);
+                            return (new DateTimeOffset(lastPlayed.Value, TimeSpan.Zero), true);
                         }
                     }
                 }
@@ -936,6 +947,6 @@ public class WatchHistoryBackfillService
         {
         }
 
-        return DateTimeOffset.UtcNow;
+        return (DateTimeOffset.UtcNow, false);
     }
 }

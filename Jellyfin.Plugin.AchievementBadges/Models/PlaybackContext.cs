@@ -44,6 +44,10 @@ public class PlaybackContext
     public string? LibraryName { get; set; }
     public DateTimeOffset? PlayedAt { get; set; }
 
+    /// <summary>True when PlayedAt came from recorded history rather than a
+    /// scan-time fallback. Silent backfills use it for calendar counters.</summary>
+    public bool PlayedAtIsReal { get; set; }
+
     public int? ProductionYear { get; set; }
     public IReadOnlyList<string>? ProductionLocations { get; set; }
     public string? OriginalLanguage { get; set; }
