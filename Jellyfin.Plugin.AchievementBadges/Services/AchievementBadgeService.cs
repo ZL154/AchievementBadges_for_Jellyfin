@@ -24,6 +24,28 @@ public class AchievementBadgeService : IDisposable
     // file with an empty in-memory state (see v1.7.2 data-loss fix).
     private bool _loadFailed;
     private readonly object _lock = new();
+    private readonly AsyncLocal<string?> _backfillUserId = new();
+
+    /// <summary>Marks this execution flow as a history scan for one user.
+    /// Completion recomputes in the same scan must also defer period awards.</summary>
+    public IDisposable BeginHistoryBackfill(string userId)
+    {
+        var previous = _backfillUserId.Value;
+        _backfillUserId.Value = NormalizeUserId(userId);
+        return new HistoryBackfillScope(_backfillUserId, previous);
+    }
+
+    private sealed class HistoryBackfillScope(AsyncLocal<string?> state, string? previous) : IDisposable
+    {
+        private bool _disposed;
+        public void Dispose()
+        {
+            if (_disposed) return;
+            state.Value = previous;
+            _disposed = true;
+        }
+    }
+
     // v1.8.60: WriteIndented=false. The store file can grow to several MB on
     // a busy server with many users; pretty-printing roughly doubles bytes
     // and serialize time. JSON is still readable in any modern editor with
@@ -1904,21 +1926,13 @@ public class AchievementBadgeService : IDisposable
             var dayKey = timestamp.ToString("yyyy-MM-dd");
             var today = DateOnly.FromDateTime(timestamp.DateTime);
 
-            // [v2.1.x, issue #27] During the initial watch-history backfill we
-            // cannot reconstruct per-day timing reliably — on older Jellyfin
-            // servers per-item LastPlayedDate is missing, so every backfilled
-            // item falls back to "now" (see WatchHistoryBackfillService.GetPlayedDate)
-            // and clusters into a single day. That inflates the
-            // MoviesByDate/EpisodesByDate/MinutesByDate buckets that back the
-            // MaxXInSingleDay daily badges, and would falsely unlock
-            // "watch N in one day" badges on the next real-time event even
-            // though the award itself is skipped during the scan. So when
-            // backfilling with time-windowed skipping enabled (default), don't
-            // write the per-day buckets at all; real-time playback fills them
-            // correctly going forward and the recompute tool can rebuild them
-            // from true timestamps.
-            var skipDailyBuckets = context.Silent
-                && (Plugin.Instance?.Configuration?.BackfillSkipTimeWindowedBadges ?? true);
+            // Rebuild calendar counters only from recorded dates. A missing
+            // LastPlayedDate falls back to scan time and must not cluster old
+            // plays into today (issue #27). The recompute tool audits awards;
+            // it does not reconstruct these buckets from history.
+            var skipDateCounters = context.Silent
+                && (Plugin.Instance?.Configuration?.BackfillSkipTimeWindowedBadges ?? true)
+                && (!context.PlayedAtIsReal || !context.PlayedAt.HasValue);
 
             // v2.0 - Consume pending Double Credit so this single playback
             // counts twice toward the main per-item counters. Multiplier is
@@ -1926,50 +1940,53 @@ public class AchievementBadgeService : IDisposable
             var creditMultiplier = _powerUps?.ConsumeDoubleCreditIfPending(profile) ?? 1;
 
             counters.TotalItemsWatched += creditMultiplier;
-            counters.WatchDates.Add(dayKey);
-
-            if (counters.LastWatchDate == null)
+            if (!skipDateCounters)
             {
-                counters.LastWatchDate = today;
-            }
-            else
-            {
-                var diff = today.DayNumber - counters.LastWatchDate.Value.DayNumber;
+                counters.WatchDates.Add(dayKey);
 
-                // v2.0.1 - Streak Freeze: consume one banked freeze per
-                // missed day (up to the number banked) and backfill the
-                // WatchDate for each so the streak math treats the gap as
-                // filled. Earlier versions only handled a 1-day gap which
-                // meant a 2+ day gap never consumed any freezes, leaving
-                // banked freezes appearing to "persist forever". Multi-day
-                // gaps now spend freezes one-per-day; if there aren't
-                // enough to cover the whole gap, freezes still get spent
-                // for the days they can cover (matches Duolingo's model).
-                if (diff >= 2)
-                {
-                    var missedDays = diff - 1;
-                    var consumed = 0;
-                    while (consumed < missedDays
-                           && _powerUps?.TryConsumeStreakFreeze(profile) == true)
-                    {
-                        counters.WatchDates.Add(
-                            counters.LastWatchDate.Value
-                                .AddDays(consumed + 1)
-                                .ToString("yyyy-MM-dd"));
-                        consumed++;
-                    }
-                }
-
-                if (diff >= 1)
+                if (counters.LastWatchDate == null)
                 {
                     counters.LastWatchDate = today;
                 }
-            }
+                else
+                {
+                    var diff = today.DayNumber - counters.LastWatchDate.Value.DayNumber;
 
-            var currentStreak = GetCurrentWatchStreak(counters);
-            if (currentStreak > counters.BestWatchStreak)
-            {
-                counters.BestWatchStreak = currentStreak;
+                    // v2.0.1 - Streak Freeze: consume one banked freeze per
+                    // missed day (up to the number banked) and backfill the
+                    // WatchDate for each so the streak math treats the gap as
+                    // filled. Earlier versions only handled a 1-day gap which
+                    // meant a 2+ day gap never consumed any freezes, leaving
+                    // banked freezes appearing to "persist forever". Multi-day
+                    // gaps now spend freezes one-per-day; if there aren't
+                    // enough to cover the whole gap, freezes still get spent
+                    // for the days they can cover (matches Duolingo's model).
+                    if (diff >= 2)
+                    {
+                        var missedDays = diff - 1;
+                        var consumed = 0;
+                        while (consumed < missedDays
+                               && _powerUps?.TryConsumeStreakFreeze(profile) == true)
+                        {
+                            counters.WatchDates.Add(
+                                counters.LastWatchDate.Value
+                                    .AddDays(consumed + 1)
+                                    .ToString("yyyy-MM-dd"));
+                            consumed++;
+                        }
+                    }
+
+                    if (diff >= 1)
+                    {
+                        counters.LastWatchDate = today;
+                    }
+                }
+
+                var currentStreak = GetCurrentWatchStreak(counters);
+                if (currentStreak > counters.BestWatchStreak)
+                {
+                    counters.BestWatchStreak = currentStreak;
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(context.LibraryName))
@@ -1981,7 +1998,7 @@ public class AchievementBadgeService : IDisposable
             {
                 counters.MoviesWatched += creditMultiplier;
 
-                if (!skipDailyBuckets)
+                if (!skipDateCounters)
                 {
                     if (!counters.MoviesByDate.ContainsKey(dayKey))
                     {
@@ -1992,7 +2009,7 @@ public class AchievementBadgeService : IDisposable
                 }
             }
 
-            if (context.IsEpisode && !skipDailyBuckets)
+            if (context.IsEpisode && !skipDateCounters)
             {
                 if (!counters.EpisodesByDate.ContainsKey(dayKey))
                 {
@@ -2135,13 +2152,16 @@ public class AchievementBadgeService : IDisposable
                 counters.DecadeItemCounts[decadeKey] = decCount + 1;
             }
 
-            // Day-of-week count
-            var dowKey = timestamp.DayOfWeek.ToString();
-            counters.DayOfWeekItemCounts.TryGetValue(dowKey, out var dowCount);
-            counters.DayOfWeekItemCounts[dowKey] = dowCount + 1;
+            if (!skipDateCounters)
+            {
+                // Day-of-week count
+                var dowKey = timestamp.DayOfWeek.ToString();
+                counters.DayOfWeekItemCounts.TryGetValue(dowKey, out var dowCount);
+                counters.DayOfWeekItemCounts[dowKey] = dowCount + 1;
+            }
 
-            // Per-day total minutes (skip during backfill — see skipDailyBuckets, issue #27)
-            if (!skipDailyBuckets && context.RunTimeTicks is long rtTicks && rtTicks > 0)
+            // Per-day minutes from recorded dates, unless the admin permits fallback.
+            if (!skipDateCounters && context.RunTimeTicks is long rtTicks && rtTicks > 0)
             {
                 var minutes = (int)(rtTicks / TimeSpan.TicksPerMinute);
                 counters.MinutesByDate.TryGetValue(dayKey, out var dayMins);
@@ -2247,22 +2267,22 @@ public class AchievementBadgeService : IDisposable
                 }
             }
 
-            if (timestamp.Month == 12 && timestamp.Day == 25)
+            if (!skipDateCounters && (timestamp.Month == 12 && timestamp.Day == 25))
             {
                 counters.WatchedOnChristmas = true;
             }
 
-            if (timestamp.Month == 1 && timestamp.Day == 1)
+            if (!skipDateCounters && (timestamp.Month == 1 && timestamp.Day == 1))
             {
                 counters.WatchedOnNewYear = true;
             }
 
-            if (timestamp.Month == 10 && timestamp.Day == 31)
+            if (!skipDateCounters && (timestamp.Month == 10 && timestamp.Day == 31))
             {
                 counters.WatchedOnHalloween = true;
             }
 
-            if (IsEidWindow(timestamp))
+            if (!skipDateCounters && (IsEidWindow(timestamp)))
             {
                 counters.WatchedOnEid = true;
             }
@@ -2270,81 +2290,81 @@ public class AchievementBadgeService : IDisposable
             // v1.9.3 — Holiday expansion. Each is a one-shot bool like the
             // four above. Variable-date holidays use small lookup tables /
             // a closed-form formula — see helpers further down the file.
-            if (timestamp.Month == 2 && timestamp.Day == 14)
+            if (!skipDateCounters && (timestamp.Month == 2 && timestamp.Day == 14))
             {
                 counters.WatchedOnValentines = true;
             }
 
-            if (IsEaster(timestamp))
+            if (!skipDateCounters && (IsEaster(timestamp)))
             {
                 counters.WatchedOnEaster = true;
             }
 
-            if (IsLunarNewYear(timestamp))
+            if (!skipDateCounters && (IsLunarNewYear(timestamp)))
             {
                 counters.WatchedOnLunarNewYear = true;
             }
 
-            if (IsDiwali(timestamp))
+            if (!skipDateCounters && (IsDiwali(timestamp)))
             {
                 counters.WatchedOnDiwali = true;
             }
 
-            if (IsUsThanksgiving(timestamp))
+            if (!skipDateCounters && (IsUsThanksgiving(timestamp)))
             {
                 counters.WatchedOnThanksgiving = true;
             }
 
-            if (timestamp.Month == 7 && timestamp.Day == 4)
+            if (!skipDateCounters && (timestamp.Month == 7 && timestamp.Day == 4))
             {
                 counters.WatchedOnIndependenceDayUS = true;
             }
 
-            if (timestamp.Month == 11 && timestamp.Day == 5)
+            if (!skipDateCounters && (timestamp.Month == 11 && timestamp.Day == 5))
             {
                 counters.WatchedOnBonfireNight = true;
             }
 
-            if (timestamp.Month == 12 && timestamp.Day == 26)
+            if (!skipDateCounters && (timestamp.Month == 12 && timestamp.Day == 26))
             {
                 counters.WatchedOnBoxingDay = true;
             }
 
-            if (IsMothersDayUS(timestamp))
+            if (!skipDateCounters && (IsMothersDayUS(timestamp)))
             {
                 counters.WatchedOnMothersDay = true;
             }
 
-            if (IsFathersDay(timestamp))
+            if (!skipDateCounters && (IsFathersDay(timestamp)))
             {
                 counters.WatchedOnFathersDay = true;
             }
 
             var hour = timestamp.Hour;
 
-            if (hour >= 23 || hour < 5)
+            if (!skipDateCounters && (hour >= 23 || hour < 5))
             {
                 counters.LateNightSessions++;
             }
 
-            if (hour >= 5 && hour < 9)
+            if (!skipDateCounters && (hour >= 5 && hour < 9))
             {
                 counters.EarlyMorningSessions++;
             }
 
             // v1.9.3 — fillers for the 12–17 and 19–22 windows that
             // previously had no time-of-day badge surface.
-            if (hour >= 12 && hour < 17)
+            if (!skipDateCounters && (hour >= 12 && hour < 17))
             {
                 counters.AfternoonSessions++;
             }
 
-            if (hour >= 19 && hour < 22)
+            if (!skipDateCounters && (hour >= 19 && hour < 22))
             {
                 counters.PrimeTimeSessions++;
             }
 
-            if (timestamp.DayOfWeek == DayOfWeek.Saturday || timestamp.DayOfWeek == DayOfWeek.Sunday)
+            if (!skipDateCounters && (timestamp.DayOfWeek == DayOfWeek.Saturday || timestamp.DayOfWeek == DayOfWeek.Sunday))
             {
                 counters.WeekendSessions++;
             }
@@ -3227,6 +3247,8 @@ public class AchievementBadgeService : IDisposable
         EarnSource earnSource = EarnSource.RealTime,
         string? unlockDeviceId = null)
     {
+        skipTimeWindowed |= _backfillUserId.Value == NormalizeUserId(userId)
+            && (Plugin.Instance?.Configuration?.BackfillSkipTimeWindowedBadges ?? true);
         var newlyUnlocked = new List<AchievementBadge>();
         var stamp = unlockTimestamp ?? DateTimeOffset.UtcNow;
         var disabledCategories = Plugin.Instance?.Configuration?.DisabledBadgeCategories;
@@ -3235,15 +3257,9 @@ public class AchievementBadgeService : IDisposable
         {
             if (IsBadgeCategoryDisabled(def.Category, disabledCategories)) continue;
 
-            // [v2.1.0 "Open Library", issue #27] Skip time-windowed badges
-            // during the initial backfill scan. Backfill iterates lifetime
-            // totals; time-windowed metrics (max-in-single-day, etc) can't
-            // be correctly awarded against cumulative counts because the
-            // per-bucket maximum collapses to the overall total on a
-            // server whose userdata reports an inaccurate LastPlayedDate.
-            // jojolll's #27 reproduction. The M6 admin "Recompute time-
-            // windowed badges" tool walks history with proper day-
-            // bucketing for retroactive credit.
+            // History scans rebuild recorded calendar counters but defer
+            // period awards until a real playback. The recompute tool only
+            // audits and removes earlier suspicious awards (issue #27).
             if (skipTimeWindowed && def.TimeWindow is not null) continue;
 
             var badge = profile.Badges.FirstOrDefault(b => b.Id.Equals(def.Id, StringComparison.OrdinalIgnoreCase));

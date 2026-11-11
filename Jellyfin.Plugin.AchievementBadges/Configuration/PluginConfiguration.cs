@@ -56,13 +56,12 @@ public class PluginConfiguration : BasePluginConfiguration
 
     // ─── v2.1.0 "Open Library" — issue #27 backfill safety ────────────
 
-    /// <summary>Skip time-windowed badges (Daily / Weekly / Monthly)
-    /// during the initial WatchHistoryBackfillService scan. v2.0.x
-    /// silently awarded these based on lifetime totals (jojolll's
-    /// reproduction in #27 — "Watch 10 films in one day" unlocked when
-    /// a user just had 10 films in history). Default true. The M6
-    /// admin "Recompute time-windowed badges" tool walks history with
-    /// proper day-bucketing for retroactive credit.</summary>
+    /// <summary>Skip time-windowed badge awards during watch-history scans.
+    /// Default true. Calendar counters are rebuilt only from recorded dates;
+    /// scan-time fallback dates are excluded to avoid clustering old plays
+    /// into today (issue #27). Disabling this also permits fallback dates.
+    /// The admin recompute tool audits and cleans up earlier awards; it does
+    /// not rebuild history or daily buckets.</summary>
     public bool BackfillSkipTimeWindowedBadges { get; set; } = true;
 
     /// <summary>How many days of daily badges.json snapshots to keep

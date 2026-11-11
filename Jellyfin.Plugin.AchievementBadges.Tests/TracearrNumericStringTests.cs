@@ -9,7 +9,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using Jellyfin.Database.Implementations.Entities;
+using Jellyfin.Plugin.AchievementBadges.Models;
 using Jellyfin.Plugin.AchievementBadges.Configuration;
 using Jellyfin.Plugin.AchievementBadges.Helpers;
 using Jellyfin.Plugin.AchievementBadges.Services;
@@ -133,7 +135,7 @@ public class TracearrNumericStringTests
                "total_duration_ms":"5400000","watched":true},
               {"id":"play-short","rating_key":"deleted-episode","media_type":"episode",
                "media_title":"Example episode","show_title":"Example series","year":2024,
-               "started_at":"2026-01-01T12:00:00Z","duration_ms":1200000,
+               "started_at":"2026-01-02T12:00:00Z","duration_ms":1200000,
                "total_duration_ms":"1200000.000","watched":true}
             ],"meta":{"nextCursor":null,"pageSize":100}}
             """;
@@ -195,8 +197,10 @@ public class TracearrNumericStringTests
                 Assert.Equal(110, profile.Counters.TotalMinutesWatched);
                 Assert.Equal(90, profile.Counters.LongestItemMinutes);
                 Assert.Equal(1, profile.Counters.ShortItemsWatched);
-                if (skipDailyBuckets) Assert.Empty(profile.Counters.MinutesByDate);
-                else Assert.Equal(110, profile.Counters.MinutesByDate["2026-01-01"]);
+                Assert.Equal(90, profile.Counters.MinutesByDate["2026-01-01"]);
+                Assert.Equal(20, profile.Counters.MinutesByDate["2026-01-02"]);
+                Assert.Equal(1, profile.Counters.MoviesByDate["2026-01-01"]);
+                Assert.Equal(1, profile.Counters.EpisodesByDate["2026-01-02"]);
                 Assert.Equal(7, profile.Counters.MoviesWatched);
                 Assert.Equal(4, profile.Counters.RewatchCount);
                 Assert.True(profile.ScoreBank >= 500);
@@ -210,6 +214,174 @@ public class TracearrNumericStringTests
             cancellation.Cancel();
             await server;
             Directory.Delete(dataDir, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(BaseItemKind.Movie, true, true)]
+    [InlineData(BaseItemKind.Movie, false, true)]
+    [InlineData(BaseItemKind.Movie, true, false)]
+    [InlineData(BaseItemKind.Movie, false, false)]
+    [InlineData(BaseItemKind.Episode, true, true)]
+    [InlineData(BaseItemKind.Episode, false, true)]
+    [InlineData(BaseItemKind.Episode, true, false)]
+    [InlineData(BaseItemKind.Episode, false, false)]
+    [InlineData(BaseItemKind.Book, true, true)]
+    [InlineData(BaseItemKind.Book, false, true)]
+    [InlineData(BaseItemKind.Book, true, false)]
+    [InlineData(BaseItemKind.Book, false, false)]
+    [InlineData(BaseItemKind.Audio, true, true)]
+    [InlineData(BaseItemKind.Audio, false, true)]
+    [InlineData(BaseItemKind.Audio, true, false)]
+    [InlineData(BaseItemKind.Audio, false, false)]
+    public void LibraryScan_UsesRealDates_AndSkipsFallbackDates(BaseItemKind kind, bool hasDate, bool skipUnreliable)
+    {
+        using var fixture = new ScanFixture(skipUnreliable);
+        BaseItem CreateItem() => kind switch
+        {
+            BaseItemKind.Movie => new MediaBrowser.Controller.Entities.Movies.Movie(),
+            BaseItemKind.Episode => new MediaBrowser.Controller.Entities.TV.Episode(),
+            BaseItemKind.Book => new Book(),
+            _ => new MediaBrowser.Controller.Entities.Audio.Audio()
+        };
+        var items = new[] { CreateItem(), CreateItem() };
+        foreach (var item in items)
+        {
+            item.Id = Guid.NewGuid();
+            item.RunTimeTicks = 90 * TimeSpan.TicksPerMinute;
+        }
+        fixture.Library.Setup(l => l.GetItemsResult(It.IsAny<InternalItemsQuery>()))
+            .Returns((InternalItemsQuery q) => new QueryResult<BaseItem>(
+                q.IsPlayed == true && q.IncludeItemTypes.Contains(kind) ? items : Array.Empty<BaseItem>()));
+        fixture.UserData.Setup(d => d.GetUserData(It.IsAny<User>(), It.IsAny<BaseItem>()))
+            .Returns(new UserItemData { Key = "test-item", LastPlayedDate = hasDate ? new DateTime(2021, 12, 25, 23, 0, 0, DateTimeKind.Utc) : null });
+
+        using var result = JsonSerializer.SerializeToDocument(fixture.Scan.BackfillUser(ScanFixture.UserId));
+        Assert.True(result.RootElement.GetProperty("Success").GetBoolean());
+        var counters = fixture.Badges.PeekProfile(ScanFixture.UserId)!.Counters;
+        var recordDates = hasDate || !skipUnreliable;
+        Assert.Equal(recordDates ? 1 : 0, counters.WatchDates.Count);
+        Assert.Equal(recordDates ? 1 : 0, counters.DayOfWeekItemCounts.Count);
+        Assert.Equal(recordDates && kind == BaseItemKind.Movie ? 1 : 0, counters.MoviesByDate.Count);
+        Assert.Equal(recordDates && kind == BaseItemKind.Episode ? 1 : 0, counters.EpisodesByDate.Count);
+        Assert.Equal(recordDates && kind != BaseItemKind.Book ? 1 : 0, counters.MinutesByDate.Count);
+        if (hasDate)
+        {
+            Assert.Contains("2021-12-25", counters.WatchDates);
+            Assert.Equal(2, counters.DayOfWeekItemCounts["Saturday"]);
+            Assert.True(counters.WatchedOnChristmas);
+            Assert.Equal(2, counters.LateNightSessions);
+        }
+        if (skipUnreliable)
+        {
+            var timeWindowed = AchievementDefinitions.All.Where(d => d.TimeWindow.HasValue).Select(d => d.Id).ToHashSet();
+            Assert.DoesNotContain(fixture.Badges.PeekProfile(ScanFixture.UserId)!.Badges,
+                b => b.Unlocked && timeWindowed.Contains(b.Id));
+            if (hasDate && kind == BaseItemKind.Movie)
+            {
+                fixture.Badges.RecordPlayback(ScanFixture.UserId, isMovie: true,
+                    playedAt: new DateTimeOffset(2021, 12, 25, 23, 0, 0, TimeSpan.Zero));
+                Assert.Contains(fixture.Badges.PeekProfile(ScanFixture.UserId)!.Badges,
+                    b => b.Id == "double-feature" && b.Unlocked && b.EarnSource == EarnSource.RealTime);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(true, true, 0)]
+    [InlineData(false, true, 1)]
+    [InlineData(true, false, 1)]
+    public void UntrustedDates_DoNotInventCalendarProgress(bool skipUnreliable, bool silent, int expected)
+    {
+        using var fixture = new ScanFixture(skipUnreliable);
+        fixture.Badges.RecordPlayback(new PlaybackContext
+        {
+            UserId = ScanFixture.UserId, IsMovie = true, Silent = silent,
+            PlayedAt = new DateTimeOffset(2021, 12, 25, 23, 0, 0, TimeSpan.Zero),
+            RunTimeTicks = TimeSpan.TicksPerMinute
+        });
+        var counters = fixture.Badges.PeekProfile(ScanFixture.UserId)!.Counters;
+        Assert.Equal(expected, counters.WatchDates.Count);
+        Assert.Equal(expected, counters.DayOfWeekItemCounts.Count);
+        Assert.Equal(expected, counters.BestWatchStreak);
+        Assert.Equal(expected == 1, counters.LastWatchDate.HasValue);
+        Assert.Equal(expected == 1, counters.WatchedOnChristmas);
+        Assert.Equal(expected, counters.LateNightSessions);
+        Assert.Equal(expected, counters.WeekendSessions);
+        Assert.Equal(1, counters.TotalItemsWatched);
+        Assert.Equal(1, counters.TotalMinutesWatched);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ScanScope_IsLimitedToItsUser_AndRestoredEvenOnFailure(bool failScan)
+    {
+        using var fixture = new ScanFixture(true);
+        const string other = "22222222-2222-2222-2222-222222222222";
+        var invoked = false;
+        fixture.Library.Setup(l => l.GetItemsResult(It.IsAny<InternalItemsQuery>()))
+            .Callback(() =>
+            {
+                if (invoked) return;
+                invoked = true;
+                fixture.Badges.RecordPlayback(other, isMovie: true);
+                fixture.Badges.RecordPlayback(other, isMovie: true);
+                if (failScan) throw new InvalidOperationException("Test scan failure");
+            })
+            .Returns(new QueryResult<BaseItem>(Array.Empty<BaseItem>()));
+        using var result = JsonSerializer.SerializeToDocument(fixture.Scan.BackfillUser(ScanFixture.UserId));
+        Assert.Equal(!failScan, result.RootElement.GetProperty("Success").GetBoolean());
+        Assert.Contains(fixture.Badges.PeekProfile(other)!.Badges,
+            b => b.Id == "double-feature" && b.Unlocked && b.EarnSource == EarnSource.RealTime);
+        fixture.Badges.RecordPlayback(ScanFixture.UserId, isMovie: true);
+        fixture.Badges.RecordPlayback(ScanFixture.UserId, isMovie: true);
+        Assert.Contains(fixture.Badges.PeekProfile(ScanFixture.UserId)!.Badges,
+            b => b.Id == "double-feature" && b.Unlocked && b.EarnSource == EarnSource.RealTime);
+    }
+
+    private sealed class ScanFixture : IDisposable
+    {
+        public const string UserId = "11111111-1111-1111-1111-111111111111";
+        private readonly string _dataDir = Path.Combine(Path.GetTempPath(), "ab-dates-" + Guid.NewGuid().ToString("N"));
+        private readonly Plugin? _previous = Plugin.Instance;
+        public Mock<ILibraryManager> Library { get; } = new();
+        public Mock<IUserDataManager> UserData { get; } = new();
+        public AchievementBadgeService Badges { get; }
+        public WatchHistoryBackfillService Scan { get; }
+        private readonly TargetProgressService _targets;
+        public ScanFixture(bool skipUnreliable)
+        {
+            Directory.CreateDirectory(_dataDir);
+            var paths = new Mock<IApplicationPaths>();
+            paths.SetupGet(p => p.PluginConfigurationsPath).Returns(_dataDir);
+            paths.SetupGet(p => p.PluginsPath).Returns(_dataDir);
+            var serializer = new Mock<IXmlSerializer>();
+            serializer.Setup(s => s.DeserializeFromFile(typeof(PluginConfiguration), It.IsAny<string>()))
+                .Returns(new PluginConfiguration { BackfillSkipTimeWindowedBadges = skipUnreliable });
+            _ = new Plugin(paths.Object, serializer.Object);
+            var users = new Mock<IUserManager>();
+            users.Setup(u => u.GetUserById(Guid.Parse(UserId))).Returns(new User("Example", "provider", "reset"));
+            Library.Setup(l => l.GetItemsResult(It.IsAny<InternalItemsQuery>()))
+                .Returns(new QueryResult<BaseItem>(Array.Empty<BaseItem>()));
+            var ledger = new TracearrCreditLedger();
+            Badges = new AchievementBadgeService(paths.Object, users.Object,
+                new WebhookNotifier(NullLogger<WebhookNotifier>.Instance),
+                new AuditLogService(paths.Object, NullLogger<AuditLogService>.Instance),
+                NullLogger<AchievementBadgeService>.Instance, tracearrLedger: ledger);
+            _targets = new TargetProgressService(Library.Object, UserData.Object, users.Object,
+                new CustomBadgeService(paths.Object, NullLogger<CustomBadgeService>.Instance), Badges,
+                NullLogger<TargetProgressService>.Instance);
+            Scan = new WatchHistoryBackfillService(Library.Object, users.Object, UserData.Object, Badges,
+                new LibraryCompletionService(Library.Object, users.Object, Badges, NullLogger<LibraryCompletionService>.Instance),
+                _targets, ledger, new WatchCarryStore(TimeSpan.Zero), NullLogger<WatchHistoryBackfillService>.Instance);
+        }
+        public void Dispose()
+        {
+            _targets.Dispose();
+            Badges.Dispose();
+            typeof(Plugin).GetProperty(nameof(Plugin.Instance))!.SetValue(null, _previous);
+            Directory.Delete(_dataDir, recursive: true);
         }
     }
 
