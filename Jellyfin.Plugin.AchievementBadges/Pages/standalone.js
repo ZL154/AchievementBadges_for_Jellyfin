@@ -619,6 +619,14 @@
             // Tighter padding on phones so content has maximum width.
             '@media (max-width: 640px){#' + ROOT_ID + ' .ab-panel-card{padding:0.75em;border-radius:10px;}}' +
             '#' + ROOT_ID + ' .ab-muted{opacity:0.7;}' +
+            // [issue #179] A link does not take the colour of the text around
+            // it: the browser paints it in its own link blue, which is hard to
+            // read on this dark page under the opacity of .ab-muted (where the
+            // browser keeps the light scheme #0000EE, it is nearly invisible).
+            // The profile card link follows the page text like the rest of the
+            // muted text; the light theme keeps its own grey further down,
+            // through a more specific selector.
+            '#' + ROOT_ID + ' #abSaProfileCardLink{color:inherit;}' +
             '#' + ROOT_ID + ' .ab-error{margin-top:1em;padding:1em;border:1px solid rgba(248,113,113,0.45);border-radius:12px;background:rgba(248,113,113,0.08);color:#fca5a5;}' +
             '#' + ROOT_ID + ' .ab-eyebrow{font-size:0.88em;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#9fb3c8;margin-bottom:0.7em;}' +
             // Theme overrides that unlock as the user reaches higher ranks
